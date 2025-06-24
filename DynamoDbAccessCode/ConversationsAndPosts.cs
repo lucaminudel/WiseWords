@@ -13,7 +13,7 @@ namespace DynamoDbAccessCode
             DILEMMA
         }
 
-        public async Task<string> CreateNewConversation(Guid newGuid, ConvoTypeEnum convoType, string title, string messageBody, string author, DateTimeOffset utcNow)
+        public async Task<string> CreateNewConversation(Guid newGuid, ConvoTypeEnum convoType, string title, string messageBody, string author, DateTimeOffset utcCreationTime)
         {
             if (newGuid == Guid.Empty)
                 throw new ArgumentException("Guid cannot be empty", nameof(newGuid));
@@ -30,9 +30,9 @@ namespace DynamoDbAccessCode
             if (string.IsNullOrWhiteSpace(messageBody))
                 throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
 
-            var utcNowUnixTimestamp = utcNow.ToUnixTimeSeconds();
-            var updateAt = utcNowUnixTimestamp;
-            var updatedAtYear = utcNow.Year;
+            var utcCreationTimeUnixTimestamp = utcCreationTime.ToUnixTimeSeconds();
+            var updateAt = utcCreationTimeUnixTimestamp;
+            var updatedAtYear = utcCreationTime.Year;
 
             var conversation = new ConversationSerialiser
             {
@@ -99,6 +99,54 @@ namespace DynamoDbAccessCode
             var jsonResults = documents.Select(doc => doc.ToJson()).ToList();
             return jsonResults;
 
+        }
+
+        public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
+        {
+            if (string.IsNullOrEmpty(conversationPK))
+                throw new ArgumentException("Conversation PK cannot be null or empty", nameof(conversationPK));
+
+            if (!conversationPK.StartsWith("CONVO#"))
+                throw new ArgumentException("Conversation PK must start with 'CONVO#'", nameof(conversationPK));
+
+            if (parentPostSK == "METADATA") { parentPostSK = ""; }
+
+            if (parentPostSK.LastIndexOf("#CM#") != -1 || parentPostSK.LastIndexOf("#CONVO#") != -1)
+                throw new ArgumentException("Parent Post SK tree's path must not contain '#CM#' or '#CONVO#'", nameof(parentPostSK));
+
+            var parts = parentPostSK.Split('#', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length % 2 != 0) throw new ArgumentException("Parent Post SK tree's path has one malformed post id", nameof(parentPostSK));
+            Enumerable.Range(0, parts.Length / 2).ToList().ForEach(i =>
+                {
+                    if (parts[i * 2] != "DD" || !Guid.TryParse(parts[i * 2 + 1], out _))
+                        throw new ArgumentException("Parent Post SK tree's path has invalid post type or invalid guid", nameof(parentPostSK));
+                }); 
+
+            if (newPostGuid == Guid.Empty)
+                throw new ArgumentException("Post GUID cannot be empty", nameof(newPostGuid));
+
+            if (string.IsNullOrEmpty(author))
+                throw new ArgumentException("Author cannot be null or empty", nameof(author));
+
+            if (string.IsNullOrEmpty(messageBody))
+                throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
+
+
+            var drillDownPost = new PostSerialiser
+            {
+                PK = conversationPK,
+                SK = $"{parentPostSK}#DD#{newPostGuid}",
+                MessageBody = messageBody,
+                Author = author,
+                UpdatedAt = utcCreationTime.ToUnixTimeSeconds()
+            };
+
+            await AsyncExecuteWithDynamoDB(async (client, context) =>
+            {
+                await context.SaveAsync(drillDownPost);
+            });
+
+            return drillDownPost.ToString();
         }
 
         private static async Task AsyncExecuteWithDynamoDB(Func<AmazonDynamoDBClient, DynamoDBContext, Task> action)
