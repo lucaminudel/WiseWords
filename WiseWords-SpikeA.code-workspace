@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "DynamoDbLocalDockerImage"
+		},
+		{
+			"path": "DynamoDbAccessCode"
+		}
+	],
+	"settings": {}
+}
