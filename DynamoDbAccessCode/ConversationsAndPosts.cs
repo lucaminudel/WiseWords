@@ -149,6 +149,53 @@ namespace DynamoDbAccessCode
             return drillDownPost.ToString();
         }
 
+        public async Task<string> AppendCommentPost(string conversationPK, string parentPostSK, Guid newCommentGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
+        {
+            if (string.IsNullOrEmpty(conversationPK))
+                throw new ArgumentException("Conversation PK cannot be null or empty", nameof(conversationPK));
+
+            if (!conversationPK.StartsWith("CONVO#"))
+                throw new ArgumentException("Conversation PK must start with 'CONVO#'", nameof(conversationPK));
+
+            if (parentPostSK == "METADATA") { parentPostSK = ""; }
+
+            if (parentPostSK.LastIndexOf("#CM#") != -1 || parentPostSK.LastIndexOf("#CONVO#") != -1)
+                throw new ArgumentException("Parent Post SK tree's path must not contain '#CM#' or '#CONVO#'", nameof(parentPostSK));
+
+            var parts = parentPostSK.Split('#', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length % 2 != 0) throw new ArgumentException("Parent Post SK tree's path has one malformed post id", nameof(parentPostSK));
+            Enumerable.Range(0, parts.Length / 2).ToList().ForEach(i =>
+                {
+                    if (parts[i * 2] != "DD" || !Guid.TryParse(parts[i * 2 + 1], out _))
+                        throw new ArgumentException("Parent Post SK tree's path has invalid post type or invalid guid", nameof(parentPostSK));
+                }); 
+
+            if (newCommentGuid == Guid.Empty)
+                throw new ArgumentException("Comment GUID cannot be empty", nameof(newCommentGuid));
+
+            if (string.IsNullOrEmpty(author))
+                throw new ArgumentException("Author cannot be null or empty", nameof(author));
+
+            if (string.IsNullOrEmpty(messageBody))
+                throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
+
+            var commentPost = new PostSerialiser
+            {
+                PK = conversationPK,
+                SK = $"{parentPostSK}#CM#{newCommentGuid}",
+                MessageBody = messageBody,
+                Author = author,
+                UpdatedAt = utcCreationTime.ToUnixTimeSeconds()
+            };
+
+            await AsyncExecuteWithDynamoDB(async (client, context) =>
+            {
+                await context.SaveAsync(commentPost);
+            });
+
+            return commentPost.ToString();
+        }
+
         private static async Task AsyncExecuteWithDynamoDB(Func<AmazonDynamoDBClient, DynamoDBContext, Task> action)
         {
             var clientConfig = new AmazonDynamoDBConfig
