@@ -419,7 +419,7 @@ namespace DynamoDbAccessCode.Tests
             }
             catch (ArgumentException e)
             {
-                Assert.Contains("Parent Post SK tree's path must not contain '#CM#' or '#CONVO#'", e.Message);
+                Assert.Contains("Canno't append a Comment post to a Conversation or Conclusion post", e.Message);
             }
         }
 
@@ -460,7 +460,7 @@ namespace DynamoDbAccessCode.Tests
             }
             catch (ArgumentException e)
             {
-                Assert.Contains("Parent Post SK tree's path must not contain '#CM#' or '#CONVO#'", e.Message);
+                Assert.Contains("Canno't append a DrillDown post to a Conversation or Conclusion post", e.Message);
             }
         }
     }

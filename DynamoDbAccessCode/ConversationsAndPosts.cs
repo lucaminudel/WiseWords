@@ -16,6 +16,7 @@ namespace DynamoDbAccessCode
         private const string CONVERSATION_SK_METADATA = "METADATA";
         private const string DRILL_DOWN_POST_SK_PREFIX = "DD";
         private const string COMMENT_POST_SK_PREFIX = "CM";
+        private const string CONCLUSION_POST_SK_PREFIX = "CC";
         
 
         public enum ConvoTypeEnum
@@ -122,24 +123,13 @@ namespace DynamoDbAccessCode
         {
             CommonFieldsValidation(postTypeName, newGuid, messageBody, author);
 
-            if (string.IsNullOrEmpty(conversationPK))
-                throw new ArgumentException("Conversation PK cannot be null or empty", nameof(conversationPK));
-
-            if (!conversationPK.StartsWith(CONVERSATION_PK_PREFIX))
-                throw new ArgumentException($"Conversation PK must start with '{CONVERSATION_PK_PREFIX}'", nameof(conversationPK));
+            ValidateConversationPkIntegrity(conversationPK);
 
             if (parentPostSK == CONVERSATION_SK_METADATA) { parentPostSK = ""; }
 
-            if (parentPostSK.LastIndexOf($"#{COMMENT_POST_SK_PREFIX}#") != -1 || parentPostSK.LastIndexOf($"#{CONVERSATION_PK_PREFIX}") != -1)
-                throw new ArgumentException($"Parent Post SK tree's path must not contain '#{COMMENT_POST_SK_PREFIX}#' or '#{CONVERSATION_PK_PREFIX}'", nameof(parentPostSK));
+            ValidateAllowedTreeStructure(postTypeName, parentPostSK);
 
-            var parts = parentPostSK.Split('#', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length % 2 != 0) throw new ArgumentException("Parent Post SK tree's path has one malformed post id", nameof(parentPostSK));
-            Enumerable.Range(0, parts.Length / 2).ToList().ForEach(i =>
-                {
-                    if (parts[i * 2] != DRILL_DOWN_POST_SK_PREFIX || !Guid.TryParse(parts[i * 2 + 1], out _))
-                        throw new ArgumentException("Parent Post SK tree's path has invalid post type or invalid guid", nameof(parentPostSK));
-                }); 
+            ValidateParentPostSkIntegrity(parentPostSK);
 
             var post = new PostSerialiser
             {
@@ -156,6 +146,38 @@ namespace DynamoDbAccessCode
             });
 
             return post.ToString();
+        }
+
+        private static void ValidateAllowedTreeStructure(string postTypeName, string parentPostSK)
+        {
+            if (parentPostSK.LastIndexOf($"#{COMMENT_POST_SK_PREFIX}#") != -1 || parentPostSK.LastIndexOf($"#{CONCLUSION_POST_SK_PREFIX}") != -1)
+                throw new ArgumentException($"Canno't append a {postTypeName} post to a Conversation or Conclusion post", nameof(parentPostSK));
+        }
+
+        private static void ValidateConversationPkIntegrity(string conversationPK)
+        {
+            if (string.IsNullOrEmpty(conversationPK))
+                throw new ArgumentException("Conversation PK cannot be null or empty", nameof(conversationPK));
+
+            if (!conversationPK.StartsWith(CONVERSATION_PK_PREFIX))
+                throw new ArgumentException($"Conversation PK must start with '{CONVERSATION_PK_PREFIX}'", nameof(conversationPK));
+        }
+
+        private static void ValidateParentPostSkIntegrity(string parentPostSK)
+        {
+            if (parentPostSK.LastIndexOf($"#{CONVERSATION_PK_PREFIX}") != -1)
+                throw new ArgumentException($"Parent Post SK tree's path must not contain '#{CONVERSATION_PK_PREFIX}' prefix", nameof(parentPostSK));
+
+            var parts = parentPostSK.Split('#', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length % 2 != 0) throw new ArgumentException("Parent Post SK tree's path has one malformed post id", nameof(parentPostSK));
+            Enumerable.Range(0, parts.Length / 2).ToList().ForEach(i =>
+            {
+                if (parts[i * 2] != DRILL_DOWN_POST_SK_PREFIX)
+                    throw new ArgumentException("Parent Post SK tree's path has invalid post type: {parts[i * 2]}", nameof(parentPostSK));
+
+                if (!Guid.TryParse(parts[i * 2 + 1], out _))
+                    throw new ArgumentException("Parent Post SK tree's path has invalid guid: {parts[i * 2 + 1}", nameof(parentPostSK));
+            });
         }
 
         private static void CommonFieldsValidation(string postTypeName, Guid newGuid, string messageBody, string author)
