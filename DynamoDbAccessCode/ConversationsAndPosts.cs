@@ -66,7 +66,7 @@ namespace DynamoDbAccessCode
             if (updatedAtYear < 1970)
                 throw new ArgumentException("Invalid year", nameof(updatedAtYear));
 
-            List<Document> documents = new List<Document>();
+            var conversations = new List<Document>();
 
             await AsyncExecuteWithDynamoDB(async (client, context) =>
             {            
@@ -99,13 +99,45 @@ namespace DynamoDbAccessCode
                     .Build();
                 var search = table.Query(queryConfig);
                 
-                documents = await search.GetNextSetAsync();
+                conversations = await search.GetNextSetAsync();
 
             });
 
-            var jsonResults = documents.Select(doc => doc.ToJson()).ToList();
+            var jsonResults = conversations.Select(doc => doc.ToJson()).ToList();
             return jsonResults;
 
+        }
+
+        public async Task<List<string>> RetrieveConversationPosts(string conversationPK)
+        {
+            ValidateConversationPkIntegrity(conversationPK);
+
+            var conversationPosts = new List<Document>();
+
+            await AsyncExecuteWithDynamoDB(async (client, context) =>
+            {
+                var queryConfig = new QueryOperationConfig
+                {
+                    KeyExpression = new Expression
+                    {
+                        ExpressionStatement = "#pk = :pk",
+                        ExpressionAttributeNames = new Dictionary<string, string> { { "#pk", "PK" } },
+                        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry> { { ":pk", conversationPK } }
+                    },
+                    Select = SelectValues.AllAttributes
+                };
+
+                var table = new TableBuilder(client, TABLE_NAME)
+                    .AddHashKey("PK", DynamoDBEntryType.String)
+                    .AddRangeKey("SK", DynamoDBEntryType.String)
+                    .Build();
+                var search = table.Query(queryConfig);
+
+                conversationPosts = await search.GetNextSetAsync();
+            });
+
+            var jsonResults = conversationPosts.Select(doc => doc.ToJson()).ToList();
+            return jsonResults;
         }
 
         public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string messageBody, DateTimeOffset utcCreationTime)

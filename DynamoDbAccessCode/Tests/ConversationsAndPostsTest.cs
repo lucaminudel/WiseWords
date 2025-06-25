@@ -633,5 +633,140 @@ namespace DynamoDbAccessCode.Tests
                 Assert.Contains("Cannot append a Conclusion post to a Comment or Conclusion post", e.Message);
             }
         }
+
+        [Fact]
+        public async Task RetrieveConversationPosts_RetrievesAllPostsSuccessfullyAndInOrder()
+        {
+            var conversationGuid = Guid.NewGuid();
+            var drillDownGuid = Guid.NewGuid();
+            var commentGuid = Guid.NewGuid();
+            var conclusionGuid = Guid.NewGuid();
+            var drillDownCommentGuid = Guid.NewGuid();
+
+            var authorPrefix = "TestyWholeConvo";
+
+            var dbConversationsAndPosts = new ConversationsAndPosts();
+
+            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+                conversationGuid,
+                ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
+                "Test conversation with multiple posts",
+                "This conversation will have various types of posts",
+                authorPrefix,
+                DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
+            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+
+            var jsonDrillDown = await dbConversationsAndPosts.AppendDrillDownPost(
+                conversationFields["PK"],
+                conversationFields["SK"],
+                drillDownGuid,
+                authorPrefix + "-DD",
+                "This is a drill-down post",
+                DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
+            var drillDownFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDown);
+
+            await dbConversationsAndPosts.AppendCommentPost(
+                conversationFields["PK"],
+                conversationFields["SK"],
+                commentGuid,
+                authorPrefix + "-CM",
+                "This is a comment on the conversation",
+                DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
+
+            await dbConversationsAndPosts.AppendConclusionPost(
+                conversationFields["PK"],
+                conversationFields["SK"],
+                conclusionGuid,
+                authorPrefix + "-CC",
+                "This is a conclusion to the conversation",
+                DateTimeOffset.Parse("1970-01-01T00:00:04Z"));
+
+            await dbConversationsAndPosts.AppendCommentPost(
+                drillDownFields["PK"],
+                drillDownFields["SK"],
+                drillDownCommentGuid,
+                authorPrefix + "-DDCM",
+                "This is a comment on the drill-down post",
+                DateTimeOffset.Parse("1970-01-01T00:00:05Z"));
+
+            var allPosts = await dbConversationsAndPosts.RetrieveConversationPosts(conversationFields["PK"]);
+
+            var parsedPosts = allPosts.Select(JsonConvert.DeserializeObject<Dictionary<string, string>>).ToList();
+
+            Assert.Equal(5, parsedPosts.Count);
+
+            var conversation = parsedPosts[4];
+            Assert.Equal("METADATA", conversation["SK"]);
+            Assert.Equal("CONVO#" + conversationGuid.ToString(), conversation["PK"]);
+            Assert.Equal("Test conversation with multiple posts", conversation["Title"]);
+
+            var conclusionPost = parsedPosts[0];
+            Assert.Equal("#CC#" + conclusionGuid.ToString(), conclusionPost["SK"]);
+            Assert.Equal(conclusionPost["PK"], conversation["PK"]);
+            Assert.Equal("This is a conclusion to the conversation", conclusionPost["MessageBody"]);
+
+            var commentPost = parsedPosts[1];
+            Assert.Equal("#CM#" + commentGuid.ToString(), commentPost["SK"]);
+            Assert.Equal(commentPost["PK"], conversation["PK"]);
+            Assert.Equal("This is a comment on the conversation", commentPost["MessageBody"]);
+
+            var drillDownPost = parsedPosts[2];
+            Assert.Equal("#DD#" + drillDownGuid.ToString(), drillDownPost["SK"]);
+            Assert.Equal(drillDownPost["PK"], conversation["PK"]);
+            Assert.Equal("This is a drill-down post", drillDownPost["MessageBody"]);
+
+            var drillDownCommentPost = parsedPosts[3];
+            Assert.Equal("#DD#" + drillDownGuid.ToString() + "#CM#" + drillDownCommentGuid.ToString(), drillDownCommentPost["SK"]);
+            Assert.Equal(drillDownCommentPost["PK"], conversation["PK"]);
+            Assert.Equal("This is a comment on the drill-down post", drillDownCommentPost["MessageBody"]);
+        }
+
+        [Fact]
+        public async Task RetrieveConversationPosts_ReturnsEmptyListForNonExistentConversation()
+        {
+            var nonExistentConversationPK = "CONVO#" + Guid.NewGuid().ToString();
+            var dbConversationsAndPosts = new ConversationsAndPosts();
+
+            var posts = await dbConversationsAndPosts.RetrieveConversationPosts(nonExistentConversationPK);
+
+            Assert.Empty(posts);
+        }
+
+        [Fact]
+        public async Task RetrieveConversationPosts_InvalidConversationPkParameterFails()
+        {
+            var dbConversationsAndPosts = new ConversationsAndPosts();
+
+            try
+            {
+                await dbConversationsAndPosts.RetrieveConversationPosts("INVALID_PK");
+                Assert.Fail("Expected ArgumentException for invalid conversation PK format, but no exception was thrown.");
+            }
+            catch (ArgumentException e)
+            {
+                Assert.Contains("Conversation PK must start with 'CONVO#'", e.Message);
+            }
+
+            try
+            {
+                await dbConversationsAndPosts.RetrieveConversationPosts(null);
+                Assert.Fail("Expected ArgumentException for null conversation PK, but no exception was thrown.");
+            }
+            catch (ArgumentException e)
+            {
+                Assert.Contains("Conversation PK cannot be null or empty", e.Message);
+            }
+
+            try
+            {
+                await dbConversationsAndPosts.RetrieveConversationPosts("");
+                Assert.Fail("Expected ArgumentException for empty conversation PK, but no exception was thrown.");
+            }
+            catch (ArgumentException e)
+            {
+                Assert.Contains("Conversation PK cannot be null or empty", e.Message);
+            }
+        }
+
     }
 }
