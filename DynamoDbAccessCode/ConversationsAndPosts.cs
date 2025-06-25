@@ -15,20 +15,14 @@ namespace DynamoDbAccessCode
 
         public async Task<string> CreateNewConversation(Guid newGuid, ConvoTypeEnum convoType, string title, string messageBody, string author, DateTimeOffset utcCreationTime)
         {
-            if (newGuid == Guid.Empty)
-                throw new ArgumentException("Guid cannot be empty", nameof(newGuid));
-
-            if (string.IsNullOrWhiteSpace(author))
-                throw new ArgumentException("Author cannot be null or empty", nameof(author));
+            CommonFieldsValidation("Conversation", newGuid, messageBody, author);
 
             if (!Enum.IsDefined(typeof(ConvoTypeEnum), convoType))
                 throw new ArgumentException("Invalid conversation type", nameof(convoType));
 
             if (string.IsNullOrWhiteSpace(title))
                 throw new ArgumentException("Title cannot be null or empty", nameof(title));
-                 
-            if (string.IsNullOrWhiteSpace(messageBody))
-                throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
+
 
             var utcCreationTimeUnixTimestamp = utcCreationTime.ToUnixTimeSeconds();
             var updateAt = utcCreationTimeUnixTimestamp;
@@ -53,6 +47,7 @@ namespace DynamoDbAccessCode
 
             return conversation.ToString();
         }
+
 
         public async Task<List<string>> RetrieveConversations(int updatedAtYear, string filterByauthor = "")
         {
@@ -103,54 +98,18 @@ namespace DynamoDbAccessCode
 
         public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
-            if (string.IsNullOrEmpty(conversationPK))
-                throw new ArgumentException("Conversation PK cannot be null or empty", nameof(conversationPK));
-
-            if (!conversationPK.StartsWith("CONVO#"))
-                throw new ArgumentException("Conversation PK must start with 'CONVO#'", nameof(conversationPK));
-
-            if (parentPostSK == "METADATA") { parentPostSK = ""; }
-
-            if (parentPostSK.LastIndexOf("#CM#") != -1 || parentPostSK.LastIndexOf("#CONVO#") != -1)
-                throw new ArgumentException("Parent Post SK tree's path must not contain '#CM#' or '#CONVO#'", nameof(parentPostSK));
-
-            var parts = parentPostSK.Split('#', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length % 2 != 0) throw new ArgumentException("Parent Post SK tree's path has one malformed post id", nameof(parentPostSK));
-            Enumerable.Range(0, parts.Length / 2).ToList().ForEach(i =>
-                {
-                    if (parts[i * 2] != "DD" || !Guid.TryParse(parts[i * 2 + 1], out _))
-                        throw new ArgumentException("Parent Post SK tree's path has invalid post type or invalid guid", nameof(parentPostSK));
-                }); 
-
-            if (newPostGuid == Guid.Empty)
-                throw new ArgumentException("Post GUID cannot be empty", nameof(newPostGuid));
-
-            if (string.IsNullOrEmpty(author))
-                throw new ArgumentException("Author cannot be null or empty", nameof(author));
-
-            if (string.IsNullOrEmpty(messageBody))
-                throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
-
-
-            var drillDownPost = new PostSerialiser
-            {
-                PK = conversationPK,
-                SK = $"{parentPostSK}#DD#{newPostGuid}",
-                MessageBody = messageBody,
-                Author = author,
-                UpdatedAt = utcCreationTime.ToUnixTimeSeconds()
-            };
-
-            await AsyncExecuteWithDynamoDB(async (client, context) =>
-            {
-                await context.SaveAsync(drillDownPost);
-            });
-
-            return drillDownPost.ToString();
+            return await AppendPost("DD", "DrillDown", conversationPK, parentPostSK, newPostGuid, author, messageBody, utcCreationTime);
         }
 
         public async Task<string> AppendCommentPost(string conversationPK, string parentPostSK, Guid newCommentGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
+            return await AppendPost("CM", "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
+        }
+
+        private async Task<string> AppendPost(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
+        {
+            CommonFieldsValidation(postTypeName, newGuid, messageBody, author);
+
             if (string.IsNullOrEmpty(conversationPK))
                 throw new ArgumentException("Conversation PK cannot be null or empty", nameof(conversationPK));
 
@@ -170,19 +129,10 @@ namespace DynamoDbAccessCode
                         throw new ArgumentException("Parent Post SK tree's path has invalid post type or invalid guid", nameof(parentPostSK));
                 }); 
 
-            if (newCommentGuid == Guid.Empty)
-                throw new ArgumentException("Comment GUID cannot be empty", nameof(newCommentGuid));
-
-            if (string.IsNullOrEmpty(author))
-                throw new ArgumentException("Author cannot be null or empty", nameof(author));
-
-            if (string.IsNullOrEmpty(messageBody))
-                throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
-
-            var commentPost = new PostSerialiser
+            var post = new PostSerialiser
             {
                 PK = conversationPK,
-                SK = $"{parentPostSK}#CM#{newCommentGuid}",
+                SK = $"{parentPostSK}#{postType}#{newGuid}",
                 MessageBody = messageBody,
                 Author = author,
                 UpdatedAt = utcCreationTime.ToUnixTimeSeconds()
@@ -190,11 +140,24 @@ namespace DynamoDbAccessCode
 
             await AsyncExecuteWithDynamoDB(async (client, context) =>
             {
-                await context.SaveAsync(commentPost);
+                await context.SaveAsync(post);
             });
 
-            return commentPost.ToString();
+            return post.ToString();
         }
+
+        private static void CommonFieldsValidation(string postTypeName, Guid newGuid, string messageBody, string author)
+        {
+            if (newGuid == Guid.Empty)
+                throw new ArgumentException($"New {postTypeName} post GUID cannot be empty", nameof(newGuid));
+
+            if (string.IsNullOrWhiteSpace(author))
+                throw new ArgumentException("Author cannot be null or empty", nameof(author));
+
+            if (string.IsNullOrWhiteSpace(messageBody))
+                throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
+        }
+
 
         private static async Task AsyncExecuteWithDynamoDB(Func<AmazonDynamoDBClient, DynamoDBContext, Task> action)
         {
@@ -207,7 +170,7 @@ namespace DynamoDbAccessCode
             using (var client = new AmazonDynamoDBClient("dummy", "dummy", clientConfig))
             using (var context = new DynamoDBContextBuilder().WithDynamoDBClient(() => client).Build())
             {
-                await action(client, context); 
+                await action(client, context);
             }
         }
 
