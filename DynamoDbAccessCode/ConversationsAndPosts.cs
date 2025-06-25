@@ -6,6 +6,18 @@ namespace DynamoDbAccessCode
 {
     public partial class ConversationsAndPosts
     {
+        // Constants for magic strings
+        private const string TABLE_NAME = "WiseWordsTable";
+        private const string GSI_NAME = "GSI1_LowTraffic_ConversationsByYear";
+        private const string SERVICE_URL = "http://localhost:8000";
+        private const string DUMMY_AWS_ACCESS_KEY_ID = "dummy";
+        private const string DUMMY_AWS_SECRET_ACCESS_KEY = "dummy";
+        private const string CONVERSATION_PK_PREFIX = "CONVO#";
+        private const string CONVERSATION_SK_METADATA = "METADATA";
+        private const string DRILL_DOWN_POST_SK_PREFIX = "DD";
+        private const string COMMENT_POST_SK_PREFIX = "CM";
+        
+
         public enum ConvoTypeEnum
         {
             QUESTION,
@@ -30,8 +42,8 @@ namespace DynamoDbAccessCode
 
             var conversation = new ConversationSerialiser
             {
-                PK = "CONVO#" + newGuid.ToString(),
-                SK = "METADATA",
+                PK = CONVERSATION_PK_PREFIX + newGuid.ToString(),
+                SK = CONVERSATION_SK_METADATA,
                 ConvoType = convoType.ToString(),
                 Title = title,
                 MessageBody = messageBody,
@@ -60,7 +72,7 @@ namespace DynamoDbAccessCode
             {            
                 var queryConfig = new QueryOperationConfig
                 {
-                    IndexName = "GSI1_LowTraffic_ConversationsByYear",
+                    IndexName = GSI_NAME,
                     KeyExpression = new Expression
                     {
                         ExpressionStatement = "#uay = :uay",
@@ -81,7 +93,7 @@ namespace DynamoDbAccessCode
                     };
                 }
 
-                var table = new TableBuilder(client, "WiseWordsTable")
+                var table = new TableBuilder(client, TABLE_NAME)
                     .AddHashKey("PK", DynamoDBEntryType.String)
                     .AddRangeKey("SK", DynamoDBEntryType.String)
                     .Build();
@@ -98,12 +110,12 @@ namespace DynamoDbAccessCode
 
         public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPost("DD", "DrillDown", conversationPK, parentPostSK, newPostGuid, author, messageBody, utcCreationTime);
+            return await AppendPost(DRILL_DOWN_POST_SK_PREFIX, "DrillDown", conversationPK, parentPostSK, newPostGuid, author, messageBody, utcCreationTime);
         }
 
         public async Task<string> AppendCommentPost(string conversationPK, string parentPostSK, Guid newCommentGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPost("CM", "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
+            return await AppendPost(COMMENT_POST_SK_PREFIX, "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
         }
 
         private async Task<string> AppendPost(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
@@ -113,19 +125,19 @@ namespace DynamoDbAccessCode
             if (string.IsNullOrEmpty(conversationPK))
                 throw new ArgumentException("Conversation PK cannot be null or empty", nameof(conversationPK));
 
-            if (!conversationPK.StartsWith("CONVO#"))
-                throw new ArgumentException("Conversation PK must start with 'CONVO#'", nameof(conversationPK));
+            if (!conversationPK.StartsWith(CONVERSATION_PK_PREFIX))
+                throw new ArgumentException($"Conversation PK must start with '{CONVERSATION_PK_PREFIX}'", nameof(conversationPK));
 
-            if (parentPostSK == "METADATA") { parentPostSK = ""; }
+            if (parentPostSK == CONVERSATION_SK_METADATA) { parentPostSK = ""; }
 
-            if (parentPostSK.LastIndexOf("#CM#") != -1 || parentPostSK.LastIndexOf("#CONVO#") != -1)
-                throw new ArgumentException("Parent Post SK tree's path must not contain '#CM#' or '#CONVO#'", nameof(parentPostSK));
+            if (parentPostSK.LastIndexOf($"#{COMMENT_POST_SK_PREFIX}#") != -1 || parentPostSK.LastIndexOf($"#{CONVERSATION_PK_PREFIX}") != -1)
+                throw new ArgumentException($"Parent Post SK tree's path must not contain '#{COMMENT_POST_SK_PREFIX}#' or '#{CONVERSATION_PK_PREFIX}'", nameof(parentPostSK));
 
             var parts = parentPostSK.Split('#', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length % 2 != 0) throw new ArgumentException("Parent Post SK tree's path has one malformed post id", nameof(parentPostSK));
             Enumerable.Range(0, parts.Length / 2).ToList().ForEach(i =>
                 {
-                    if (parts[i * 2] != "DD" || !Guid.TryParse(parts[i * 2 + 1], out _))
+                    if (parts[i * 2] != DRILL_DOWN_POST_SK_PREFIX || !Guid.TryParse(parts[i * 2 + 1], out _))
                         throw new ArgumentException("Parent Post SK tree's path has invalid post type or invalid guid", nameof(parentPostSK));
                 }); 
 
@@ -163,11 +175,11 @@ namespace DynamoDbAccessCode
         {
             var clientConfig = new AmazonDynamoDBConfig
             {
-                ServiceURL = "http://localhost:8000",
+                ServiceURL = SERVICE_URL,
                 // RegionEndpoint intentionally omitted for DynamoDB Local
             };
 
-            using (var client = new AmazonDynamoDBClient("dummy", "dummy", clientConfig))
+            using (var client = new AmazonDynamoDBClient(DUMMY_AWS_ACCESS_KEY_ID, DUMMY_AWS_SECRET_ACCESS_KEY, clientConfig))
             using (var context = new DynamoDBContextBuilder().WithDynamoDBClient(() => client).Build())
             {
                 await action(client, context);
