@@ -463,5 +463,175 @@ namespace DynamoDbAccessCode.Tests
                 Assert.Contains("Cannot append a DrillDown post to a Comment or Conclusion post", e.Message);
             }
         }
+
+        [Fact]
+        public async Task AppendConclusionPost_SavesConclusionToConversationSuccessfully()
+        {
+            var conversationGuid = Guid.NewGuid();
+
+            var conclusionPostGuid = Guid.NewGuid();
+            var conclusionPostAuthor = "TestyTesterX";
+            var conclusionPostMessageBody = "This is a conclusion post responding to the conversation";
+            var conclusionPostCreationTime = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
+
+            var dbConversationsAndPosts = new ConversationsAndPosts();
+
+            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+                conversationGuid,
+                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
+                "Root conversation for conclusion posts",
+                "This is the main conversation that will have conclusion posts",
+                "TestyTester",
+                DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
+            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+
+            var jsonConclusionPost = await dbConversationsAndPosts.AppendConclusionPost(
+                conversationFields["PK"],
+                conversationFields["SK"],
+                conclusionPostGuid,
+                conclusionPostAuthor,
+                conclusionPostMessageBody,
+                conclusionPostCreationTime);
+
+            var conclusionFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConclusionPost);
+
+            Assert.True(string.IsNullOrEmpty(conclusionFields.GetValueOrDefault("UpdatedAtYear")));
+            Assert.True(string.IsNullOrEmpty(conclusionFields.GetValueOrDefault("ConvoType")));
+            Assert.True(string.IsNullOrEmpty(conclusionFields.GetValueOrDefault("Title")));
+
+            Assert.Equal("CONVO#" + conversationGuid, conclusionFields["PK"]);
+            Assert.Equal("#CC#" + conclusionPostGuid.ToString(), conclusionFields["SK"]);
+            Assert.Equal(conclusionPostAuthor, conclusionFields["Author"]);
+            Assert.Equal(conclusionPostMessageBody, conclusionFields["MessageBody"]);
+            Assert.Equal(conclusionPostCreationTime.ToUnixTimeSeconds().ToString(), conclusionFields["UpdatedAt"]);
+        }
+
+        [Fact]
+        public async Task AppendConclusionPost_SavesConclusionToDrillDownPostSuccessfully()
+        {
+            var drillDownPostGuid = Guid.NewGuid();
+
+            var conclusionPostGuid = Guid.NewGuid();
+            var conclusionPostTime = DateTimeOffset.Parse("1970-01-01T00:00:03Z");
+            var conclusionPostAuthor = "TestyTesterW";
+            var conclusionPostMessageBody = "This is a conclusion to the drill-down post";
+
+            var dbConversationsAndPosts = new ConversationsAndPosts();
+
+            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+                Guid.NewGuid(),
+                ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
+                "Conversation with drill-down posts and conclusions",
+                "This conversation will have drill-down posts with conclusions",
+                "TestyTester",
+                DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
+            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+
+            var jsonDrillDownPost = await dbConversationsAndPosts.AppendDrillDownPost(
+                conversationFields["PK"],
+                conversationFields["SK"],
+                drillDownPostGuid,
+                "TestyTesterX",
+                "This is a drill-down post",
+                DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
+            var drillDownPostFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDownPost);
+
+            var jsonConclusionPost = await dbConversationsAndPosts.AppendConclusionPost(
+                drillDownPostFields["PK"],
+                drillDownPostFields["SK"],
+                conclusionPostGuid,
+                conclusionPostAuthor,
+                conclusionPostMessageBody,
+                conclusionPostTime);
+            var conclusionFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConclusionPost);
+
+            Assert.Equal(conversationFields["PK"], conclusionFields["PK"]);
+            Assert.Equal("#DD#" + drillDownPostGuid.ToString() + "#CC#" + conclusionPostGuid.ToString(), conclusionFields["SK"]);
+            Assert.Equal(conclusionPostMessageBody, conclusionFields["MessageBody"]);
+            Assert.Equal(conclusionPostTime.ToUnixTimeSeconds().ToString(), conclusionFields["UpdatedAt"]);
+            Assert.Equal(conclusionPostAuthor, conclusionFields["Author"]);
+        }
+
+        [Fact]
+        public async Task AppendConclusionPost_CannotAppendConclusionToComment()
+        {
+            var dbConversationsAndPosts = new ConversationsAndPosts();
+
+            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+                Guid.NewGuid(),
+                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
+                "Conversation for testing conclusion restrictions",
+                "This conversation will test that conclusions cannot be added to comments",
+                "TestyTester",
+                DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
+            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+
+            var jsonComment = await dbConversationsAndPosts.AppendCommentPost(
+                conversationFields["PK"],
+                conversationFields["SK"],
+                Guid.NewGuid(),
+                "TestyTesterX",
+                "This is a comment on the conversation",
+                DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
+            var commentFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonComment);
+
+            try
+            {
+                await dbConversationsAndPosts.AppendConclusionPost(
+                    commentFields["PK"],
+                    commentFields["SK"],
+                    Guid.NewGuid(),
+                    "TestyTesterW",
+                    "This conclusion should fail to be added to the comment",
+                    DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
+
+                Assert.Fail("Expected ArgumentException when trying to append conclusion to a comment, but no exception was thrown.");
+            }
+            catch (ArgumentException e)
+            {
+                Assert.Contains("Cannot append a Conclusion post to a Comment or Conclusion post", e.Message);
+            }
+        }
+
+        [Fact]
+        public async Task AppendConclusionPost_CannotAppendConclusionToConclusion()
+        {
+            var dbConversationsAndPosts = new ConversationsAndPosts();
+
+            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+                Guid.NewGuid(),
+                ConversationsAndPosts.ConvoTypeEnum.DILEMMA,
+                "Conversation for testing conclusion-to-conclusion restrictions",
+                "This conversation will test that conclusions cannot be added to other conclusions",
+                "TestyTester",
+                DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
+            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+
+            var jsonFirstConclusion = await dbConversationsAndPosts.AppendConclusionPost(
+                conversationFields["PK"],
+                conversationFields["SK"],
+                Guid.NewGuid(),
+                "TestyTesterX",
+                "This is the first conclusion on the conversation",
+                DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
+            var firstConclusionFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonFirstConclusion);
+
+            try
+            {
+                await dbConversationsAndPosts.AppendConclusionPost(
+                    firstConclusionFields["PK"],
+                    firstConclusionFields["SK"],
+                    Guid.NewGuid(),
+                    "TestyTesterW",
+                    "This conclusion should fail to be added to the first conclusion",
+                    DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
+
+                Assert.Fail("Expected ArgumentException when trying to append conclusion to another conclusion, but no exception was thrown.");
+            }
+            catch (ArgumentException e)
+            {
+                Assert.Contains("Cannot append a Conclusion post to a Comment or Conclusion post", e.Message);
+            }
+        }
     }
 }
