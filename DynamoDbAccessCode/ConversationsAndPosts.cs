@@ -61,7 +61,6 @@ namespace DynamoDbAccessCode
             return conversation.ToString();
         }
 
-
         public async Task<List<string>> RetrieveConversations(int updatedAtYear, string filterByauthor = "")
         {
             if (updatedAtYear < 1970)
@@ -119,6 +118,11 @@ namespace DynamoDbAccessCode
             return await AppendPost(COMMENT_POST_SK_PREFIX, "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
         }
 
+        public async Task<string> AppendConclusionPost(string conversationPK, string parentPostSK, Guid newConclusionGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
+        {
+            return await AppendPost(CONCLUSION_POST_SK_PREFIX, "Conclusion", conversationPK, parentPostSK, newConclusionGuid, author, messageBody, utcCreationTime);
+        }
+
         private async Task<string> AppendPost(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
             CommonFieldsValidation(postTypeName, newGuid, messageBody, author);
@@ -151,7 +155,7 @@ namespace DynamoDbAccessCode
         private static void ValidateAllowedTreeStructure(string postTypeName, string parentPostSK)
         {
             if (parentPostSK.LastIndexOf($"#{COMMENT_POST_SK_PREFIX}#") != -1 || parentPostSK.LastIndexOf($"#{CONCLUSION_POST_SK_PREFIX}") != -1)
-                throw new ArgumentException($"Canno't append a {postTypeName} post to a Conversation or Conclusion post", nameof(parentPostSK));
+                throw new ArgumentException($"Cannot append a {postTypeName} post to a Comment or Conclusion post", nameof(parentPostSK)); 
         }
 
         private static void ValidateConversationPkIntegrity(string conversationPK)
@@ -191,7 +195,6 @@ namespace DynamoDbAccessCode
             if (string.IsNullOrWhiteSpace(messageBody))
                 throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
         }
-
 
         private static async Task AsyncExecuteWithDynamoDB(Func<AmazonDynamoDBClient, DynamoDBContext, Task> action)
         {

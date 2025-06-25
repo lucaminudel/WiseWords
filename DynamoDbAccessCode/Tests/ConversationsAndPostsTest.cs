@@ -419,7 +419,7 @@ namespace DynamoDbAccessCode.Tests
             }
             catch (ArgumentException e)
             {
-                Assert.Contains("Canno't append a Comment post to a Conversation or Conclusion post", e.Message);
+                Assert.Contains("Cannot append a Comment post to a Comment or Conclusion post", e.Message);
             }
         }
 
@@ -460,7 +460,7 @@ namespace DynamoDbAccessCode.Tests
             }
             catch (ArgumentException e)
             {
-                Assert.Contains("Canno't append a DrillDown post to a Conversation or Conclusion post", e.Message);
+                Assert.Contains("Cannot append a DrillDown post to a Comment or Conclusion post", e.Message);
             }
         }
     }
