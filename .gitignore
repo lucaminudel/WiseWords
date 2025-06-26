@@ -1,2 +1,6 @@
 SpikeA.DynamoDbAccessCode/bin
 SpikeA.DynamoDbAccessCode/obj
+SpikeB.DynamoDbAccessCode/bin
+SpikeB.DynamoDbAccessCode/obj
+SpikeB.WiseWordsAWSLambdaFacade/bin
+SpikeB.WiseWordsAWSLambdaFacade/obj
