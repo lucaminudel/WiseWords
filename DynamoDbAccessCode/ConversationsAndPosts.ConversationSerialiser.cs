@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace DynamoDbAccessCode
+namespace WiseWordsSpikeA.DynamoDbAccessCode
 {
     public partial class ConversationsAndPosts
     {

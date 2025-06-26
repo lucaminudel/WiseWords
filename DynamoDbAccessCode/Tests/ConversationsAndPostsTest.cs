@@ -3,7 +3,7 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.DynamoDBv2;
 using Newtonsoft.Json;
 
-namespace DynamoDbAccessCode.Tests
+namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
 {
 
     public class DynamoDbConversationsAndPostsTest : IAsyncLifetime

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>Net8.0</TargetFramework>
-    <RootNamespace>WiseWordsSpikes.DynamoDbLocalDockerImage</RootNamespace>
+    <RootNamespace>WiseWordsSpikeA.DynamoDbAccessCode</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 

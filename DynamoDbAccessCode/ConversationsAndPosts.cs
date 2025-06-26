@@ -3,7 +3,7 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Newtonsoft.Json;
 
-namespace DynamoDbAccessCode
+namespace WiseWordsSpikeA.DynamoDbAccessCode
 {
     public partial class ConversationsAndPosts
     {
