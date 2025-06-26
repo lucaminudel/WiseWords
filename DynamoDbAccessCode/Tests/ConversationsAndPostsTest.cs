@@ -793,7 +793,7 @@ namespace DynamoDbAccessCode.Tests
                 "This comment should also be deleted.",
                 DateTimeOffset.UtcNow);
 
-            await db.DeleteConversationAndPosts(conversationPK);
+            await db.AdministrativeNonAtomicDeleteConversationAndPosts(conversationPK);
 
             var posts = await db.RetrieveConversationPosts(conversationPK);
             Assert.Empty(posts);
@@ -811,7 +811,7 @@ namespace DynamoDbAccessCode.Tests
             var db = new ConversationsAndPosts();
             while (_dbCleanupConversationPostTest.Count > 0)
             {
-                await db.DeleteConversationAndPosts(_dbCleanupConversationPostTest.Dequeue());
+                await db.AdministrativeNonAtomicDeleteConversationAndPosts(_dbCleanupConversationPostTest.Dequeue());
             }
         }
 

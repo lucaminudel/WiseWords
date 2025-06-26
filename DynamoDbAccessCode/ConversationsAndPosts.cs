@@ -141,7 +141,7 @@ namespace DynamoDbAccessCode
             return jsonResults;
         }
 
-        public async Task DeleteConversationAndPosts(string conversationPK)
+        public async Task AdministrativeNonAtomicDeleteConversationAndPosts(string conversationPK)
         {
             ValidateConversationPkIntegrity(conversationPK);
 
@@ -168,20 +168,20 @@ namespace DynamoDbAccessCode
 
         public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPost(DRILL_DOWN_POST_SK_PREFIX, "DrillDown", conversationPK, parentPostSK, newPostGuid, author, messageBody, utcCreationTime);
+            return await AppendPostWithoutReferencialIntegrityCheck(DRILL_DOWN_POST_SK_PREFIX, "DrillDown", conversationPK, parentPostSK, newPostGuid, author, messageBody, utcCreationTime);
         }
 
         public async Task<string> AppendCommentPost(string conversationPK, string parentPostSK, Guid newCommentGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPost(COMMENT_POST_SK_PREFIX, "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
+            return await AppendPostWithoutReferencialIntegrityCheck(COMMENT_POST_SK_PREFIX, "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
         }
 
         public async Task<string> AppendConclusionPost(string conversationPK, string parentPostSK, Guid newConclusionGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPost(CONCLUSION_POST_SK_PREFIX, "Conclusion", conversationPK, parentPostSK, newConclusionGuid, author, messageBody, utcCreationTime);
+            return await AppendPostWithoutReferencialIntegrityCheck(CONCLUSION_POST_SK_PREFIX, "Conclusion", conversationPK, parentPostSK, newConclusionGuid, author, messageBody, utcCreationTime);
         }
 
-        private async Task<string> AppendPost(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
+        private async Task<string> AppendPostWithoutReferencialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
             CommonFieldsValidation(postTypeName, newGuid, messageBody, author);
 
