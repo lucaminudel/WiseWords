@@ -1,6 +1,7 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
+using Newtonsoft.Json;
 
 namespace DynamoDbAccessCode
 {
@@ -140,6 +141,31 @@ namespace DynamoDbAccessCode
             return jsonResults;
         }
 
+        public async Task DeleteConversationAndPosts(string conversationPK)
+        {
+            ValidateConversationPkIntegrity(conversationPK);
+
+            var conversationPosts = await RetrieveConversationPosts(conversationPK);
+
+            if (conversationPosts.Count == 0)
+            {
+                return;
+            }
+
+            await AsyncExecuteWithDynamoDB(async (client, context) =>
+            {
+                var batchWrite = context.CreateBatchWrite<PostSerialiser>();
+
+                var posts = conversationPosts
+                    .Select(JsonConvert.DeserializeObject<PostSerialiser>)
+                    .ToList();
+
+                posts.ForEach(batchWrite.AddDeleteItem);
+
+                await batchWrite.ExecuteAsync();
+            });
+        }
+
         public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
             return await AppendPost(DRILL_DOWN_POST_SK_PREFIX, "DrillDown", conversationPK, parentPostSK, newPostGuid, author, messageBody, utcCreationTime);
@@ -187,7 +213,7 @@ namespace DynamoDbAccessCode
         private static void ValidateAllowedTreeStructure(string postTypeName, string parentPostSK)
         {
             if (parentPostSK.LastIndexOf($"#{COMMENT_POST_SK_PREFIX}#") != -1 || parentPostSK.LastIndexOf($"#{CONCLUSION_POST_SK_PREFIX}") != -1)
-                throw new ArgumentException($"Cannot append a {postTypeName} post to a Comment or Conclusion post", nameof(parentPostSK)); 
+                throw new ArgumentException($"Cannot append a {postTypeName} post to a Comment or Conclusion post", nameof(parentPostSK));
         }
 
         private static void ValidateConversationPkIntegrity(string conversationPK)

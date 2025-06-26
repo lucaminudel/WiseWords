@@ -6,12 +6,16 @@ using Newtonsoft.Json;
 namespace DynamoDbAccessCode.Tests
 {
 
-    public class DynamoDbConversationsAndPostsTest
+    public class DynamoDbConversationsAndPostsTest : IAsyncLifetime
     {
+        private readonly Queue<string> _dbCleanupConversationPostTest = new();
+
+        public Task InitializeAsync() => Task.CompletedTask;
+
         [Fact]
         public async Task CreateNewConversation_SavesItemSuccessfully()
         {
-            var guid = Guid.NewGuid();
+            var guid = GetNewConversationGuid();
             var convoType = ConversationsAndPosts.ConvoTypeEnum.DILEMMA;
             var title = "Develop and test AWS lambda locally without cloud access";
             var messageBody = "looking for a practical way to create cloud code on a local dev environment in a reliable efficient way";
@@ -73,13 +77,12 @@ namespace DynamoDbAccessCode.Tests
         [Fact]
         public async Task CreateNewConversation_SaveItemIsIdempotent()
         {
-            var guid = Guid.NewGuid();
+            var guid = GetNewConversationGuid();
             var convoType = ConversationsAndPosts.ConvoTypeEnum.DILEMMA;
             var title = "Idempotent title";
             var messageBody = "Itempotent message bodey";
             var authorId = "IdempotentTester";
             var utcNow = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
-
 
             var dbConversationsAndPosts = new ConversationsAndPosts();
             await dbConversationsAndPosts.CreateNewConversation(guid, convoType, title, messageBody, authorId, utcNow);
@@ -108,12 +111,12 @@ namespace DynamoDbAccessCode.Tests
 
             // Create conversations with non consecutive UpdateAt timestamps to ensure they are sorted by UpdateAt in the retrieval method.
             var dbConversationsAndPosts = new ConversationsAndPosts();
-            var c1 = await dbConversationsAndPosts.CreateNewConversation(Guid.NewGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var c6 = await dbConversationsAndPosts.CreateNewConversation(Guid.NewGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-10-01T00:00:06Z"));
-            var c2 = await dbConversationsAndPosts.CreateNewConversation(Guid.NewGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var c5 = await dbConversationsAndPosts.CreateNewConversation(Guid.NewGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-07-01T00:00:05Z"));
-            var c4 = await dbConversationsAndPosts.CreateNewConversation(Guid.NewGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-13T00:00:04Z"));
-            var c3 = await dbConversationsAndPosts.CreateNewConversation(Guid.NewGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-12T00:00:03Z"));
+            var c1 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
+            var c6 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-10-01T00:00:06Z"));
+            var c2 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
+            var c5 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-07-01T00:00:05Z"));
+            var c4 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-13T00:00:04Z"));
+            var c3 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-12T00:00:03Z"));
 
             var newConversationsSortedByUpdatedAt = new List<Dictionary<string, string>>
             {
@@ -144,13 +147,12 @@ namespace DynamoDbAccessCode.Tests
         [Fact]
         public async Task AppendDrillDownPost_SavesPostSuccessfully()
         {
-            var conversationPostGuid = Guid.NewGuid();
+            var conversationPostGuid = GetNewConversationGuid();
 
             var drillDownPostGuid = Guid.NewGuid();
             var drillDownPostAuthor = "TestyTesterX";
             var drillDownpostMessageBody = "This is a drill-down post responding to the conversation";
             var drillDownPostCreationTime = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
-
 
             var dbConversationsAndPosts = new ConversationsAndPosts();
 
@@ -162,7 +164,6 @@ namespace DynamoDbAccessCode.Tests
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
             var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
-
 
             var jsonDrillDownPost = await dbConversationsAndPosts.AppendDrillDownPost(
                 conversationFields["PK"],
@@ -206,7 +207,7 @@ namespace DynamoDbAccessCode.Tests
             var dbConversationsAndPosts = new ConversationsAndPosts();
 
             var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                Guid.NewGuid(),
+                GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
                 "Conversation with nested drill-down posts",
                 "This conversation will have nested drill-down posts",
@@ -254,7 +255,7 @@ namespace DynamoDbAccessCode.Tests
             Assert.Equal(secondDrillDownPostAuthor, secondDrillDownPostFields["Author"]);
 
             Assert.Equal(conversationFields["PK"], thirdDrillDownPostFields["PK"]);
-            Assert.Equal("#DD#" + firstDrillDownPostGuid.ToString() + "#DD#" + secondDrillDownPostGuid.ToString() + "#DD#" + thirdDrillDownPostGuid.ToString(),             thirdDrillDownPostFields["SK"]);
+            Assert.Equal("#DD#" + firstDrillDownPostGuid.ToString() + "#DD#" + secondDrillDownPostGuid.ToString() + "#DD#" + thirdDrillDownPostGuid.ToString(), thirdDrillDownPostFields["SK"]);
             Assert.Equal(thirDrillDownPostMessageBody, thirdDrillDownPostFields["MessageBody"]);
             Assert.Equal(thirdDrillDownPostTime.ToUnixTimeSeconds().ToString(), thirdDrillDownPostFields["UpdatedAt"]);
             Assert.Equal(thirdDrillDownPostAuthor, thirdDrillDownPostFields["Author"]);
@@ -264,7 +265,7 @@ namespace DynamoDbAccessCode.Tests
         [Fact]
         public async Task AppendCommentPost_SavesCommentSuccessfully()
         {
-            var conversationGuid = Guid.NewGuid();
+            var conversationGuid = GetNewConversationGuid();
 
             var commentPostGuid = Guid.NewGuid();
             var conversationPK = "CONVO#" + conversationGuid.ToString();
@@ -327,7 +328,7 @@ namespace DynamoDbAccessCode.Tests
             var dbConversationsAndPosts = new ConversationsAndPosts();
 
             var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                Guid.NewGuid(),
+                GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
                 "Conversation with drill-down posts and comments",
                 "This conversation will have drill-down posts with comments",
@@ -388,7 +389,7 @@ namespace DynamoDbAccessCode.Tests
         {
 
             var jsonConversation = await new ConversationsAndPosts().CreateNewConversation(
-                Guid.NewGuid(),
+                GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.QUESTION,
                 "Conversation for testing comment restrictions",
                 "This conversation will test that comments cannot be added to other comments",
@@ -429,7 +430,7 @@ namespace DynamoDbAccessCode.Tests
             var dbConversationsAndPosts = new ConversationsAndPosts();
 
             var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                Guid.NewGuid(),
+                GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
                 "Conversation for testing drill-down post restrictions",
                 "This conversation will test that drill-down posts cannot be added to comments",
@@ -467,7 +468,7 @@ namespace DynamoDbAccessCode.Tests
         [Fact]
         public async Task AppendConclusionPost_SavesConclusionToConversationSuccessfully()
         {
-            var conversationGuid = Guid.NewGuid();
+            var conversationGuid = GetNewConversationGuid();
 
             var conclusionPostGuid = Guid.NewGuid();
             var conclusionPostAuthor = "TestyTesterX";
@@ -519,7 +520,7 @@ namespace DynamoDbAccessCode.Tests
             var dbConversationsAndPosts = new ConversationsAndPosts();
 
             var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                Guid.NewGuid(),
+                GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
                 "Conversation with drill-down posts and conclusions",
                 "This conversation will have drill-down posts with conclusions",
@@ -558,7 +559,7 @@ namespace DynamoDbAccessCode.Tests
             var dbConversationsAndPosts = new ConversationsAndPosts();
 
             var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                Guid.NewGuid(),
+                GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.QUESTION,
                 "Conversation for testing conclusion restrictions",
                 "This conversation will test that conclusions cannot be added to comments",
@@ -599,7 +600,7 @@ namespace DynamoDbAccessCode.Tests
             var dbConversationsAndPosts = new ConversationsAndPosts();
 
             var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                Guid.NewGuid(),
+                GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.DILEMMA,
                 "Conversation for testing conclusion-to-conclusion restrictions",
                 "This conversation will test that conclusions cannot be added to other conclusions",
@@ -637,7 +638,7 @@ namespace DynamoDbAccessCode.Tests
         [Fact]
         public async Task RetrieveConversationPosts_RetrievesAllPostsSuccessfullyAndInOrder()
         {
-            var conversationGuid = Guid.NewGuid();
+            var conversationGuid = GetNewConversationGuid();
             var drillDownGuid = Guid.NewGuid();
             var commentGuid = Guid.NewGuid();
             var conclusionGuid = Guid.NewGuid();
@@ -765,6 +766,52 @@ namespace DynamoDbAccessCode.Tests
             catch (ArgumentException e)
             {
                 Assert.Contains("Conversation PK cannot be null or empty", e.Message);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteConversationAndPosts_DeletesAllItemsSuccessfully()
+        {
+            var conversationGuid = GetNewConversationGuid();
+            var db = new ConversationsAndPosts();
+
+            var jsonConversation = await db.CreateNewConversation(
+                conversationGuid,
+                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
+                "Test Deletion",
+                "This conversation should be deleted.",
+                "DeletionTester",
+                DateTimeOffset.UtcNow);
+            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationPK = conversationFields["PK"];
+
+            await db.AppendCommentPost(
+                conversationPK,
+                "METADATA",
+                Guid.NewGuid(),
+                "Commenter",
+                "This comment should also be deleted.",
+                DateTimeOffset.UtcNow);
+
+            await db.DeleteConversationAndPosts(conversationPK);
+
+            var posts = await db.RetrieveConversationPosts(conversationPK);
+            Assert.Empty(posts);
+        }
+
+        private Guid GetNewConversationGuid()
+        {
+            var guid = Guid.NewGuid();
+            _dbCleanupConversationPostTest.Enqueue($"CONVO#{guid}");
+
+            return guid;
+        }
+        public async Task DisposeAsync()
+        {
+            var db = new ConversationsAndPosts();
+            while (_dbCleanupConversationPostTest.Count > 0)
+            {
+                await db.DeleteConversationAndPosts(_dbCleanupConversationPostTest.Dequeue());
             }
         }
 
