@@ -12,5 +12,5 @@
   "function-runtime": "dotnet8",
   "function-memory-size": 512,
   "function-timeout": 30,
-  "function-handler": "WiseWordsLambda::WiseWordsLambda.Function::FunctionHandler"
+  "function-handler": "SpikeB.WiseWordsAWSLambdaFacade::SpikeB.WiseWordsAWSLambdaFacade.Function::FunctionHandler"
 }
