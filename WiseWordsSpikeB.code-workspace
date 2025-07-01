@@ -1,7 +1,14 @@
 {
     "folders": [
-        { "path": "SpikeB.DynamoDbAccessCode" },
-        { "path": "SpikeB.WiseWordsAWSLambdaFacade" }
+        {
+            "path": "SpikeB.DynamoDbAccessCode"
+        },
+        {
+            "path": "SpikeB.WiseWordsAWSLambdaFacade"
+        },
+        {
+            "path": "SpikeB.WiseWordsAWSLambdaFacade.Tests"
+        }
     ],
     "settings": {}
 }

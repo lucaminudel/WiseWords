@@ -7,17 +7,25 @@ public class ConversationsAndPosts
 
     public enum ConvoTypeEnum
     {
-        QUESTION,
-        PROBLEM,
-        DILEMMA
+        QUESTION = 1,
+        PROBLEM = 2,
+        DILEMMA = 3
     }
 
     public async Task<string> CreateNewConversation(Guid newGuid, ConvoTypeEnum convoType, string title, string messageBody, string author, DateTimeOffset utcCreationTime)
     {
-        // Placeholder for .NET AWS SDK code that writes a Conversation root-post item to DynamoDb single-table WiseWordsTable, and returns its json string
         await Task.CompletedTask;
 
-        return string.Empty;
+        return $@"{{" 
+             + $@"  ""PK"": {{ ""S"": ""CONVO#{newGuid}"" }}," 
+             + $@"   ""SK"": {{ ""S"": ""METADATA"" }}," 
+             + $@"  ""Author"": {{""S"": ""{author}""}}," 
+             + $@"  ""UpdatedAtYear"": {{ ""N"": ""{utcCreationTime.Year}""}}," 
+             + $@"  ""UpdatedAt"": {{ ""N"": ""{utcCreationTime.ToUnixTimeSeconds()}"" }}," 
+             + $@"  ""ConvoType"": {{ ""S"": ""{convoType}"" }}," 
+             + $@"  ""Title"": {{ ""S"": ""{title}"" }}," 
+             + $@"  ""MessageBody"": {{ ""S"": ""{messageBody}""}}" 
+             + $@"  }}";
     }
 
     public async Task<List<string>> RetrieveConversations(int updatedAtYear, string filterByauthor = "")

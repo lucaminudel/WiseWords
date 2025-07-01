@@ -4,3 +4,5 @@ SpikeB.DynamoDbAccessCode/bin
 SpikeB.DynamoDbAccessCode/obj
 SpikeB.WiseWordsAWSLambdaFacade/bin
 SpikeB.WiseWordsAWSLambdaFacade/obj
+SpikeB.WiseWordsAWSLambdaFacade.Tests/bin
+SpikeB.WiseWordsAWSLambdaFacade.Tests/obj

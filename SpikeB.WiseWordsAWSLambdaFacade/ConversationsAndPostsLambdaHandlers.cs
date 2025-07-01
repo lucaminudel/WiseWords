@@ -5,7 +5,7 @@ using DynamoDbAccessCodeToAWSLambda;
 
 namespace SpikeB.WiseWordsAWSLambdaFacade;
 
-public class Function
+public class ConversationsAndPostsLambdaHandlers
 {
     private readonly ConversationsAndPosts _service = new ConversationsAndPosts();
 
@@ -29,61 +29,4 @@ public class Function
 
     public async Task<string> AppendConclusionPostHandler(AppendConclusionPostRequest req, ILambdaContext context)
         => await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, req.Author, req.MessageBody, req.UtcCreationTime);
-}
-
-// Request DTOs
-public class CreateNewConversationRequest
-{
-    public Guid NewGuid { get; set; }
-    public ConversationsAndPosts.ConvoTypeEnum ConvoType { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string MessageBody { get; set; } = string.Empty;
-    public string Author { get; set; } = string.Empty;
-    public DateTimeOffset UtcCreationTime { get; set; }
-}
-
-public class RetrieveConversationsRequest
-{
-    public int UpdatedAtYear { get; set; }
-    public string FilterByAuthor { get; set; } = string.Empty;
-}
-
-public class RetrieveConversationPostsRequest
-{
-    public string ConversationPK { get; set; } = string.Empty;
-}
-
-public class DeleteConversationRequest
-{
-    public string ConversationPK { get; set; } = string.Empty;
-}
-
-public class AppendDrillDownPostRequest
-{
-    public string ConversationPK { get; set; } = string.Empty;
-    public string ParentPostSK { get; set; } = string.Empty;
-    public Guid NewPostGuid { get; set; }
-    public string Author { get; set; } = string.Empty;
-    public string MessageBody { get; set; } = string.Empty;
-    public DateTimeOffset UtcCreationTime { get; set; }
-}
-
-public class AppendCommentPostRequest
-{
-    public string ConversationPK { get; set; } = string.Empty;
-    public string ParentPostSK { get; set; } = string.Empty;
-    public Guid NewCommentGuid { get; set; }
-    public string Author { get; set; } = string.Empty;
-    public string MessageBody { get; set; } = string.Empty;
-    public DateTimeOffset UtcCreationTime { get; set; }
-}
-
-public class AppendConclusionPostRequest
-{
-    public string ConversationPK { get; set; } = string.Empty;
-    public string ParentPostSK { get; set; } = string.Empty;
-    public Guid NewConclusionGuid { get; set; }
-    public string Author { get; set; } = string.Empty;
-    public string MessageBody { get; set; } = string.Empty;
-    public DateTimeOffset UtcCreationTime { get; set; }
 }
