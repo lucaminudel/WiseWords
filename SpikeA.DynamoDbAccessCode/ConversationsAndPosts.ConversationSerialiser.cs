@@ -1,4 +1,5 @@
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace WiseWordsSpikeA.DynamoDbAccessCode
 {
@@ -11,7 +12,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode
 
             public ConversationSerialiser(string json) : base(json)
             {
-                var conversation = JsonConvert.DeserializeObject<ConversationSerialiser>(json);
+                var conversation = JsonSerializer.Deserialize<ConversationSerialiser>(json);
                 ConvoType = conversation.ConvoType;
                 Title = conversation.Title;
                 UpdatedAtYear = conversation.UpdatedAtYear;
@@ -23,7 +24,11 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode
 
             public override string ToString()
             {
-                return JsonConvert.SerializeObject(this, Formatting.Indented);
+                return JsonSerializer.Serialize(this, new JsonSerializerOptions 
+                { 
+                    WriteIndented = true,
+                    NumberHandling = JsonNumberHandling.WriteAsString
+                });
             }
         }
         

@@ -1,7 +1,8 @@
 using Xunit;
 using Amazon.DynamoDBv2.Model;
 using Amazon.DynamoDBv2;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
 {
@@ -9,6 +10,16 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
     public class DynamoDbConversationsAndPostsTest : IAsyncLifetime
     {
         private readonly Queue<string> _dbCleanupConversationPostTest = new();
+        
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            NumberHandling = JsonNumberHandling.WriteAsString | JsonNumberHandling.AllowReadingFromString
+        };
+        
+        private static Dictionary<string, string> DeserializeToStringDictionary(string json)
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
+        }
 
         public Task InitializeAsync() => Task.CompletedTask;
 
@@ -63,7 +74,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 Assert.Fail($"General Error: {e.Message}");
             }
 
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
             Assert.Equal("CONVO#" + guid.ToString(), conversationFields["PK"]);
             Assert.Equal("METADATA", conversationFields["SK"]);
             Assert.Equal(authorId, conversationFields["Author"]);
@@ -90,7 +101,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
             utcNow = DateTimeOffset.Parse("1970-01-01T00:00:12Z");
             var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(guid, convoType, title, messageBody, authorId, utcNow);
 
-            var fields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var fields = DeserializeToStringDictionary(jsonConversation);
             Assert.Equal("CONVO#" + guid.ToString(), fields["PK"]);
             Assert.Equal("METADATA", fields["SK"]);
             Assert.Equal(authorId, fields["Author"]);
@@ -120,12 +131,12 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
 
             var newConversationsSortedByUpdatedAt = new List<Dictionary<string, string>>
             {
-                JsonConvert.DeserializeObject<Dictionary<string, string>>(c1),
-                JsonConvert.DeserializeObject<Dictionary<string, string>>(c2),
-                JsonConvert.DeserializeObject<Dictionary<string, string>>(c3),
-                JsonConvert.DeserializeObject<Dictionary<string, string>>(c4),
-                JsonConvert.DeserializeObject<Dictionary<string, string>>(c5),
-                JsonConvert.DeserializeObject<Dictionary<string, string>>(c6)
+                DeserializeToStringDictionary(c1),
+                DeserializeToStringDictionary(c2),
+                DeserializeToStringDictionary(c3),
+                DeserializeToStringDictionary(c4),
+                DeserializeToStringDictionary(c5),
+                DeserializeToStringDictionary(c6)
             };
 
             var retrievedConversations = await dbConversationsAndPosts.RetrieveConversations(1970, uniqueAuthor);
@@ -133,7 +144,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
             Assert.Equal(newConversationsSortedByUpdatedAt.Count, retrievedConversations.Count);
             for (int i = 0; i < retrievedConversations.Count; i++)
             {
-                var retrievedConversationJson = JsonConvert.DeserializeObject<Dictionary<string, string>>(retrievedConversations[i]);
+                var retrievedConversationJson = DeserializeToStringDictionary(retrievedConversations[i]);
 
                 Assert.Equal(newConversationsSortedByUpdatedAt[i]["PK"], retrievedConversationJson["PK"]);
                 Assert.Equal(newConversationsSortedByUpdatedAt[i]["Author"], retrievedConversationJson["Author"]);
@@ -163,7 +174,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This is the main conversation that will have drill-down posts",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonDrillDownPost = await dbConversationsAndPosts.AppendDrillDownPost(
                 conversationFields["PK"],
@@ -172,7 +183,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 drillDownPostAuthor,
                 drillDownpostMessageBody,
                 drillDownPostCreationTime);
-            var drillDownfields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDownPost);
+            var drillDownfields = DeserializeToStringDictionary(jsonDrillDownPost);
 
             Assert.True(string.IsNullOrEmpty(drillDownfields.GetValueOrDefault("UpdatedAtYear")));
             Assert.True(string.IsNullOrEmpty(drillDownfields.GetValueOrDefault("ConvoType")));
@@ -213,7 +224,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation will have nested drill-down posts",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonDrillDownFirstPost = await dbConversationsAndPosts.AppendDrillDownPost(
                     conversationFields["PK"],
@@ -222,7 +233,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                     firstDrillDownPostAuthor,
                     firstDrillDownPostMessageBody,
                     firstDrillDownPostTime);
-            var firstDrillDownPostFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDownFirstPost);
+            var firstDrillDownPostFields = DeserializeToStringDictionary(jsonDrillDownFirstPost);
 
             var jsonDrillDownSecondPost = await dbConversationsAndPosts.AppendDrillDownPost(
                 firstDrillDownPostFields["PK"],
@@ -231,7 +242,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 secondDrillDownPostAuthor,
                 secondDrillDownPostMessageBody,
                 secondDrillDownPostTime);
-            var secondDrillDownPostFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDownSecondPost);
+            var secondDrillDownPostFields = DeserializeToStringDictionary(jsonDrillDownSecondPost);
 
             var jsonDrillDownThirdPost = await dbConversationsAndPosts.AppendDrillDownPost(
                 secondDrillDownPostFields["PK"],
@@ -240,7 +251,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 thirdDrillDownPostAuthor,
                 thirDrillDownPostMessageBody,
                 thirdDrillDownPostTime);
-            var thirdDrillDownPostFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDownThirdPost);
+            var thirdDrillDownPostFields = DeserializeToStringDictionary(jsonDrillDownThirdPost);
 
             Assert.Equal(conversationFields["PK"], firstDrillDownPostFields["PK"]);
             Assert.Equal("#DD#" + firstDrillDownPostGuid.ToString(), firstDrillDownPostFields["SK"]);
@@ -292,7 +303,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 commentPostMessageBody,
                 commentPostCreationTime);
 
-            var commentFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonCommentPost);
+            var commentFields = DeserializeToStringDictionary(jsonCommentPost);
 
             Assert.True(string.IsNullOrEmpty(commentFields.GetValueOrDefault("UpdatedAtYear")));
             Assert.True(string.IsNullOrEmpty(commentFields.GetValueOrDefault("ConvoType")));
@@ -334,7 +345,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation will have drill-down posts with comments",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonConversationComment = await dbConversationsAndPosts.AppendCommentPost(
                 conversationFields["PK"],
@@ -343,7 +354,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 conversationCommentAuthor,
                 conversationCommentMessageBody,
                 conversationCommentTime);
-            var conversationCommentFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversationComment);
+            var conversationCommentFields = DeserializeToStringDictionary(jsonConversationComment);
 
             var jsonDrillDownPost = await dbConversationsAndPosts.AppendDrillDownPost(
                     conversationFields["PK"],
@@ -352,7 +363,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                     drillDownPostAuthor,
                     drillDownPostMessageBody,
                     drillDownPostTime);
-            var drillDownPostFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDownPost);
+            var drillDownPostFields = DeserializeToStringDictionary(jsonDrillDownPost);
 
             var jsonDrillDownComment = await dbConversationsAndPosts.AppendCommentPost(
                 drillDownPostFields["PK"],
@@ -375,7 +386,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
             Assert.Equal(conversationCommentTime.ToUnixTimeSeconds().ToString(), conversationCommentFields["UpdatedAt"]);
             Assert.Equal(conversationCommentAuthor, conversationCommentFields["Author"]);
 
-            var drillDownCommentFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDownComment);
+            var drillDownCommentFields = DeserializeToStringDictionary(jsonDrillDownComment);
             Assert.Equal(conversationFields["PK"], drillDownCommentFields["PK"]);
             Assert.Equal("#DD#" + drillDownPostGuid.ToString() + "#CM#" + drillDownCommentGuid.ToString(), drillDownCommentFields["SK"]);
             Assert.Equal(drillDownCommentMessageBody, drillDownCommentFields["MessageBody"]);
@@ -395,7 +406,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation will test that comments cannot be added to other comments",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonFirstComment = await new ConversationsAndPosts().AppendCommentPost(
                 conversationFields["PK"],
@@ -404,7 +415,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "TestyTesterX",
                 "This is the first comment on the conversation",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var firstCommentFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonFirstComment);
+            var firstCommentFields = DeserializeToStringDictionary(jsonFirstComment);
 
             try
             {
@@ -436,7 +447,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation will test that drill-down posts cannot be added to comments",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonComment = await dbConversationsAndPosts.AppendCommentPost(
                 conversationFields["PK"],
@@ -445,7 +456,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "TestyTesterX",
                 "This is a comment on the conversation",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var commentFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonComment);
+            var commentFields = DeserializeToStringDictionary(jsonComment);
 
             try
             {
@@ -484,7 +495,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This is the main conversation that will have conclusion posts",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonConclusionPost = await dbConversationsAndPosts.AppendConclusionPost(
                 conversationFields["PK"],
@@ -494,7 +505,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 conclusionPostMessageBody,
                 conclusionPostCreationTime);
 
-            var conclusionFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConclusionPost);
+            var conclusionFields = DeserializeToStringDictionary(jsonConclusionPost);
 
             Assert.True(string.IsNullOrEmpty(conclusionFields.GetValueOrDefault("UpdatedAtYear")));
             Assert.True(string.IsNullOrEmpty(conclusionFields.GetValueOrDefault("ConvoType")));
@@ -526,7 +537,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation will have drill-down posts with conclusions",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonDrillDownPost = await dbConversationsAndPosts.AppendDrillDownPost(
                 conversationFields["PK"],
@@ -535,7 +546,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "TestyTesterX",
                 "This is a drill-down post",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var drillDownPostFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDownPost);
+            var drillDownPostFields = DeserializeToStringDictionary(jsonDrillDownPost);
 
             var jsonConclusionPost = await dbConversationsAndPosts.AppendConclusionPost(
                 drillDownPostFields["PK"],
@@ -544,7 +555,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 conclusionPostAuthor,
                 conclusionPostMessageBody,
                 conclusionPostTime);
-            var conclusionFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConclusionPost);
+            var conclusionFields = DeserializeToStringDictionary(jsonConclusionPost);
 
             Assert.Equal(conversationFields["PK"], conclusionFields["PK"]);
             Assert.Equal("#DD#" + drillDownPostGuid.ToString() + "#CC#" + conclusionPostGuid.ToString(), conclusionFields["SK"]);
@@ -565,7 +576,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation will test that conclusions cannot be added to comments",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonComment = await dbConversationsAndPosts.AppendCommentPost(
                 conversationFields["PK"],
@@ -574,7 +585,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "TestyTesterX",
                 "This is a comment on the conversation",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var commentFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonComment);
+            var commentFields = DeserializeToStringDictionary(jsonComment);
 
             try
             {
@@ -606,7 +617,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation will test that conclusions cannot be added to other conclusions",
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonFirstConclusion = await dbConversationsAndPosts.AppendConclusionPost(
                 conversationFields["PK"],
@@ -615,7 +626,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "TestyTesterX",
                 "This is the first conclusion on the conversation",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var firstConclusionFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonFirstConclusion);
+            var firstConclusionFields = DeserializeToStringDictionary(jsonFirstConclusion);
 
             try
             {
@@ -655,7 +666,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation will have various types of posts",
                 authorPrefix,
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
             var jsonDrillDown = await dbConversationsAndPosts.AppendDrillDownPost(
                 conversationFields["PK"],
@@ -664,7 +675,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 authorPrefix + "-DD",
                 "This is a drill-down post",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var drillDownFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonDrillDown);
+            var drillDownFields = DeserializeToStringDictionary(jsonDrillDown);
 
             await dbConversationsAndPosts.AppendCommentPost(
                 conversationFields["PK"],
@@ -692,7 +703,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
 
             var allPosts = await dbConversationsAndPosts.RetrieveConversationPosts(conversationFields["PK"]);
 
-            var parsedPosts = allPosts.Select(JsonConvert.DeserializeObject<Dictionary<string, string>>).ToList();
+            var parsedPosts = allPosts.Select(json => DeserializeToStringDictionary(json)).ToList();
 
             Assert.Equal(5, parsedPosts.Count);
 
@@ -782,7 +793,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This conversation should be deleted.",
                 "DeletionTester",
                 DateTimeOffset.UtcNow);
-            var conversationFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonConversation);
+            var conversationFields = DeserializeToStringDictionary(jsonConversation);
             var conversationPK = conversationFields["PK"];
 
             await db.AppendCommentPost(

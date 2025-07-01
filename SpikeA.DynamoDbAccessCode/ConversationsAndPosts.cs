@@ -1,13 +1,13 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace WiseWordsSpikeA.DynamoDbAccessCode
 {
     public partial class ConversationsAndPosts
     {
-        // Constants for magic strings
         private const string TABLE_NAME = "WiseWordsTable";
         private const string GSI_NAME = "GSI1_LowTraffic_ConversationsByYear";
         private const string SERVICE_URL = "http://localhost:8000";
@@ -104,7 +104,11 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode
 
             });
 
-            var jsonResults = conversations.Select(doc => doc.ToJson()).ToList();
+            var jsonResults = conversations
+                .Select(doc => JsonSerializer.Serialize(
+                    doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()), 
+                    JsonOptions))
+                .ToList();
             return jsonResults;
 
         }
@@ -137,7 +141,11 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode
                 conversationPosts = await search.GetNextSetAsync();
             });
 
-            var jsonResults = conversationPosts.Select(doc => doc.ToJson()).ToList();
+            var jsonResults = conversationPosts
+                .Select(doc => JsonSerializer.Serialize(
+                    doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()), 
+                    JsonOptions))
+                .ToList();
             return jsonResults;
         }
 
@@ -157,7 +165,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode
                 var batchWrite = context.CreateBatchWrite<PostSerialiser>();
 
                 var posts = conversationPosts
-                    .Select(JsonConvert.DeserializeObject<PostSerialiser>)
+                    .Select(json => JsonSerializer.Deserialize<PostSerialiser>(json, JsonOptions))
                     .ToList();
 
                 posts.ForEach(batchWrite.AddDeleteItem);
@@ -253,6 +261,11 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode
             if (string.IsNullOrWhiteSpace(messageBody))
                 throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
         }
+
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            NumberHandling = JsonNumberHandling.WriteAsString | JsonNumberHandling.AllowReadingFromString
+        };
 
         private static async Task AsyncExecuteWithDynamoDB(Func<AmazonDynamoDBClient, DynamoDBContext, Task> action)
         {

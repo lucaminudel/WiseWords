@@ -1,5 +1,6 @@
 using Amazon.DynamoDBv2.DataModel;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace WiseWordsSpikeA.DynamoDbAccessCode
 {
@@ -13,7 +14,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode
 
             public PostSerialiser(string json)
             {
-                var conversation = JsonConvert.DeserializeObject<PostSerialiser>(json);
+                var conversation = JsonSerializer.Deserialize<PostSerialiser>(json);
                 PK = conversation.PK;
                 SK = conversation.SK;
                 MessageBody = conversation.MessageBody;
@@ -33,7 +34,11 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode
 
             public override string ToString()
             {
-                return JsonConvert.SerializeObject(this, Formatting.Indented);
+                return JsonSerializer.Serialize(this, new JsonSerializerOptions 
+                { 
+                    WriteIndented = true,
+                    NumberHandling = JsonNumberHandling.WriteAsString
+                });
             }
         }
 
