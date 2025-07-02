@@ -1,8 +1,7 @@
 using Xunit;
-using Amazon.DynamoDBv2.Model;
-using Amazon.DynamoDBv2;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FluentAssertions;
 
 namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
 {
@@ -16,120 +15,107 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
             NumberHandling = JsonNumberHandling.WriteAsString | JsonNumberHandling.AllowReadingFromString
         };
         
+         private enum PostType { Conversation, Post }
+        
         private static Dictionary<string, string> DeserializeToStringDictionary(string json)
         {
             return JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
         }
+
+        private static TestDataBuilders.ConversationBuilder AConversation() => TestDataBuilders.AConversation();
+        private static TestDataBuilders.PostBuilder APost() => TestDataBuilders.APost();
+        private static TestDataBuilders.DrillDownHierarchyBuilder ADrillDownHierarchy() => TestDataBuilders.ADrillDownHierarchy();
+
 
         public Task InitializeAsync() => Task.CompletedTask;
 
         [Fact]
         public async Task CreateNewConversation_SavesItemSuccessfully()
         {
+            // Arrange
             var guid = GetNewConversationGuid();
-            var convoType = ConversationsAndPosts.ConvoTypeEnum.DILEMMA;
-            var title = "Develop and test AWS lambda locally without cloud access";
-            var messageBody = "looking for a practical way to create cloud code on a local dev environment in a reliable efficient way";
-            var authorId = "TestyTester";
-            var utcNow = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
+            var timestamp = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
+            var db = new ConversationsAndPosts();
 
-            string jsonConversation = null;
+            // Act
+            var conversationFields = await AConversation()
+                .WithGuid(guid)
+                .WithType(ConversationsAndPosts.ConvoTypeEnum.DILEMMA)
+                .WithTitle("Develop and test AWS lambda locally without cloud access")
+                .WithMessageBody("looking for a practical way to create cloud code on a local dev environment in a reliable efficient way")
+                .WithAuthor("TestyTester")
+                .WithTimestamp(timestamp)
+                .CreateAsync(db);
 
-            try
+            // Assert
+            var expectedFields = new Dictionary<string, string>
             {
-                var dbConversationsAndPosts = new ConversationsAndPosts();
-                jsonConversation = await dbConversationsAndPosts.CreateNewConversation(guid, convoType, title, messageBody, authorId, utcNow);
+                ["PK"] = $"CONVO#{guid}",
+                ["SK"] = "METADATA",
+                ["Author"] = "TestyTester",
+                ["Title"] = "Develop and test AWS lambda locally without cloud access",
+                ["ConvoType"] = "DILEMMA",
+                ["MessageBody"] = "looking for a practical way to create cloud code on a local dev environment in a reliable efficient way",
+                ["UpdatedAt"] = timestamp.ToUnixTimeSeconds().ToString(),
+                ["UpdatedAtYear"] = timestamp.Year.ToString()
+            };
 
-            }
-            catch (ConditionalCheckFailedException e)
-            {
-                Assert.Fail($"CONDITIONAL CHECK FAILED: The write operation for the item failed because a condition was not met. This often indicates a concurrency issue or a business rule violation. Error: {e.Message}");
-            }
-            catch (ItemCollectionSizeLimitExceededException e)
-            {
-                Assert.Fail($"ITEM COLLECTION SIZE LIMIT EXCEEDED: The item collection size limit was exceeded. Error: {e.Message}");
-            }
-            catch (ResourceNotFoundException e)
-            {
-                Assert.Fail($"RESOURCE NOT FOUND: The specified resource does not exist. Error: {e.Message}");
-            }
-            catch (RequestLimitExceededException e)
-            {
-                Assert.Fail($"REQUEST LIMIT EXCEEDED: The write operation for the item was throttled due to request limits. Error: {e.Message}");
-            }
-            catch (ProvisionedThroughputExceededException e)
-            {
-                Assert.Fail($"PROVISIONED THROUGHPUT EXCEEDED: The write operation for the item was throttled. Error: {e.Message}");
-            }
-            catch (InternalServerErrorException e)
-            {
-                Assert.Fail($"INTERNAL SERVER ERROR: An unexpected error occurred on the server. Error: {e.Message}");
-            }
-            catch (AmazonDynamoDBException e)
-            {
-                Assert.Fail($"DynamoDB Error: {e.Message}\nError Code: {e.ErrorCode}\nError Type: {e.ErrorType}\nRequest ID: {e.RequestId}");
-            }
-            catch (Exception e)
-            {
-                Assert.Fail($"General Error: {e.Message}");
-            }
-
-            var conversationFields = DeserializeToStringDictionary(jsonConversation);
-            Assert.Equal("CONVO#" + guid.ToString(), conversationFields["PK"]);
-            Assert.Equal("METADATA", conversationFields["SK"]);
-            Assert.Equal(authorId, conversationFields["Author"]);
-            Assert.Equal(title, conversationFields["Title"]);
-            Assert.Equal(convoType.ToString(), conversationFields["ConvoType"]);
-            Assert.Equal(messageBody, conversationFields["MessageBody"]);
-            Assert.Equal(utcNow.ToUnixTimeSeconds().ToString(), conversationFields["UpdatedAt"]);
-            Assert.Equal(utcNow.Year.ToString(), conversationFields["UpdatedAtYear"]);
+            AssertConversationMatches(conversationFields, expectedFields);
         }
 
         [Fact]
         public async Task CreateNewConversation_SaveItemIsIdempotent()
         {
+            // Arrange
             var guid = GetNewConversationGuid();
             var convoType = ConversationsAndPosts.ConvoTypeEnum.DILEMMA;
             var title = "Idempotent title";
             var messageBody = "Itempotent message bodey";
             var authorId = "IdempotentTester";
-            var utcNow = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
-
+            var firstTime = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
+            var secondTime = DateTimeOffset.Parse("1970-01-01T00:00:12Z");
             var dbConversationsAndPosts = new ConversationsAndPosts();
-            await dbConversationsAndPosts.CreateNewConversation(guid, convoType, title, messageBody, authorId, utcNow);
 
-            utcNow = DateTimeOffset.Parse("1970-01-01T00:00:12Z");
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(guid, convoType, title, messageBody, authorId, utcNow);
+            // Act - Create conversation twice with same GUID
+            await dbConversationsAndPosts.CreateNewConversation(guid, convoType, title, messageBody, authorId, firstTime);
+            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(guid, convoType, title, messageBody, authorId, secondTime);
 
+            // Assert - Second call should update the existing conversation
             var fields = DeserializeToStringDictionary(jsonConversation);
-            Assert.Equal("CONVO#" + guid.ToString(), fields["PK"]);
-            Assert.Equal("METADATA", fields["SK"]);
-            Assert.Equal(authorId, fields["Author"]);
-            Assert.Equal(title, fields["Title"]);
-            Assert.Equal(convoType.ToString(), fields["ConvoType"]);
-            Assert.Equal(messageBody, fields["MessageBody"]);
-            Assert.Equal(utcNow.ToUnixTimeSeconds().ToString(), fields["UpdatedAt"]);
-            Assert.Equal(utcNow.Year.ToString(), fields["UpdatedAtYear"]);
+            var expectedFields = new Dictionary<string, string>
+            {
+                ["PK"] = $"CONVO#{guid}",
+                ["SK"] = "METADATA",
+                ["Author"] = authorId,
+                ["Title"] = title,
+                ["ConvoType"] = convoType.ToString(),
+                ["MessageBody"] = messageBody,
+                ["UpdatedAt"] = secondTime.ToUnixTimeSeconds().ToString(),
+                ["UpdatedAtYear"] = secondTime.Year.ToString()
+            };
+            
+            AssertConversationMatches(fields, expectedFields);
         }
 
         [Fact]
         public async Task RetrieveConversations_RetrieveAllItemsSuccessfully()
         {
-
+            // Arrange
             var uniqueAuthor = "AutomaticTestAuthor" + Guid.NewGuid();
             var title = "A short title for a conversation";
             var messageBody = "a message body for a conversation";
+            var db = new ConversationsAndPosts();
 
-            // Create conversations with non consecutive UpdateAt timestamps to ensure they are sorted by UpdateAt in the retrieval method.
-            var dbConversationsAndPosts = new ConversationsAndPosts();
-            var c1 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var c6 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-10-01T00:00:06Z"));
-            var c2 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var c5 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-07-01T00:00:05Z"));
-            var c4 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-13T00:00:04Z"));
-            var c3 = await dbConversationsAndPosts.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-12T00:00:03Z"));
+            // Create conversations OUT OF ORDER by UpdatedAt to test that retrieval sorts them correctly
+            var c1 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
+            var c6 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-10-01T00:00:06Z"));
+            var c2 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
+            var c5 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-07-01T00:00:05Z"));
+            var c4 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-13T00:00:04Z"));
+            var c3 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-12T00:00:03Z"));
 
-            var newConversationsSortedByUpdatedAt = new List<Dictionary<string, string>>
+            // Expected order: sorted by UpdatedAt (c1, c2, c3, c4, c5, c6)
+            var expectedConversationsInOrder = new[]
             {
                 DeserializeToStringDictionary(c1),
                 DeserializeToStringDictionary(c2),
@@ -139,155 +125,135 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DeserializeToStringDictionary(c6)
             };
 
-            var retrievedConversations = await dbConversationsAndPosts.RetrieveConversations(1970, uniqueAuthor);
+            // Act
+            var retrievedConversations = await db.RetrieveConversations(1970, uniqueAuthor);
 
-            Assert.Equal(newConversationsSortedByUpdatedAt.Count, retrievedConversations.Count);
+            // Assert - Verify conversations are returned sorted by UpdatedAt
+            retrievedConversations.Should().HaveCount(expectedConversationsInOrder.Length);
+            
             for (int i = 0; i < retrievedConversations.Count; i++)
             {
-                var retrievedConversationJson = DeserializeToStringDictionary(retrievedConversations[i]);
+                var retrieved = DeserializeToStringDictionary(retrievedConversations[i]);
+                var expected = expectedConversationsInOrder[i];
 
-                Assert.Equal(newConversationsSortedByUpdatedAt[i]["PK"], retrievedConversationJson["PK"]);
-                Assert.Equal(newConversationsSortedByUpdatedAt[i]["Author"], retrievedConversationJson["Author"]);
-                Assert.Equal(newConversationsSortedByUpdatedAt[i]["Title"], retrievedConversationJson["Title"]);
-                Assert.Equal(newConversationsSortedByUpdatedAt[i]["ConvoType"], retrievedConversationJson["ConvoType"]);
-                Assert.Equal(newConversationsSortedByUpdatedAt[i]["UpdatedAt"], retrievedConversationJson["UpdatedAt"]);
-                Assert.Equal(newConversationsSortedByUpdatedAt[i]["UpdatedAtYear"], retrievedConversationJson["UpdatedAtYear"]);
+                retrieved["PK"].Should().Be(expected["PK"]);
+                retrieved["Author"].Should().Be(expected["Author"]);
+                retrieved["Title"].Should().Be(expected["Title"]);
+                retrieved["ConvoType"].Should().Be(expected["ConvoType"]);
+                retrieved["UpdatedAt"].Should().Be(expected["UpdatedAt"]);
+                retrieved["UpdatedAtYear"].Should().Be(expected["UpdatedAtYear"]);
             }
         }
 
         [Fact]
         public async Task AppendDrillDownPost_SavesPostSuccessfully()
         {
-            var conversationPostGuid = GetNewConversationGuid();
+            // Arrange
+            var conversationGuid = GetNewConversationGuid();
+            var drillDownGuid = Guid.NewGuid();
+            var drillDownTimestamp = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
+            var db = new ConversationsAndPosts();
 
-            var drillDownPostGuid = Guid.NewGuid();
-            var drillDownPostAuthor = "TestyTesterX";
-            var drillDownpostMessageBody = "This is a drill-down post responding to the conversation";
-            var drillDownPostCreationTime = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
+            var conversation = await AConversation()
+                .WithGuid(conversationGuid)
+                .WithType(ConversationsAndPosts.ConvoTypeEnum.QUESTION)
+                .WithTitle("Parent conversation for drill-down posts")
+                .WithMessageBody("This is the main conversation that will have drill-down posts")
+                .WithAuthor("TestyTester")
+                .CreateAsync(db);
 
-            var dbConversationsAndPosts = new ConversationsAndPosts();
+            // Act
+            var drillDownPost = await APost()
+                .WithGuid(drillDownGuid)
+                .WithAuthor("TestyTesterX")
+                .WithMessageBody("This is a drill-down post responding to the conversation")
+                .WithTimestamp(drillDownTimestamp)
+                .CreateDrillDownAsync(db, conversation["PK"], conversation["SK"]);
 
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                conversationPostGuid,
-                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
-                "Parent conversation for drill-down posts",
-                "This is the main conversation that will have drill-down posts",
-                "TestyTester",
-                DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = DeserializeToStringDictionary(jsonConversation);
+            // Assert
+            var expectedDrillDownPost = new Dictionary<string, string>
+            {
+                ["PK"] = $"CONVO#{conversationGuid}",
+                ["SK"] = $"#DD#{drillDownGuid}",
+                ["Author"] = "TestyTesterX",
+                ["MessageBody"] = "This is a drill-down post responding to the conversation",
+                ["UpdatedAt"] = drillDownTimestamp.ToUnixTimeSeconds().ToString()
+            };
 
-            var jsonDrillDownPost = await dbConversationsAndPosts.AppendDrillDownPost(
-                conversationFields["PK"],
-                conversationFields["SK"],
-                drillDownPostGuid,
-                drillDownPostAuthor,
-                drillDownpostMessageBody,
-                drillDownPostCreationTime);
-            var drillDownfields = DeserializeToStringDictionary(jsonDrillDownPost);
-
-            Assert.True(string.IsNullOrEmpty(drillDownfields.GetValueOrDefault("UpdatedAtYear")));
-            Assert.True(string.IsNullOrEmpty(drillDownfields.GetValueOrDefault("ConvoType")));
-            Assert.True(string.IsNullOrEmpty(drillDownfields.GetValueOrDefault("Title")));
-
-            Assert.Equal("CONVO#" + conversationPostGuid, drillDownfields["PK"]);
-            Assert.Equal("#DD#" + drillDownPostGuid.ToString(), drillDownfields["SK"]);
-            Assert.Equal(drillDownPostAuthor, drillDownfields["Author"]);
-            Assert.Equal(drillDownpostMessageBody, drillDownfields["MessageBody"]);
-            Assert.Equal(drillDownPostCreationTime.ToUnixTimeSeconds().ToString(), drillDownfields["UpdatedAt"]);
+            AssertPostMatches(drillDownPost, expectedDrillDownPost);
         }
 
         [Fact]
         public async Task AppendDrillDownPost_CreatesNestedPostHierarchySuccessfully()
         {
-            var firstDrillDownPostGuid = Guid.NewGuid();
-            var firstDrillDownPostTime = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
-            var firstDrillDownPostAuthor = "TestyTesterX";
-            var firstDrillDownPostMessageBody = "First level drill-down post";
+            // Arrange
+            var firstGuid = Guid.NewGuid();
+            var secondGuid = Guid.NewGuid();
+            var thirdGuid = Guid.NewGuid();
+            var db = new ConversationsAndPosts();
 
-            var secondDrillDownPostGuid = Guid.NewGuid();
-            var secondDrillDownPostTime = DateTimeOffset.Parse("1970-01-01T00:00:03Z");
-            var secondDrillDownPostAuthor = "TestyTesterW";
-            var secondDrillDownPostMessageBody = "Second level drill-down post (reply to first)";
+            var conversation = await AConversation()
+                .WithGuid(GetNewConversationGuid())
+                .WithType(ConversationsAndPosts.ConvoTypeEnum.PROBLEM)
+                .WithTitle("Conversation with nested drill-down posts")
+                .WithMessageBody("This conversation will have nested drill-down posts")
+                .WithAuthor("TestyTester")
+                .CreateAsync(db);
 
-            var thirdDrillDownPostGuid = Guid.NewGuid();
-            var thirdDrillDownPostTime = DateTimeOffset.Parse("1970-01-01T00:00:04Z");
-            var thirdDrillDownPostAuthor = "TestyTesterK";
-            var thirDrillDownPostMessageBody = "Third level drill-down post (reply to second)";
+            // Act - Create nested hierarchy using fluent builder
+            var drillDownPosts = await ADrillDownHierarchy()
+                .WithConversation(conversation)
+                .AddLevel(firstGuid, "TestyTesterX", "First level drill-down post", DateTimeOffset.Parse("1970-01-01T00:00:02Z"))
+                .AddLevel(secondGuid, "TestyTesterW", "Second level drill-down post (reply to first)", DateTimeOffset.Parse("1970-01-01T00:00:03Z"))
+                .AddLevel(thirdGuid, "TestyTesterK", "Third level drill-down post (reply to second)", DateTimeOffset.Parse("1970-01-01T00:00:04Z"))
+                .BuildAsync(db);
 
+            // Assert - Verify nested hierarchy structure using simplified assertions
+            var expectedHierarchy = new[]
+            {
+                new Dictionary<string, string>
+                {
+                    ["PK"] = conversation["PK"],
+                    ["SK"] = $"#DD#{firstGuid}",
+                    ["Author"] = "TestyTesterX",
+                    ["MessageBody"] = "First level drill-down post",
+                    ["UpdatedAt"] = DateTimeOffset.Parse("1970-01-01T00:00:02Z").ToUnixTimeSeconds().ToString()
+                },
+                new Dictionary<string, string>
+                {
+                    ["PK"] = conversation["PK"],
+                    ["SK"] = $"#DD#{firstGuid}#DD#{secondGuid}",
+                    ["Author"] = "TestyTesterW",
+                    ["MessageBody"] = "Second level drill-down post (reply to first)",
+                    ["UpdatedAt"] = DateTimeOffset.Parse("1970-01-01T00:00:03Z").ToUnixTimeSeconds().ToString()
+                },
+                new Dictionary<string, string>
+                {
+                    ["PK"] = conversation["PK"],
+                    ["SK"] = $"#DD#{firstGuid}#DD#{secondGuid}#DD#{thirdGuid}",
+                    ["Author"] = "TestyTesterK",
+                    ["MessageBody"] = "Third level drill-down post (reply to second)",
+                    ["UpdatedAt"] = DateTimeOffset.Parse("1970-01-01T00:00:04Z").ToUnixTimeSeconds().ToString()
+                }
+            };
 
-            var dbConversationsAndPosts = new ConversationsAndPosts();
-
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                GetNewConversationGuid(),
-                ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
-                "Conversation with nested drill-down posts",
-                "This conversation will have nested drill-down posts",
-                "TestyTester",
-                DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = DeserializeToStringDictionary(jsonConversation);
-
-            var jsonDrillDownFirstPost = await dbConversationsAndPosts.AppendDrillDownPost(
-                    conversationFields["PK"],
-                    conversationFields["SK"],
-                    firstDrillDownPostGuid,
-                    firstDrillDownPostAuthor,
-                    firstDrillDownPostMessageBody,
-                    firstDrillDownPostTime);
-            var firstDrillDownPostFields = DeserializeToStringDictionary(jsonDrillDownFirstPost);
-
-            var jsonDrillDownSecondPost = await dbConversationsAndPosts.AppendDrillDownPost(
-                firstDrillDownPostFields["PK"],
-                firstDrillDownPostFields["SK"],
-                secondDrillDownPostGuid,
-                secondDrillDownPostAuthor,
-                secondDrillDownPostMessageBody,
-                secondDrillDownPostTime);
-            var secondDrillDownPostFields = DeserializeToStringDictionary(jsonDrillDownSecondPost);
-
-            var jsonDrillDownThirdPost = await dbConversationsAndPosts.AppendDrillDownPost(
-                secondDrillDownPostFields["PK"],
-                secondDrillDownPostFields["SK"],
-                thirdDrillDownPostGuid,
-                thirdDrillDownPostAuthor,
-                thirDrillDownPostMessageBody,
-                thirdDrillDownPostTime);
-            var thirdDrillDownPostFields = DeserializeToStringDictionary(jsonDrillDownThirdPost);
-
-            Assert.Equal(conversationFields["PK"], firstDrillDownPostFields["PK"]);
-            Assert.Equal("#DD#" + firstDrillDownPostGuid.ToString(), firstDrillDownPostFields["SK"]);
-            Assert.Equal(firstDrillDownPostMessageBody, firstDrillDownPostFields["MessageBody"]);
-            Assert.Equal(firstDrillDownPostTime.ToUnixTimeSeconds().ToString(), firstDrillDownPostFields["UpdatedAt"]);
-            Assert.Equal(firstDrillDownPostAuthor, firstDrillDownPostFields["Author"]);
-
-            Assert.Equal(conversationFields["PK"], secondDrillDownPostFields["PK"]);
-            Assert.Equal("#DD#" + firstDrillDownPostGuid.ToString() + "#DD#" + secondDrillDownPostGuid.ToString(), secondDrillDownPostFields["SK"]);
-            Assert.Equal(secondDrillDownPostMessageBody, secondDrillDownPostFields["MessageBody"]);
-            Assert.Equal(secondDrillDownPostTime.ToUnixTimeSeconds().ToString(), secondDrillDownPostFields["UpdatedAt"]);
-            Assert.Equal(secondDrillDownPostAuthor, secondDrillDownPostFields["Author"]);
-
-            Assert.Equal(conversationFields["PK"], thirdDrillDownPostFields["PK"]);
-            Assert.Equal("#DD#" + firstDrillDownPostGuid.ToString() + "#DD#" + secondDrillDownPostGuid.ToString() + "#DD#" + thirdDrillDownPostGuid.ToString(), thirdDrillDownPostFields["SK"]);
-            Assert.Equal(thirDrillDownPostMessageBody, thirdDrillDownPostFields["MessageBody"]);
-            Assert.Equal(thirdDrillDownPostTime.ToUnixTimeSeconds().ToString(), thirdDrillDownPostFields["UpdatedAt"]);
-            Assert.Equal(thirdDrillDownPostAuthor, thirdDrillDownPostFields["Author"]);
-
+            AssertPostsMatchInOrder(drillDownPosts, expectedHierarchy);
         }
 
         [Fact]
         public async Task AppendCommentPost_SavesCommentSuccessfully()
         {
+            // Arrange
             var conversationGuid = GetNewConversationGuid();
-
             var commentPostGuid = Guid.NewGuid();
-            var conversationPK = "CONVO#" + conversationGuid.ToString();
+            var conversationPK = $"CONVO#{conversationGuid}";
             var parentPostSK = "METADATA";
             var commentPostAuthor = "TestyTesterX";
             var commentPostMessageBody = "This is a comment responding to the conversation";
             var commentPostCreationTime = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
+            var db = new ConversationsAndPosts();
 
-            var dbConversationsAndPosts = new ConversationsAndPosts();
-
-            await dbConversationsAndPosts.CreateNewConversation(
+            await db.CreateNewConversation(
                 conversationGuid,
                 ConversationsAndPosts.ConvoTypeEnum.QUESTION,
                 "Root conversation for comment posts",
@@ -295,7 +261,8 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "TestyTester",
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
 
-            var jsonCommentPost = await dbConversationsAndPosts.AppendCommentPost(
+            // Act
+            var jsonCommentPost = await db.AppendCommentPost(
                 conversationPK,
                 parentPostSK,
                 commentPostGuid,
@@ -303,103 +270,69 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 commentPostMessageBody,
                 commentPostCreationTime);
 
+            // Assert
             var commentFields = DeserializeToStringDictionary(jsonCommentPost);
-
-            Assert.True(string.IsNullOrEmpty(commentFields.GetValueOrDefault("UpdatedAtYear")));
-            Assert.True(string.IsNullOrEmpty(commentFields.GetValueOrDefault("ConvoType")));
-            Assert.True(string.IsNullOrEmpty(commentFields.GetValueOrDefault("Title")));
-
-            Assert.Equal(conversationPK, commentFields["PK"]);
-            Assert.Equal("#CM#" + commentPostGuid.ToString(), commentFields["SK"]);
-            Assert.Equal(commentPostAuthor, commentFields["Author"]);
-            Assert.Equal(commentPostMessageBody, commentFields["MessageBody"]);
-            Assert.Equal(commentPostCreationTime.ToUnixTimeSeconds().ToString(), commentFields["UpdatedAt"]);
-
+            
+            AssertPostHasStructure(commentFields, conversationPK, $"#CM#{commentPostGuid}", 
+                commentPostAuthor, commentPostMessageBody, commentPostCreationTime.ToUnixTimeSeconds());
         }
 
         [Fact]
         public async Task AppendCommentPost_CreatesCommentsOnDrillDownPostsSuccessfully()
         {
-            var drillDownPostGuid = Guid.NewGuid();
-            var drillDownPostTime = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
-            var drillDownPostAuthor = "TestyTesterX";
-            var drillDownPostMessageBody = "This is a drill-down post";
-
+            // Arrange
+            var drillDownGuid = Guid.NewGuid();
             var conversationCommentGuid = Guid.NewGuid();
-            var conversationCommentTime = DateTimeOffset.Parse("1970-01-01T00:00:03Z");
-            var conversationCommentAuthor = "TestyTesterW";
-            var conversationCommentMessageBody = "Comment directly on conversation";
-
             var drillDownCommentGuid = Guid.NewGuid();
-            var drillDownCommentTime = DateTimeOffset.Parse("1970-01-01T00:00:04Z");
-            var drillDownCommentAuthor = "TestyTesterK";
-            var drillDownCommentMessageBody = "Comment on drill-down post";
+            var db = new ConversationsAndPosts();
 
+            var conversation = await AConversation()
+                .WithGuid(GetNewConversationGuid())
+                .WithType(ConversationsAndPosts.ConvoTypeEnum.PROBLEM)
+                .WithTitle("Conversation with drill-down posts and comments")
+                .WithMessageBody("This conversation will have drill-down posts with comments")
+                .WithAuthor("TestyTester")
+                .CreateAsync(db);
 
-            var dbConversationsAndPosts = new ConversationsAndPosts();
+            // Act - Create posts using fluent builders
+            var conversationComment = await APost()
+                .WithGuid(conversationCommentGuid)
+                .WithAuthor("TestyTesterW")
+                .WithMessageBody("Comment directly on conversation")
+                .WithTimestamp(DateTimeOffset.Parse("1970-01-01T00:00:03Z"))
+                .CreateCommentAsync(db, conversation["PK"], conversation["SK"]);
 
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
-                GetNewConversationGuid(),
-                ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
-                "Conversation with drill-down posts and comments",
-                "This conversation will have drill-down posts with comments",
-                "TestyTester",
-                DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var conversationFields = DeserializeToStringDictionary(jsonConversation);
+            var drillDownPost = await APost()
+                .WithGuid(drillDownGuid)
+                .WithAuthor("TestyTesterX")
+                .WithMessageBody("This is a drill-down post")
+                .WithTimestamp(DateTimeOffset.Parse("1970-01-01T00:00:02Z"))
+                .CreateDrillDownAsync(db, conversation["PK"], conversation["SK"]);
 
-            var jsonConversationComment = await dbConversationsAndPosts.AppendCommentPost(
-                conversationFields["PK"],
-                conversationFields["SK"],
-                conversationCommentGuid,
-                conversationCommentAuthor,
-                conversationCommentMessageBody,
-                conversationCommentTime);
-            var conversationCommentFields = DeserializeToStringDictionary(jsonConversationComment);
+            var drillDownComment = await APost()
+                .WithGuid(drillDownCommentGuid)
+                .WithAuthor("TestyTesterK")
+                .WithMessageBody("Comment on drill-down post")
+                .WithTimestamp(DateTimeOffset.Parse("1970-01-01T00:00:04Z"))
+                .CreateCommentAsync(db, drillDownPost["PK"], drillDownPost["SK"]);
 
-            var jsonDrillDownPost = await dbConversationsAndPosts.AppendDrillDownPost(
-                    conversationFields["PK"],
-                    conversationFields["SK"],
-                    drillDownPostGuid,
-                    drillDownPostAuthor,
-                    drillDownPostMessageBody,
-                    drillDownPostTime);
-            var drillDownPostFields = DeserializeToStringDictionary(jsonDrillDownPost);
-
-            var jsonDrillDownComment = await dbConversationsAndPosts.AppendCommentPost(
-                drillDownPostFields["PK"],
-                drillDownPostFields["SK"],
-                drillDownCommentGuid,
-                drillDownCommentAuthor,
-                drillDownCommentMessageBody,
-                drillDownCommentTime);
-
-
-            Assert.Equal(conversationFields["PK"], drillDownPostFields["PK"]);
-            Assert.Equal("#DD#" + drillDownPostGuid.ToString(), drillDownPostFields["SK"]);
-            Assert.Equal(drillDownPostMessageBody, drillDownPostFields["MessageBody"]);
-            Assert.Equal(drillDownPostTime.ToUnixTimeSeconds().ToString(), drillDownPostFields["UpdatedAt"]);
-            Assert.Equal(drillDownPostAuthor, drillDownPostFields["Author"]);
-
-            Assert.Equal(conversationFields["PK"], conversationCommentFields["PK"]);
-            Assert.Equal("#CM#" + conversationCommentGuid.ToString(), conversationCommentFields["SK"]);
-            Assert.Equal(conversationCommentMessageBody, conversationCommentFields["MessageBody"]);
-            Assert.Equal(conversationCommentTime.ToUnixTimeSeconds().ToString(), conversationCommentFields["UpdatedAt"]);
-            Assert.Equal(conversationCommentAuthor, conversationCommentFields["Author"]);
-
-            var drillDownCommentFields = DeserializeToStringDictionary(jsonDrillDownComment);
-            Assert.Equal(conversationFields["PK"], drillDownCommentFields["PK"]);
-            Assert.Equal("#DD#" + drillDownPostGuid.ToString() + "#CM#" + drillDownCommentGuid.ToString(), drillDownCommentFields["SK"]);
-            Assert.Equal(drillDownCommentMessageBody, drillDownCommentFields["MessageBody"]);
-            Assert.Equal(drillDownCommentTime.ToUnixTimeSeconds().ToString(), drillDownCommentFields["UpdatedAt"]);
-            Assert.Equal(drillDownCommentAuthor, drillDownCommentFields["Author"]);
-
+            // Assert - Using simplified assertion helpers
+            AssertPostHasStructure(drillDownPost, conversation["PK"], $"#DD#{drillDownGuid}", 
+                "TestyTesterX", "This is a drill-down post", DateTimeOffset.Parse("1970-01-01T00:00:02Z").ToUnixTimeSeconds());
+                
+            AssertPostHasStructure(conversationComment, conversation["PK"], $"#CM#{conversationCommentGuid}", 
+                "TestyTesterW", "Comment directly on conversation", DateTimeOffset.Parse("1970-01-01T00:00:03Z").ToUnixTimeSeconds());
+                
+            AssertPostHasStructure(drillDownComment, conversation["PK"], $"#DD#{drillDownGuid}#CM#{drillDownCommentGuid}", 
+                "TestyTesterK", "Comment on drill-down post", DateTimeOffset.Parse("1970-01-01T00:00:04Z").ToUnixTimeSeconds());
         }
 
         [Fact]
         public async Task AppendCommentPost_CannotAppendCommentToComment()
         {
-
-            var jsonConversation = await new ConversationsAndPosts().CreateNewConversation(
+            // Arrange
+            var db = new ConversationsAndPosts();
+            var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.QUESTION,
                 "Conversation for testing comment restrictions",
@@ -408,7 +341,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
             var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
-            var jsonFirstComment = await new ConversationsAndPosts().AppendCommentPost(
+            var jsonFirstComment = await db.AppendCommentPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 Guid.NewGuid(),
@@ -417,30 +350,26 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var firstCommentFields = DeserializeToStringDictionary(jsonFirstComment);
 
-            try
-            {
-                await new ConversationsAndPosts().AppendCommentPost(
-                    firstCommentFields["PK"],
-                    firstCommentFields["SK"],
-                    Guid.NewGuid(),
-                    "TestyTesterW",
-                    "This comment should fail to be added to the first comment",
-                    DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
+            // Act & Assert
+            var act = async () => await db.AppendCommentPost(
+                firstCommentFields["PK"],
+                firstCommentFields["SK"],
+                Guid.NewGuid(),
+                "TestyTesterW",
+                "This comment should fail to be added to the first comment",
+                DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
 
-                Assert.Fail("Expected ArgumentException when trying to append comment to another comment, but no exception was thrown.");
-            }
-            catch (ArgumentException e)
-            {
-                Assert.Contains("Cannot append a Comment post to a Comment or Conclusion post", e.Message);
-            }
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Cannot append a Comment post to a Comment or Conclusion post*");
         }
 
         [Fact]
         public async Task AppendDrillDownPost_CannotAppendDrillDownPostToComment()
         {
-            var dbConversationsAndPosts = new ConversationsAndPosts();
+            // Arrange
+            var db = new ConversationsAndPosts();
 
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+            var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
                 "Conversation for testing drill-down post restrictions",
@@ -449,7 +378,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
             var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
-            var jsonComment = await dbConversationsAndPosts.AppendCommentPost(
+            var jsonComment = await db.AppendCommentPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 Guid.NewGuid(),
@@ -458,37 +387,31 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var commentFields = DeserializeToStringDictionary(jsonComment);
 
-            try
-            {
-                await dbConversationsAndPosts.AppendDrillDownPost(
-                    commentFields["PK"],
-                    commentFields["SK"],
-                    Guid.NewGuid(),
-                    "TestyTesterW",
-                    "This drill-down post should fail to be added to the comment",
-                    DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
+            // Act & Assert
+            var act = async () => await db.AppendDrillDownPost(
+                commentFields["PK"],
+                commentFields["SK"],
+                Guid.NewGuid(),
+                "TestyTesterW",
+                "This drill-down post should fail to be added to the comment",
+                DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
 
-                Assert.Fail("Expected ArgumentException when trying to append drill-down post to a comment, but no exception was thrown.");
-            }
-            catch (ArgumentException e)
-            {
-                Assert.Contains("Cannot append a DrillDown post to a Comment or Conclusion post", e.Message);
-            }
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Cannot append a DrillDown post to a Comment or Conclusion post*");
         }
 
         [Fact]
         public async Task AppendConclusionPost_SavesConclusionToConversationSuccessfully()
         {
+            // Arrange
             var conversationGuid = GetNewConversationGuid();
-
             var conclusionPostGuid = Guid.NewGuid();
             var conclusionPostAuthor = "TestyTesterX";
             var conclusionPostMessageBody = "This is a conclusion post responding to the conversation";
             var conclusionPostCreationTime = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
+            var db = new ConversationsAndPosts();
 
-            var dbConversationsAndPosts = new ConversationsAndPosts();
-
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+            var jsonConversation = await db.CreateNewConversation(
                 conversationGuid,
                 ConversationsAndPosts.ConvoTypeEnum.QUESTION,
                 "Root conversation for conclusion posts",
@@ -497,7 +420,8 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
             var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
-            var jsonConclusionPost = await dbConversationsAndPosts.AppendConclusionPost(
+            // Act
+            var jsonConclusionPost = await db.AppendConclusionPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 conclusionPostGuid,
@@ -505,32 +429,25 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 conclusionPostMessageBody,
                 conclusionPostCreationTime);
 
+            // Assert
             var conclusionFields = DeserializeToStringDictionary(jsonConclusionPost);
-
-            Assert.True(string.IsNullOrEmpty(conclusionFields.GetValueOrDefault("UpdatedAtYear")));
-            Assert.True(string.IsNullOrEmpty(conclusionFields.GetValueOrDefault("ConvoType")));
-            Assert.True(string.IsNullOrEmpty(conclusionFields.GetValueOrDefault("Title")));
-
-            Assert.Equal("CONVO#" + conversationGuid, conclusionFields["PK"]);
-            Assert.Equal("#CC#" + conclusionPostGuid.ToString(), conclusionFields["SK"]);
-            Assert.Equal(conclusionPostAuthor, conclusionFields["Author"]);
-            Assert.Equal(conclusionPostMessageBody, conclusionFields["MessageBody"]);
-            Assert.Equal(conclusionPostCreationTime.ToUnixTimeSeconds().ToString(), conclusionFields["UpdatedAt"]);
+            
+            AssertPostHasStructure(conclusionFields, $"CONVO#{conversationGuid}", $"#CC#{conclusionPostGuid}", 
+                conclusionPostAuthor, conclusionPostMessageBody, conclusionPostCreationTime.ToUnixTimeSeconds());
         }
 
         [Fact]
         public async Task AppendConclusionPost_SavesConclusionToDrillDownPostSuccessfully()
         {
+            // Arrange
             var drillDownPostGuid = Guid.NewGuid();
-
             var conclusionPostGuid = Guid.NewGuid();
             var conclusionPostTime = DateTimeOffset.Parse("1970-01-01T00:00:03Z");
             var conclusionPostAuthor = "TestyTesterW";
             var conclusionPostMessageBody = "This is a conclusion to the drill-down post";
+            var db = new ConversationsAndPosts();
 
-            var dbConversationsAndPosts = new ConversationsAndPosts();
-
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+            var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
                 "Conversation with drill-down posts and conclusions",
@@ -539,7 +456,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
             var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
-            var jsonDrillDownPost = await dbConversationsAndPosts.AppendDrillDownPost(
+            var jsonDrillDownPost = await db.AppendDrillDownPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 drillDownPostGuid,
@@ -548,28 +465,29 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var drillDownPostFields = DeserializeToStringDictionary(jsonDrillDownPost);
 
-            var jsonConclusionPost = await dbConversationsAndPosts.AppendConclusionPost(
+            // Act
+            var jsonConclusionPost = await db.AppendConclusionPost(
                 drillDownPostFields["PK"],
                 drillDownPostFields["SK"],
                 conclusionPostGuid,
                 conclusionPostAuthor,
                 conclusionPostMessageBody,
                 conclusionPostTime);
-            var conclusionFields = DeserializeToStringDictionary(jsonConclusionPost);
 
-            Assert.Equal(conversationFields["PK"], conclusionFields["PK"]);
-            Assert.Equal("#DD#" + drillDownPostGuid.ToString() + "#CC#" + conclusionPostGuid.ToString(), conclusionFields["SK"]);
-            Assert.Equal(conclusionPostMessageBody, conclusionFields["MessageBody"]);
-            Assert.Equal(conclusionPostTime.ToUnixTimeSeconds().ToString(), conclusionFields["UpdatedAt"]);
-            Assert.Equal(conclusionPostAuthor, conclusionFields["Author"]);
+            // Assert
+            var conclusionFields = DeserializeToStringDictionary(jsonConclusionPost);
+            
+            AssertPostHasStructure(conclusionFields, conversationFields["PK"], $"#DD#{drillDownPostGuid}#CC#{conclusionPostGuid}", 
+                conclusionPostAuthor, conclusionPostMessageBody, conclusionPostTime.ToUnixTimeSeconds());
         }
 
         [Fact]
         public async Task AppendConclusionPost_CannotAppendConclusionToComment()
         {
-            var dbConversationsAndPosts = new ConversationsAndPosts();
+            // Arrange
+            var db = new ConversationsAndPosts();
 
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+            var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.QUESTION,
                 "Conversation for testing conclusion restrictions",
@@ -578,7 +496,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
             var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
-            var jsonComment = await dbConversationsAndPosts.AppendCommentPost(
+            var jsonComment = await db.AppendCommentPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 Guid.NewGuid(),
@@ -587,30 +505,26 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var commentFields = DeserializeToStringDictionary(jsonComment);
 
-            try
-            {
-                await dbConversationsAndPosts.AppendConclusionPost(
-                    commentFields["PK"],
-                    commentFields["SK"],
-                    Guid.NewGuid(),
-                    "TestyTesterW",
-                    "This conclusion should fail to be added to the comment",
-                    DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
+            // Act & Assert
+            var act = async () => await db.AppendConclusionPost(
+                commentFields["PK"],
+                commentFields["SK"],
+                Guid.NewGuid(),
+                "TestyTesterW",
+                "This conclusion should fail to be added to the comment",
+                DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
 
-                Assert.Fail("Expected ArgumentException when trying to append conclusion to a comment, but no exception was thrown.");
-            }
-            catch (ArgumentException e)
-            {
-                Assert.Contains("Cannot append a Conclusion post to a Comment or Conclusion post", e.Message);
-            }
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Cannot append a Conclusion post to a Comment or Conclusion post*");
         }
 
         [Fact]
         public async Task AppendConclusionPost_CannotAppendConclusionToConclusion()
         {
-            var dbConversationsAndPosts = new ConversationsAndPosts();
+            // Arrange
+            var db = new ConversationsAndPosts();
 
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+            var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
                 ConversationsAndPosts.ConvoTypeEnum.DILEMMA,
                 "Conversation for testing conclusion-to-conclusion restrictions",
@@ -619,7 +533,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
             var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
-            var jsonFirstConclusion = await dbConversationsAndPosts.AppendConclusionPost(
+            var jsonFirstConclusion = await db.AppendConclusionPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 Guid.NewGuid(),
@@ -628,38 +542,33 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var firstConclusionFields = DeserializeToStringDictionary(jsonFirstConclusion);
 
-            try
-            {
-                await dbConversationsAndPosts.AppendConclusionPost(
-                    firstConclusionFields["PK"],
-                    firstConclusionFields["SK"],
-                    Guid.NewGuid(),
-                    "TestyTesterW",
-                    "This conclusion should fail to be added to the first conclusion",
-                    DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
+            // Act & Assert
+            var act = async () => await db.AppendConclusionPost(
+                firstConclusionFields["PK"],
+                firstConclusionFields["SK"],
+                Guid.NewGuid(),
+                "TestyTesterW",
+                "This conclusion should fail to be added to the first conclusion",
+                DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
 
-                Assert.Fail("Expected ArgumentException when trying to append conclusion to another conclusion, but no exception was thrown.");
-            }
-            catch (ArgumentException e)
-            {
-                Assert.Contains("Cannot append a Conclusion post to a Comment or Conclusion post", e.Message);
-            }
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Cannot append a Conclusion post to a Comment or Conclusion post*");
         }
 
         [Fact]
         public async Task RetrieveConversationPosts_RetrievesAllPostsSuccessfullyAndInOrder()
         {
+            // Arrange
             var conversationGuid = GetNewConversationGuid();
             var drillDownGuid = Guid.NewGuid();
             var commentGuid = Guid.NewGuid();
             var conclusionGuid = Guid.NewGuid();
             var drillDownCommentGuid = Guid.NewGuid();
-
             var authorPrefix = "TestyWholeConvo";
+            var db = new ConversationsAndPosts();
 
-            var dbConversationsAndPosts = new ConversationsAndPosts();
-
-            var jsonConversation = await dbConversationsAndPosts.CreateNewConversation(
+            // Create conversation and various post types
+            var jsonConversation = await db.CreateNewConversation(
                 conversationGuid,
                 ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
                 "Test conversation with multiple posts",
@@ -668,7 +577,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
             var conversationFields = DeserializeToStringDictionary(jsonConversation);
 
-            var jsonDrillDown = await dbConversationsAndPosts.AppendDrillDownPost(
+            var jsonDrillDown = await db.AppendDrillDownPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 drillDownGuid,
@@ -677,7 +586,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var drillDownFields = DeserializeToStringDictionary(jsonDrillDown);
 
-            await dbConversationsAndPosts.AppendCommentPost(
+            await db.AppendCommentPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 commentGuid,
@@ -685,7 +594,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This is a comment on the conversation",
                 DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
 
-            await dbConversationsAndPosts.AppendConclusionPost(
+            await db.AppendConclusionPost(
                 conversationFields["PK"],
                 conversationFields["SK"],
                 conclusionGuid,
@@ -693,7 +602,7 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This is a conclusion to the conversation",
                 DateTimeOffset.Parse("1970-01-01T00:00:04Z"));
 
-            await dbConversationsAndPosts.AppendCommentPost(
+            await db.AppendCommentPost(
                 drillDownFields["PK"],
                 drillDownFields["SK"],
                 drillDownCommentGuid,
@@ -701,88 +610,84 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This is a comment on the drill-down post",
                 DateTimeOffset.Parse("1970-01-01T00:00:05Z"));
 
-            var allPosts = await dbConversationsAndPosts.RetrieveConversationPosts(conversationFields["PK"]);
+            // Act
+            var allPosts = await db.RetrieveConversationPosts(conversationFields["PK"]);
 
+            // Assert
             var parsedPosts = allPosts.Select(json => DeserializeToStringDictionary(json)).ToList();
+            parsedPosts.Should().HaveCount(5);
 
-            Assert.Equal(5, parsedPosts.Count);
-
+            // Verify conversation (should be last in sort order)
             var conversation = parsedPosts[4];
-            Assert.Equal("METADATA", conversation["SK"]);
-            Assert.Equal("CONVO#" + conversationGuid.ToString(), conversation["PK"]);
-            Assert.Equal("Test conversation with multiple posts", conversation["Title"]);
+            conversation["SK"].Should().Be("METADATA");
+            conversation["PK"].Should().Be($"CONVO#{conversationGuid}");
+            conversation["Title"].Should().Be("Test conversation with multiple posts");
 
+            // Verify conclusion post (should be first in sort order)
             var conclusionPost = parsedPosts[0];
-            Assert.Equal("#CC#" + conclusionGuid.ToString(), conclusionPost["SK"]);
-            Assert.Equal(conclusionPost["PK"], conversation["PK"]);
-            Assert.Equal("This is a conclusion to the conversation", conclusionPost["MessageBody"]);
+            conclusionPost["SK"].Should().Be($"#CC#{conclusionGuid}");
+            conclusionPost["PK"].Should().Be(conversation["PK"]);
+            conclusionPost["MessageBody"].Should().Be("This is a conclusion to the conversation");
 
+            // Verify comment post (should be second in sort order)
             var commentPost = parsedPosts[1];
-            Assert.Equal("#CM#" + commentGuid.ToString(), commentPost["SK"]);
-            Assert.Equal(commentPost["PK"], conversation["PK"]);
-            Assert.Equal("This is a comment on the conversation", commentPost["MessageBody"]);
+            commentPost["SK"].Should().Be($"#CM#{commentGuid}");
+            commentPost["PK"].Should().Be(conversation["PK"]);
+            commentPost["MessageBody"].Should().Be("This is a comment on the conversation");
 
+            // Verify drill-down post (should be third in sort order)
             var drillDownPost = parsedPosts[2];
-            Assert.Equal("#DD#" + drillDownGuid.ToString(), drillDownPost["SK"]);
-            Assert.Equal(drillDownPost["PK"], conversation["PK"]);
-            Assert.Equal("This is a drill-down post", drillDownPost["MessageBody"]);
+            drillDownPost["SK"].Should().Be($"#DD#{drillDownGuid}");
+            drillDownPost["PK"].Should().Be(conversation["PK"]);
+            drillDownPost["MessageBody"].Should().Be("This is a drill-down post");
 
+            // Verify drill-down comment post (should be fourth in sort order)
             var drillDownCommentPost = parsedPosts[3];
-            Assert.Equal("#DD#" + drillDownGuid.ToString() + "#CM#" + drillDownCommentGuid.ToString(), drillDownCommentPost["SK"]);
-            Assert.Equal(drillDownCommentPost["PK"], conversation["PK"]);
-            Assert.Equal("This is a comment on the drill-down post", drillDownCommentPost["MessageBody"]);
+            drillDownCommentPost["SK"].Should().Be($"#DD#{drillDownGuid}#CM#{drillDownCommentGuid}");
+            drillDownCommentPost["PK"].Should().Be(conversation["PK"]);
+            drillDownCommentPost["MessageBody"].Should().Be("This is a comment on the drill-down post");
         }
 
         [Fact]
         public async Task RetrieveConversationPosts_ReturnsEmptyListForNonExistentConversation()
         {
-            var nonExistentConversationPK = "CONVO#" + Guid.NewGuid().ToString();
-            var dbConversationsAndPosts = new ConversationsAndPosts();
+            // Arrange
+            var nonExistentConversationPK = $"CONVO#{Guid.NewGuid()}";
+            var db = new ConversationsAndPosts();
 
-            var posts = await dbConversationsAndPosts.RetrieveConversationPosts(nonExistentConversationPK);
+            // Act
+            var posts = await db.RetrieveConversationPosts(nonExistentConversationPK);
 
-            Assert.Empty(posts);
+            // Assert
+            posts.Should().BeEmpty();
         }
 
         [Fact]
         public async Task RetrieveConversationPosts_InvalidConversationPkParameterFails()
         {
-            var dbConversationsAndPosts = new ConversationsAndPosts();
+            // Arrange
+            var db = new ConversationsAndPosts();
 
-            try
-            {
-                await dbConversationsAndPosts.RetrieveConversationPosts("INVALID_PK");
-                Assert.Fail("Expected ArgumentException for invalid conversation PK format, but no exception was thrown.");
-            }
-            catch (ArgumentException e)
-            {
-                Assert.Contains("Conversation PK must start with 'CONVO#'", e.Message);
-            }
+            // Act & Assert - Invalid PK format
+            var actInvalid = async () => await db.RetrieveConversationPosts("INVALID_PK");
+            await actInvalid.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Conversation PK must start with 'CONVO#'*");
 
-            try
-            {
-                await dbConversationsAndPosts.RetrieveConversationPosts(null);
-                Assert.Fail("Expected ArgumentException for null conversation PK, but no exception was thrown.");
-            }
-            catch (ArgumentException e)
-            {
-                Assert.Contains("Conversation PK cannot be null or empty", e.Message);
-            }
+            // Act & Assert - Null PK
+            var actNull = async () => await db.RetrieveConversationPosts(null);
+            await actNull.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Conversation PK cannot be null or empty*");
 
-            try
-            {
-                await dbConversationsAndPosts.RetrieveConversationPosts("");
-                Assert.Fail("Expected ArgumentException for empty conversation PK, but no exception was thrown.");
-            }
-            catch (ArgumentException e)
-            {
-                Assert.Contains("Conversation PK cannot be null or empty", e.Message);
-            }
+            // Act & Assert - Empty PK
+            var actEmpty = async () => await db.RetrieveConversationPosts("");
+            await actEmpty.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Conversation PK cannot be null or empty*");
         }
 
         [Fact]
         public async Task DeleteConversationAndPosts_DeletesAllItemsSuccessfully()
         {
+            // Arrange
             var conversationGuid = GetNewConversationGuid();
             var db = new ConversationsAndPosts();
 
@@ -804,10 +709,12 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
                 "This comment should also be deleted.",
                 DateTimeOffset.UtcNow);
 
+            // Act
             await db.AdministrativeNonAtomicDeleteConversationAndPosts(conversationPK);
 
+            // Assert
             var posts = await db.RetrieveConversationPosts(conversationPK);
-            Assert.Empty(posts);
+            posts.Should().BeEmpty();
         }
 
         private Guid GetNewConversationGuid()
@@ -817,6 +724,55 @@ namespace WiseWordsSpikeA.DynamoDbAccessCode.Tests
 
             return guid;
         }
+ 
+        
+        private static void AssertPostMatches(Dictionary<string, string> actual, Dictionary<string, string> expected, PostType postType = PostType.Post)
+        {
+            actual["PK"].Should().Be(expected["PK"]);
+            actual["SK"].Should().Be(expected["SK"]);
+            actual["Author"].Should().Be(expected["Author"]);
+            actual["MessageBody"].Should().Be(expected["MessageBody"]);
+            actual["UpdatedAt"].Should().Be(expected["UpdatedAt"]);
+            
+            if (postType != PostType.Conversation)
+            {
+                actual.Should().NotContainKeys("UpdatedAtYear", "ConvoType", "Title");
+            }
+        }
+        
+        private static void AssertConversationMatches(Dictionary<string, string> actual, Dictionary<string, string> expected)
+        {
+            var conversationFields = new[] { "PK", "SK", "Author", "Title", "ConvoType", "MessageBody", "UpdatedAt", "UpdatedAtYear" };
+            actual.Should().ContainKeys(conversationFields);
+            
+            foreach (var field in conversationFields)
+            {
+                actual[field].Should().Be(expected[field], $"Field {field} should match");
+            }
+        }
+        
+        private static void AssertPostHasStructure(Dictionary<string, string> actual, string expectedPK, string expectedSK, string expectedAuthor, string expectedMessage, long expectedTimestamp)
+        {
+            var expected = new Dictionary<string, string>
+            {
+                ["PK"] = expectedPK,
+                ["SK"] = expectedSK,
+                ["Author"] = expectedAuthor,
+                ["MessageBody"] = expectedMessage,
+                ["UpdatedAt"] = expectedTimestamp.ToString()
+            };
+            AssertPostMatches(actual, expected);
+        }
+        
+        private static void AssertPostsMatchInOrder(List<Dictionary<string, string>> actualPosts, Dictionary<string, string>[] expectedPosts)
+        {
+            actualPosts.Should().HaveCount(expectedPosts.Length);
+            for (int i = 0; i < actualPosts.Count; i++)
+            {
+                AssertPostMatches(actualPosts[i], expectedPosts[i]);
+            }
+        }
+
         public async Task DisposeAsync()
         {
             var db = new ConversationsAndPosts();
