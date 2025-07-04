@@ -13,3 +13,12 @@ SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/obj
 SpikeC.DynamoDbAccessCode/.vscode
 SpikeC.DynamoDbAccessCode/bin
 SpikeC.DynamoDbAccessCode/obj
+SpikeC/.vscode
+SpikeC/.aws-sam
+SpikeC/publish
+SpikeC/SpikeC.DynamoDbAccessCode/.vscode
+SpikeC/SpikeC.DynamoDbAccessCode/bin
+SpikeC/SpikeC.DynamoDbAccessCode/obj
+SpikeC/SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/.vscode
+SpikeC/SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/bin
+SpikeC/SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/obj

@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Local test template for ConversationsAndPosts Lambda + API Gateway
+Resources:
+  ConversationsApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade::SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade.ConversationsAndPostsApiGatewayEntryPoint::RouteHttpRequestToLambda
+      Runtime: dotnet8
+      CodeUri: publish
+      MemorySize: 256
+      Timeout: 30
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
