@@ -6,3 +6,10 @@ SpikeB.WiseWordsAWSLambdaFacade/bin
 SpikeB.WiseWordsAWSLambdaFacade/obj
 SpikeB.WiseWordsAWSLambdaFacade.Tests/bin
 SpikeB.WiseWordsAWSLambdaFacade.Tests/obj
+.env
+SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/.vscode
+SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/bin
+SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/obj
+SpikeC.DynamoDbAccessCode/.vscode
+SpikeC.DynamoDbAccessCode/bin
+SpikeC.DynamoDbAccessCode/obj
