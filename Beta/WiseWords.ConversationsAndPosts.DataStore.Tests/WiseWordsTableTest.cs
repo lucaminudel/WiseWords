@@ -4,7 +4,7 @@ using FluentAssertions;
 namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 {
 
-    public class DynamoDbConversationsAndPostsTest : IAsyncLifetime
+    public class WiseWordsTableTest : IAsyncLifetime
     {
 
         private readonly Queue<string> _dbCleanupConversationPostTest = new();
@@ -25,12 +25,12 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             // Arrange
             var guid = GetNewConversationGuid();
             var timestamp = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             // Act
             var conversationFields = await AConversation()
                 .WithGuid(guid)
-                .WithType(ConversationsAndPosts.ConvoTypeEnum.DILEMMA)
+                .WithType(WiseWordsTable.ConvoTypeEnum.DILEMMA)
                 .WithTitle("Develop and test AWS lambda locally without cloud access")
                 .WithMessageBody("looking for a practical way to create cloud code on a local dev environment in a reliable efficient way")
                 .WithAuthor("TestyTester")
@@ -58,13 +58,13 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         {
             // Arrange
             var guid = GetNewConversationGuid();
-            var convoType = ConversationsAndPosts.ConvoTypeEnum.DILEMMA;
+            var convoType = WiseWordsTable.ConvoTypeEnum.DILEMMA;
             var title = "Idempotent title";
             var messageBody = "Itempotent message bodey";
             var authorId = "IdempotentTester";
             var firstTime = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
             var secondTime = DateTimeOffset.Parse("1970-01-01T00:00:12Z");
-            var dbConversationsAndPosts = new ConversationsAndPosts();
+            var dbConversationsAndPosts = new WiseWordsTable();
 
             // Act - Create conversation twice with same GUID
             await dbConversationsAndPosts.CreateNewConversation(guid, convoType, title, messageBody, authorId, firstTime);
@@ -94,15 +94,15 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var uniqueAuthor = "AutomaticTestAuthor" + Guid.NewGuid();
             var title = "A short title for a conversation";
             var messageBody = "a message body for a conversation";
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             // Create conversations OUT OF ORDER by UpdatedAt to test that retrieval sorts them correctly
-            var c1 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
-            var c6 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-10-01T00:00:06Z"));
-            var c2 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
-            var c5 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-07-01T00:00:05Z"));
-            var c4 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-13T00:00:04Z"));
-            var c3 = await db.CreateNewConversation(GetNewConversationGuid(), ConversationsAndPosts.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-12T00:00:03Z"));
+            var c1 = await db.CreateNewConversation(GetNewConversationGuid(), WiseWordsTable.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:01Z"));
+            var c6 = await db.CreateNewConversation(GetNewConversationGuid(), WiseWordsTable.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-10-01T00:00:06Z"));
+            var c2 = await db.CreateNewConversation(GetNewConversationGuid(), WiseWordsTable.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
+            var c5 = await db.CreateNewConversation(GetNewConversationGuid(), WiseWordsTable.ConvoTypeEnum.PROBLEM, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-07-01T00:00:05Z"));
+            var c4 = await db.CreateNewConversation(GetNewConversationGuid(), WiseWordsTable.ConvoTypeEnum.DILEMMA, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-13T00:00:04Z"));
+            var c3 = await db.CreateNewConversation(GetNewConversationGuid(), WiseWordsTable.ConvoTypeEnum.QUESTION, title, messageBody, uniqueAuthor, DateTimeOffset.Parse("1970-02-12T00:00:03Z"));
 
             // Expected order: sorted by UpdatedAt (c1, c2, c3, c4, c5, c6)
             var expectedConversationsInOrder = new[]
@@ -142,11 +142,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var conversationGuid = GetNewConversationGuid();
             var drillDownGuid = Guid.NewGuid();
             var drillDownTimestamp = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var conversation = await AConversation()
                 .WithGuid(conversationGuid)
-                .WithType(ConversationsAndPosts.ConvoTypeEnum.QUESTION)
+                .WithType(WiseWordsTable.ConvoTypeEnum.QUESTION)
                 .WithTitle("Parent conversation for drill-down posts")
                 .WithMessageBody("This is the main conversation that will have drill-down posts")
                 .WithAuthor("TestyTester")
@@ -180,11 +180,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var firstGuid = Guid.NewGuid();
             var secondGuid = Guid.NewGuid();
             var thirdGuid = Guid.NewGuid();
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var conversation = await AConversation()
                 .WithGuid(GetNewConversationGuid())
-                .WithType(ConversationsAndPosts.ConvoTypeEnum.PROBLEM)
+                .WithType(WiseWordsTable.ConvoTypeEnum.PROBLEM)
                 .WithTitle("Conversation with nested drill-down posts")
                 .WithMessageBody("This conversation will have nested drill-down posts")
                 .WithAuthor("TestyTester")
@@ -241,11 +241,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var commentPostAuthor = "TestyTesterX";
             var commentPostMessageBody = "This is a comment responding to the conversation";
             var commentPostCreationTime = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             await db.CreateNewConversation(
                 conversationGuid,
-                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
+                WiseWordsTable.ConvoTypeEnum.QUESTION,
                 "Root conversation for comment posts",
                 "This is the main conversation that will have comment posts",
                 "TestyTester",
@@ -274,11 +274,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var drillDownGuid = Guid.NewGuid();
             var conversationCommentGuid = Guid.NewGuid();
             var drillDownCommentGuid = Guid.NewGuid();
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var conversation = await AConversation()
                 .WithGuid(GetNewConversationGuid())
-                .WithType(ConversationsAndPosts.ConvoTypeEnum.PROBLEM)
+                .WithType(WiseWordsTable.ConvoTypeEnum.PROBLEM)
                 .WithTitle("Conversation with drill-down posts and comments")
                 .WithMessageBody("This conversation will have drill-down posts with comments")
                 .WithAuthor("TestyTester")
@@ -321,10 +321,10 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         public async Task AppendCommentPost_CannotAppendCommentToComment()
         {
             // Arrange
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
             var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
-                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
+                WiseWordsTable.ConvoTypeEnum.QUESTION,
                 "Conversation for testing comment restrictions",
                 "This conversation will test that comments cannot be added to other comments",
                 "TestyTester",
@@ -357,11 +357,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         public async Task AppendDrillDownPost_CannotAppendDrillDownPostToComment()
         {
             // Arrange
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
-                ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
+                WiseWordsTable.ConvoTypeEnum.PROBLEM,
                 "Conversation for testing drill-down post restrictions",
                 "This conversation will test that drill-down posts cannot be added to comments",
                 "TestyTester",
@@ -399,11 +399,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var conclusionPostAuthor = "TestyTesterX";
             var conclusionPostMessageBody = "This is a conclusion post responding to the conversation";
             var conclusionPostCreationTime = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var jsonConversation = await db.CreateNewConversation(
                 conversationGuid,
-                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
+                WiseWordsTable.ConvoTypeEnum.QUESTION,
                 "Root conversation for conclusion posts",
                 "This is the main conversation that will have conclusion posts",
                 "TestyTester",
@@ -435,11 +435,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var conclusionPostTime = DateTimeOffset.Parse("1970-01-01T00:00:03Z");
             var conclusionPostAuthor = "TestyTesterW";
             var conclusionPostMessageBody = "This is a conclusion to the drill-down post";
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
-                ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
+                WiseWordsTable.ConvoTypeEnum.PROBLEM,
                 "Conversation with drill-down posts and conclusions",
                 "This conversation will have drill-down posts with conclusions",
                 "TestyTester",
@@ -475,11 +475,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         public async Task AppendConclusionPost_CannotAppendConclusionToComment()
         {
             // Arrange
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
-                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
+                WiseWordsTable.ConvoTypeEnum.QUESTION,
                 "Conversation for testing conclusion restrictions",
                 "This conversation will test that conclusions cannot be added to comments",
                 "TestyTester",
@@ -512,11 +512,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         public async Task AppendConclusionPost_CannotAppendConclusionToConclusion()
         {
             // Arrange
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var jsonConversation = await db.CreateNewConversation(
                 GetNewConversationGuid(),
-                ConversationsAndPosts.ConvoTypeEnum.DILEMMA,
+                WiseWordsTable.ConvoTypeEnum.DILEMMA,
                 "Conversation for testing conclusion-to-conclusion restrictions",
                 "This conversation will test that conclusions cannot be added to other conclusions",
                 "TestyTester",
@@ -555,12 +555,12 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var conclusionGuid = Guid.NewGuid();
             var drillDownCommentGuid = Guid.NewGuid();
             var authorPrefix = "TestyWholeConvo";
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             // Create conversation and various post types
             var jsonConversation = await db.CreateNewConversation(
                 conversationGuid,
-                ConversationsAndPosts.ConvoTypeEnum.PROBLEM,
+                WiseWordsTable.ConvoTypeEnum.PROBLEM,
                 "Test conversation with multiple posts",
                 "This conversation will have various types of posts",
                 authorPrefix,
@@ -643,7 +643,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         {
             // Arrange
             var nonExistentConversationPK = $"CONVO#{Guid.NewGuid()}";
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             // Act
             var posts = await db.RetrieveConversationPosts(nonExistentConversationPK);
@@ -656,7 +656,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         public async Task RetrieveConversationPosts_InvalidConversationPkParameterFails()
         {
             // Arrange
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             // Act & Assert - Invalid PK format
             var actInvalid = async () => await db.RetrieveConversationPosts("INVALID_PK");
@@ -681,11 +681,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         {
             // Arrange
             var conversationGuid = GetNewConversationGuid();
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
 
             var jsonConversation = await db.CreateNewConversation(
                 conversationGuid,
-                ConversationsAndPosts.ConvoTypeEnum.QUESTION,
+                WiseWordsTable.ConvoTypeEnum.QUESTION,
                 "Test Deletion",
                 "This conversation should be deleted.",
                 "DeletionTester",
@@ -767,7 +767,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
         public async Task DisposeAsync()
         {
-            var db = new ConversationsAndPosts();
+            var db = new WiseWordsTable();
             while (_dbCleanupConversationPostTest.Count > 0)
             {
                 await db.AdministrativeNonAtomicDeleteConversationAndPosts(_dbCleanupConversationPostTest.Dequeue());

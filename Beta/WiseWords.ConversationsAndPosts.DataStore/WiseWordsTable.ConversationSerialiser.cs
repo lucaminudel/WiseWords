@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace WiseWords.ConversationsAndPosts.DataStore
 {
-    public partial class ConversationsAndPosts
+    public partial class WiseWordsTable
     {
         private class ConversationSerialiser : PostSerialiser
         {

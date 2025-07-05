@@ -34,13 +34,13 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
         public class ConversationBuilder : BaseBuilder<ConversationBuilder>
         {
-            private ConversationsAndPosts.ConvoTypeEnum _type = ConversationsAndPosts.ConvoTypeEnum.QUESTION;
+            private WiseWordsTable.ConvoTypeEnum _type = WiseWordsTable.ConvoTypeEnum.QUESTION;
             private string _title = "Test Conversation";
 
-            public ConversationBuilder WithType(ConversationsAndPosts.ConvoTypeEnum type) { _type = type; return this; }
+            public ConversationBuilder WithType(WiseWordsTable.ConvoTypeEnum type) { _type = type; return this; }
             public ConversationBuilder WithTitle(string title) { _title = title; return this; }
 
-            public async Task<Dictionary<string, string>> CreateAsync(ConversationsAndPosts db)
+            public async Task<Dictionary<string, string>> CreateAsync(WiseWordsTable db)
             {
                 ValidateGuidIsSet();
                 var json = await db.CreateNewConversation(_guid!.Value, _type, _title, _messageBody, _author, _timestamp);
@@ -50,21 +50,21 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
         public class PostBuilder : BaseBuilder<PostBuilder>
         {
-            public async Task<Dictionary<string, string>> CreateDrillDownAsync(ConversationsAndPosts db, string parentPK, string parentSK)
+            public async Task<Dictionary<string, string>> CreateDrillDownAsync(WiseWordsTable db, string parentPK, string parentSK)
             {
                 ValidateGuidIsSet();
                 var json = await db.AppendDrillDownPost(parentPK, parentSK, _guid!.Value, _author, _messageBody, _timestamp);
                 return ParseResult(json);
             }
 
-            public async Task<Dictionary<string, string>> CreateCommentAsync(ConversationsAndPosts db, string parentPK, string parentSK)
+            public async Task<Dictionary<string, string>> CreateCommentAsync(WiseWordsTable db, string parentPK, string parentSK)
             {
                 ValidateGuidIsSet();
                 var json = await db.AppendCommentPost(parentPK, parentSK, _guid!.Value, _author, _messageBody, _timestamp);
                 return ParseResult(json);
             }
 
-            public async Task<Dictionary<string, string>> CreateConclusionAsync(ConversationsAndPosts db, string parentPK, string parentSK)
+            public async Task<Dictionary<string, string>> CreateConclusionAsync(WiseWordsTable db, string parentPK, string parentSK)
             {
                 ValidateGuidIsSet();
                 var json = await db.AppendConclusionPost(parentPK, parentSK, _guid!.Value, _author, _messageBody, _timestamp);
@@ -89,7 +89,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 return this;
             }
 
-            public async Task<List<Dictionary<string, string>>> BuildAsync(ConversationsAndPosts db)
+            public async Task<List<Dictionary<string, string>>> BuildAsync(WiseWordsTable db)
             {
                 var results = new List<Dictionary<string, string>>();
                 var currentPK = _conversation["PK"];

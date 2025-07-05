@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace WiseWords.ConversationsAndPosts.DataStore
 {
-    public partial class ConversationsAndPosts
+    public partial class WiseWordsTable
     {
         private const string TABLE_NAME = "WiseWordsTable";
         private const string GSI_NAME = "GSI1_LowTraffic_ConversationsByYear";

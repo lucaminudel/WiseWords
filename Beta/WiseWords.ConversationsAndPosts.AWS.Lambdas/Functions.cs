@@ -7,7 +7,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
     public class Functions
     {
-        private readonly DataStore.ConversationsAndPosts _service = new();
+        private readonly DataStore.WiseWordsTable _service = new();
         private readonly IHandlerObserver _observer;
 
         public Functions() : this(new LambdaLoggerObserver())

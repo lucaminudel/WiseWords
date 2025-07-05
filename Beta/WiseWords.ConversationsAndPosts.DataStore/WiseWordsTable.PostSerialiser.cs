@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace WiseWords.ConversationsAndPosts.DataStore
 {
-    public partial class ConversationsAndPosts 
+    public partial class WiseWordsTable 
     {
         [DynamoDBTable("WiseWordsTable")] 
         private class PostSerialiser
