@@ -1,0 +1,14 @@
+{
+  "Information": [
+    "Configuration for AppendDrillDownPostHandler testing",
+    "Copy this content to aws-lambda-tools-defaults.json to test this handler"
+  ],
+  "profile": "",
+  "region": "",
+  "configuration": "Release",
+  "function-architecture": "x86_64",
+  "function-runtime": "dotnet8",
+  "function-memory-size": 512,
+  "function-timeout": 30,
+  "function-handler": "WiseWords.ConversationsAndPosts.AWS.Lambdas::WiseWords.ConversationsAndPosts.AWS.Lambdas.Functions::AppendDrillDownPostHandler"
+}
