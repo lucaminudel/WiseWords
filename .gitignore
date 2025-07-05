@@ -22,3 +22,5 @@ Spikes/SpikeC/SpikeC.DynamoDbAccessCode/obj
 Spikes/SpikeC/SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/.vscode
 Spikes/SpikeC/SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/bin
 Spikes/SpikeC/SpikeC.WiseWordsAWSApiGatewayAndLambdaFacade/obj
+Beta/WiseWords.ConversationsAndPosts.DataStore/bin
+Beta/WiseWords.ConversationsAndPosts.DataStore/obj
