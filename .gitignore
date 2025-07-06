@@ -29,3 +29,9 @@ Beta/WiseWords.ConversationsAndPosts.DataStore.Tests/obj
 Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/.vscode
 Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/bin
 Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/obj
+Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/bin
+Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/obj
+Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests/bin
+Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests/obj
+Beta/.vscode
+Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/publish

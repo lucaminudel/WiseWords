@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Local test template for ConversationsAndPosts Lambda + API Gateway
+Resources:
+  ConversationsApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration::WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.ApiGatewayEntryPoint::RouteHttpRequestToLambda
+      Runtime: dotnet8
+      CodeUri: publish
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          DYNAMODB_SERVICE_URL: http://host.docker.internal:8000
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY

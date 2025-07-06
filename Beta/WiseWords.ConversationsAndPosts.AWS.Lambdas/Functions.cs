@@ -7,15 +7,18 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
     public class Functions
     {
-        private readonly DataStore.WiseWordsTable _service = new();
+        private readonly DataStore.WiseWordsTable _service;
         private readonly IHandlerObserver _observer;
 
-        public Functions() : this(new LambdaLoggerObserver())
+
+        public Functions(Uri dynamoDbServiceUrl) : this(dynamoDbServiceUrl, new LambdaLoggerObserver())
         {
         }
 
-        public Functions(IHandlerObserver observer)
+        public Functions(Uri dynamoDbServiceUrl, IHandlerObserver observer)
         {
+            ValidateServiceUrl(dynamoDbServiceUrl);
+            _service = new DataStore.WiseWordsTable(dynamoDbServiceUrl);
             _observer = observer;
         }
 
@@ -148,6 +151,19 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
                 _observer.OnError($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
+        }
+
+        private static void ValidateServiceUrl(Uri serviceUrl)
+        {
+            if (serviceUrl == null)
+                throw new ArgumentNullException(nameof(serviceUrl));
+            
+            if (!serviceUrl.IsAbsoluteUri)
+                throw new ArgumentException("Service URL must be an absolute URI", nameof(serviceUrl));
+                
+            if (!serviceUrl.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) && 
+                !serviceUrl.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Service URL must use HTTP or HTTPS scheme", nameof(serviceUrl));
         }
     }
 }

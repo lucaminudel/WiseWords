@@ -10,15 +10,23 @@ namespace WiseWords.ConversationsAndPosts.DataStore
     {
         private const string TABLE_NAME = "WiseWordsTable";
         private const string GSI_NAME = "GSI1_LowTraffic_ConversationsByYear";
-        private const string SERVICE_URL = "http://localhost:8000";
         private const string DUMMY_AWS_ACCESS_KEY_ID = "dummy";
         private const string DUMMY_AWS_SECRET_ACCESS_KEY = "dummy";
+
+        private readonly Uri _serviceUrl;
+
+        public WiseWordsTable(Uri serviceUrl)
+        {
+            ValidateServiceUrl(serviceUrl);
+            _serviceUrl = serviceUrl;
+        }
+
         private const string CONVERSATION_PK_PREFIX = "CONVO#";
         private const string CONVERSATION_SK_METADATA = "METADATA";
         private const string DRILL_DOWN_POST_SK_PREFIX = "DD";
         private const string COMMENT_POST_SK_PREFIX = "CM";
         private const string CONCLUSION_POST_SK_PREFIX = "CC";
-        
+
 
         public enum ConvoTypeEnum
         {
@@ -70,7 +78,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             var conversations = new List<Document>();
 
             await AsyncExecuteWithDynamoDB(async (client, context) =>
-            {            
+            {
                 var queryConfig = new QueryOperationConfig
                 {
                     IndexName = GSI_NAME,
@@ -99,14 +107,14 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                     .AddRangeKey("SK", DynamoDBEntryType.String)
                     .Build();
                 var search = table.Query(queryConfig);
-                
+
                 conversations = await search.GetNextSetAsync();
 
             });
 
             var jsonResults = conversations
                 .Select(doc => JsonSerializer.Serialize(
-                    doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()), 
+                    doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()),
                     JsonOptions))
                 .ToList();
             return jsonResults;
@@ -143,7 +151,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
             var jsonResults = conversationPosts
                 .Select(doc => JsonSerializer.Serialize(
-                    doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()), 
+                    doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()),
                     JsonOptions))
                 .ToList();
             return jsonResults;
@@ -267,11 +275,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             NumberHandling = JsonNumberHandling.WriteAsString | JsonNumberHandling.AllowReadingFromString
         };
 
-        private static async Task AsyncExecuteWithDynamoDB(Func<AmazonDynamoDBClient, DynamoDBContext, Task> action)
+        private async Task AsyncExecuteWithDynamoDB(Func<AmazonDynamoDBClient, DynamoDBContext, Task> action)
         {
             var clientConfig = new AmazonDynamoDBConfig
             {
-                ServiceURL = SERVICE_URL,
+                ServiceURL = _serviceUrl.ToString(),
                 // RegionEndpoint intentionally omitted for DynamoDB Local
             };
 
@@ -280,6 +288,19 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             {
                 await action(client, context);
             }
+        }
+
+        private static void ValidateServiceUrl(Uri serviceUrl)
+        {
+            if (serviceUrl == null)
+                throw new ArgumentNullException(nameof(serviceUrl));
+            
+            if (!serviceUrl.IsAbsoluteUri)
+                throw new ArgumentException("Service URL must be an absolute URI", nameof(serviceUrl));
+                
+            if (!serviceUrl.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) && 
+                !serviceUrl.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Service URL must use HTTP or HTTPS scheme", nameof(serviceUrl));
         }
 
     }
