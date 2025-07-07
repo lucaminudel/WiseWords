@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests;
@@ -11,12 +12,21 @@ public class ConversationsApiHttpTests : IDisposable
     private readonly HttpClient _httpClient;
     public ConversationsApiHttpTests()
     {
+        var Configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.test.json", optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+
+        var baseUrl = Configuration["API_GATEWAY_BASE_URL"] ?? 
+        Configuration["ApiGateway:BaseUrl"] ?? 
+        "http://127.0.0.1:3000/";
+
+            
         _httpClient = new HttpClient
         {
-            BaseAddress = new Uri(ApiTestConfiguration.BaseUrl),
-            Timeout = TimeSpan.FromSeconds(ApiTestConfiguration.TimeoutSeconds)
+            BaseAddress = new Uri(baseUrl),
+            Timeout = TimeSpan.FromSeconds(30)
         };
-        //_httpClient.DefaultRequestHeaders.Add("Content-Type", "application/json");
     }
 
     #region POST /conversations Tests
@@ -35,6 +45,7 @@ public class ConversationsApiHttpTests : IDisposable
             UtcCreationTime = DateTimeOffset.UtcNow
         };
 
+        var json = request.ToString();
         // Act
         var response = await _httpClient.PostAsJsonAsync("/conversations", request);
 
