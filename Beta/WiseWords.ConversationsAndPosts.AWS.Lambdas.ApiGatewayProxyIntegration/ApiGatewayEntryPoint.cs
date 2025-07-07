@@ -8,12 +8,12 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration
 
 public class ApiGatewayEntryPoint
 {
-    private readonly Functions _handlers;
+    private readonly Functions _lambdaFunctions;
 
     public ApiGatewayEntryPoint()
     {
         var dynamoDbServiceUrl = Environment.GetEnvironmentVariable("DYNAMODB_SERVICE_URL") ?? "http://localhost:8000";
-        _handlers = new Functions(new Uri(dynamoDbServiceUrl));
+        _lambdaFunctions = new Functions(new Uri(dynamoDbServiceUrl));
     }
 
     public async Task<APIGatewayProxyResponse> RouteHttpRequestToLambda(APIGatewayProxyRequest request, ILambdaContext context)
@@ -61,8 +61,35 @@ public class ApiGatewayEntryPoint
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        var result = await _handlers.CreateNewConversationHandler(nullOrValidLambdaHandlerRequest, context);
-        return CreateResponse(200, result);
+        try
+        {
+            var result = await _lambdaFunctions.CreateNewConversationHandler(nullOrValidLambdaHandlerRequest, context);
+            return CreateResponse(200, result);
+        }
+        catch (ArgumentException ex)
+        {
+            return CreateResponse(400, $"Invalid request: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return CreateResponse(400, $"Invalid operation: {ex.Message}");
+        }
+        catch (TaskCanceledException ex)
+        {
+            return CreateResponse(408, $"Request timeout: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            return CreateResponse(400, $"JSON serialization error: {ex.Message}");
+        }
+        catch (Amazon.DynamoDBv2.AmazonDynamoDBException ex)
+        {
+            return CreateResponse(503, $"DynamoDB service error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return CreateResponse(500, $"Internal server error: {ex.Message}");
+        }
     }
 
     private async Task<APIGatewayProxyResponse> RouteGetConversations(APIGatewayProxyRequest request, ILambdaContext context)
@@ -82,7 +109,7 @@ public class ApiGatewayEntryPoint
             FilterByAuthor = filterByAuthor ?? string.Empty
         };
 
-        var result = await _handlers.RetrieveConversationsHandler(lambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.RetrieveConversationsHandler(lambdaHandlerRequest, context);
         return CreateResponse(200, JsonSerializer.Serialize(result));
     }
 
@@ -101,7 +128,7 @@ public class ApiGatewayEntryPoint
             ConversationPK = segments[1]
         };
 
-        var result = await _handlers.RetrieveConversationPostsHandler(lambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.RetrieveConversationPostsHandler(lambdaHandlerRequest, context);
         return CreateResponse(200, JsonSerializer.Serialize(result));
 
     }
@@ -115,7 +142,7 @@ public class ApiGatewayEntryPoint
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        await _handlers.AdministrativeNonAtomicDeleteConversationAndPostsHandler(nullOrValidLambdaHandlerRequest, context);
+        await _lambdaFunctions.AdministrativeNonAtomicDeleteConversationAndPostsHandler(nullOrValidLambdaHandlerRequest, context);
         return CreateResponse(200, "Deleted");
     }
 
@@ -129,7 +156,7 @@ public class ApiGatewayEntryPoint
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        var result = await _handlers.AppendDrillDownPostHandler(nullOrValidLambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.AppendDrillDownPostHandler(nullOrValidLambdaHandlerRequest, context);
         return CreateResponse(200, result);
     }
 
@@ -142,7 +169,7 @@ public class ApiGatewayEntryPoint
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        var result = await _handlers.AppendCommentPostHandler(nullOrValidLambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.AppendCommentPostHandler(nullOrValidLambdaHandlerRequest, context);
         return CreateResponse(200, result);
     }
 
@@ -155,7 +182,7 @@ public class ApiGatewayEntryPoint
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        var result = await _handlers.AppendConclusionPostHandler(nullOrValidLambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.AppendConclusionPostHandler(nullOrValidLambdaHandlerRequest, context);
         return CreateResponse(200, result);
     }
 
@@ -202,6 +229,15 @@ public class ApiGatewayEntryPoint
     private void TryToSerialise<T>(string body, out T? nullOrValidRequest, out int errorNumber, out string errorMessage)
     {
 
+        if (string.IsNullOrEmpty(body))
+        {
+            nullOrValidRequest = default;
+            errorNumber = 400;
+            errorMessage = "Empty request body.";
+
+            return;
+        }
+
         try
         {
             nullOrValidRequest = JsonSerializer.Deserialize<T>(body);
@@ -209,19 +245,11 @@ public class ApiGatewayEntryPoint
         catch (Exception ex)
         {
             errorNumber = 400;
-            errorMessage = $"Invalid request body.\nAdditional info\n{{Error type:{ex.GetType().ToString}\nError message:{ex.Message}";
+            errorMessage = $"Invalid request body. {{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}";
             nullOrValidRequest = default;
 
             return;
 
-        }
-
-        if (nullOrValidRequest == null)
-        {
-            errorNumber = 400;
-            errorMessage = "Empty request body.";
-
-            return;
         }
 
         errorNumber = 0;

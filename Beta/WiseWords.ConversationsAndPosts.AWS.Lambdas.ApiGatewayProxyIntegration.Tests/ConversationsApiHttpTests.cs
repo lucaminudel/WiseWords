@@ -1,15 +1,17 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests;
 
-public class ConversationsApiHttpTests : IDisposable
+public class ConversationsApiHttpTests : IAsyncLifetime
 {
     private readonly HttpClient _httpClient;
+
+    private readonly Queue<string> _CleanupConversationPosts = new();
+
+    
     public ConversationsApiHttpTests()
     {
         var Configuration = new ConfigurationBuilder()
@@ -17,11 +19,11 @@ public class ConversationsApiHttpTests : IDisposable
             .AddEnvironmentVariables()
             .Build();
 
-        var baseUrl = Configuration["API_GATEWAY_BASE_URL"] ?? 
-        Configuration["ApiGateway:BaseUrl"] ?? 
+        var baseUrl = Configuration["API_GATEWAY_BASE_URL"] ??
+        Configuration["ApiGateway:BaseUrl"] ??
         "http://127.0.0.1:3000/";
 
-            
+
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(baseUrl),
@@ -34,20 +36,11 @@ public class ConversationsApiHttpTests : IDisposable
     [Fact]
     public async Task POST_Conversations_Should_Create_New_Conversation_Successfully()
     {
-        // Arrange
-        var request = new CreateNewConversationRequest
-        {
-            NewGuid = Guid.NewGuid(),
-            ConvoType = DataStore.WiseWordsTable.ConvoTypeEnum.DILEMMA,
-            Title = "Test Conversation",
-            MessageBody = "This is a test conversation message",
-            Author = "TestUser",
-            UtcCreationTime = DateTimeOffset.UtcNow
-        };
-
-        var json = request.ToString();
+        
         // Act
-        var response = await _httpClient.PostAsJsonAsync("/conversations", request);
+        var content = new StringContent(CreateNewConversatonRequestJason(GetNewConversationGuid(), DateTimeOffset.UtcNow),
+                                        System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations", content);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -55,14 +48,13 @@ public class ConversationsApiHttpTests : IDisposable
         result.Should().NotBeEmpty();
     }
 
-    /*
 
     [Fact]
     public async Task POST_Conversations_Should_Return_400_For_Invalid_Request_Body()
     {
         // Arrange
-        var invalidJson = "{ invalid json }";
-        var content = new StringContent(invalidJson, System.Text.Encoding.UTF8, "application/json");
+        var invalidRequestJson = "{ invalid json }";
+        var content = new StringContent(invalidRequestJson, System.Text.Encoding.UTF8, "application/json");
 
         // Act
         var response = await _httpClient.PostAsync("/conversations", content);
@@ -77,7 +69,8 @@ public class ConversationsApiHttpTests : IDisposable
     public async Task POST_Conversations_Should_Return_400_For_Empty_Request_Body()
     {
         // Arrange
-        var content = new StringContent("", System.Text.Encoding.UTF8, "application/json");
+        var emptyRequestJson = string.Empty;
+        var content = new StringContent(emptyRequestJson, System.Text.Encoding.UTF8, "application/json");
 
         // Act
         var response = await _httpClient.PostAsync("/conversations", content);
@@ -87,8 +80,50 @@ public class ConversationsApiHttpTests : IDisposable
         var errorMessage = await response.Content.ReadAsStringAsync();
         errorMessage.Should().Contain("Empty request body");
     }
+    
+    #endregion
+
+    #region POST /conversations/drilldown Tests
+
+    [Fact]
+    public async Task POST_ConversationsDrilldown_Should_Add_Drilldown_Post_Successfully()
+    {
+        // Arrange
+        var newConvoGuid = GetNewConversationGuid();
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, DateTimeOffset.UtcNow),
+                                    System.Text.Encoding.UTF8, "application/json"));
+
+        // Act
+        var content = new StringContent(CreateNewDrillDownPostRequestJason(Guid.NewGuid(),newConvoGuid, DateTimeOffset.UtcNow),
+                                         System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations/drilldown", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadAsStringAsync();
+        result.Should().NotBeEmpty();
+    }
+
+
+    [Fact]
+    public async Task POST_ConversationsDrilldown_Should_Return_400_For_Invalid_Request()
+    {
+        // Arrange
+        var invalidJson = "{ invalid json }";
+        var content = new StringContent(invalidJson, System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await _httpClient.PostAsync("/conversations/drilldown", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 
     #endregion
+
+    /*
+
 
     #region POST /conversations/delete Tests
 
@@ -119,46 +154,6 @@ public class ConversationsApiHttpTests : IDisposable
 
         // Act
         var response = await _httpClient.PostAsync("/conversations/delete", content);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    #endregion
-
-    #region POST /conversations/drilldown Tests
-
-    [Fact]
-    public async Task POST_ConversationsDrilldown_Should_Add_Drilldown_Post_Successfully()
-    {
-        // Arrange
-        var request = new AppendDrillDownPostRequest
-        {
-            ConversationPK = "test-conversation-id",
-            ParentPostSK = "test-parent-post-id",
-            Author = "TestUser",
-            MessageBody = "This is a drill-down post",
-            UtcCreationTime = DateTimeOffset.UtcNow
-        };
-
-        // Act
-        var response = await _httpClient.PostAsJsonAsync("/conversations/drilldown", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadAsStringAsync();
-        result.Should().NotBeEmpty();
-    }
-
-    [Fact]
-    public async Task POST_ConversationsDrilldown_Should_Return_400_For_Invalid_Request()
-    {
-        // Arrange
-        var invalidJson = "{ invalid json }";
-        var content = new StringContent(invalidJson, System.Text.Encoding.UTF8, "application/json");
-
-        // Act
-        var response = await _httpClient.PostAsync("/conversations/drilldown", content);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -406,13 +401,53 @@ public class ConversationsApiHttpTests : IDisposable
         errorMessage.Should().Be("Method not allowed");
     }
 
-*/
     #endregion
 
-
-    public void Dispose()
+    */
+    private Guid GetNewConversationGuid()
     {
+        var guid = Guid.NewGuid();
+        _CleanupConversationPosts.Enqueue($"CONVO#{guid}");
+
+        return guid;
+    }
+
+    private static string CreateNewConversatonRequestJason(Guid guid, DateTimeOffset updateAt) => $$"""
+        {
+            "NewGuid": "{{guid}}",
+            "ConvoType": 2,
+            "Title": "Test Conversation tilet",
+            "MessageBody": "This is a test conversation message body",
+            "Author": "HttpTestUser",
+            "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
+        }
+        """;
+
+    private static string CreateNewDrillDownPostRequestJason(Guid newDrillDownPostguid, Guid convoGuid, DateTimeOffset updateAt) => $$"""
+        {
+            "NewDrillDownGuid": "{{newDrillDownPostguid}}",
+            "ConversationPK": "CONVO#{{convoGuid}}",
+            "ParentPostSK": "",
+            "Author": "HttpTestUser",
+            "MessageBody": "This is a drill-down post",
+            "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
+        }
+        """;
+
+    public async Task InitializeAsync() => await Task.CompletedTask;
+
+    public async Task DisposeAsync()
+    {
+
+        while (_CleanupConversationPosts.Count > 0)
+        {
+            _CleanupConversationPosts.Dequeue();
+            //           await _db.AdministrativeNonAtomicDeleteConversationAndPosts(_dbCleanupConversationPosts.Dequeue());
+        }
+
         _httpClient?.Dispose();
-    }    
-    
+
+    await Task.CompletedTask;
+
+    }
 }
