@@ -2,6 +2,8 @@ using System.Net;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests;
 
@@ -36,9 +38,10 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     [Fact]
     public async Task POST_Conversations_Should_Create_New_Conversation_Successfully()
     {
-        
+
         // Act
-        var content = new StringContent(CreateNewConversatonRequestJason(GetNewConversationGuid(), DateTimeOffset.UtcNow),
+        var conversationGuid = GetNewConversationGuid();
+        var content = new StringContent(CreateNewConversatonRequestJason(conversationGuid, new DateTimeOffset(new DateTime(2025, 12, 12))),
                                         System.Text.Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync("/conversations", content);
 
@@ -46,6 +49,12 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadAsStringAsync();
         result.Should().NotBeEmpty();
+
+        var jsonResult = JsonSerializer.Deserialize<Dictionary<string, string>>(result);
+        jsonResult!["PK"].Should().Be($"CONVO#{conversationGuid}");
+        jsonResult["SK"].Should().Be("METADATA");
+        jsonResult["ConvoType"].Should().Be("DILEMMA");
+        jsonResult["UpdatedAtYear"].Should().Be("2025");
     }
 
 
@@ -80,7 +89,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var errorMessage = await response.Content.ReadAsStringAsync();
         errorMessage.Should().Contain("Empty request body");
     }
-    
+
     #endregion
 
     #region POST /conversations/drilldown Tests
@@ -95,7 +104,8 @@ public class ConversationsApiHttpTests : IAsyncLifetime
                                     System.Text.Encoding.UTF8, "application/json"));
 
         // Act
-        var content = new StringContent(CreateNewDrillDownPostRequestJason(Guid.NewGuid(),newConvoGuid, DateTimeOffset.UtcNow),
+        var newDDguid = Guid.NewGuid();
+        var content = new StringContent(CreateNewDrillDownPostRequestJason(newDDguid, newConvoGuid, DateTimeOffset.UtcNow),
                                          System.Text.Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync("/conversations/drilldown", content);
 
@@ -103,6 +113,10 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadAsStringAsync();
         result.Should().NotBeEmpty();
+        
+        var jsonResult = JsonSerializer.Deserialize<Dictionary<string, string>>(result);
+        jsonResult!["PK"].Should().Be($"CONVO#{newConvoGuid}");
+        jsonResult["SK"].Should().Be($"#DD#{newDDguid}");
     }
 
 
@@ -121,6 +135,159 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     }
 
     #endregion
+
+    #region POST /conversations/comment Tests
+
+    [Fact]
+    public async Task POST_ConversationsComment_Should_Add_Comment_Successfully()
+    {
+        // Arrange
+        var newConvoGuid = GetNewConversationGuid();
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, DateTimeOffset.UtcNow),
+                                    System.Text.Encoding.UTF8, "application/json"));
+
+        // Act
+        var newCMguid = Guid.NewGuid();
+        var content = new StringContent(CreateNewCommentPostRequestJson(newCMguid, newConvoGuid, DateTimeOffset.UtcNow),
+                                         System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations/comment", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadAsStringAsync();
+        result.Should().NotBeEmpty();
+
+        var jsonResult = JsonSerializer.Deserialize<Dictionary<string, string>>(result);
+        jsonResult!["PK"].Should().Be($"CONVO#{newConvoGuid}");
+        jsonResult["SK"].Should().Be($"#CM#{newCMguid}");
+    }
+
+    [Fact]
+    public async Task POST_ConversationsComment_Should_Return_400_For_Invalid_Request()
+    {
+        // Arrange
+        var invalidJson = "{ invalid json }";
+        var content = new StringContent(invalidJson, System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await _httpClient.PostAsync("/conversations/comment", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    #endregion
+
+    #region POST /conversations/conclusion Tests
+
+    [Fact]
+    public async Task POST_ConversationsConclusion_Should_Add_Conclusion_Successfully()
+    {
+        // Arrange
+        var newConvoGuid = GetNewConversationGuid();
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, DateTimeOffset.UtcNow),
+                                    System.Text.Encoding.UTF8, "application/json"));
+
+        // Act
+        var newCCguid = Guid.NewGuid();
+        var content = new StringContent(CreateNewConclusionPostRequestJson(newCCguid, newConvoGuid, DateTimeOffset.UtcNow),
+                                         System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations/conclusion", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadAsStringAsync();
+        result.Should().NotBeEmpty();
+
+        var jsonResult = JsonSerializer.Deserialize<Dictionary<string, string>>(result);
+        jsonResult!["PK"].Should().Be($"CONVO#{newConvoGuid}");
+        jsonResult["SK"].Should().Be($"#CC#{newCCguid}");
+
+    }
+
+    [Fact]
+    public async Task POST_ConversationsConclusion_Should_Return_400_For_Invalid_Request()
+    {
+        // Arrange
+        var invalidJson = "{ invalid json }";
+        var content = new StringContent(invalidJson, System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await _httpClient.PostAsync("/conversations/conclusion", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    #endregion
+
+
+    #region GET /conversations/{id}/posts Tests
+
+    [Fact]
+    public async Task GET_ConversationPosts_Should_Return_Posts_Successfully()
+    {
+        // Arrange 
+        var newConvoGuid = GetNewConversationGuid();
+        var creationTime = DateTimeOffset.UtcNow;
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, creationTime),
+                                                      System.Text.Encoding.UTF8, "application/json"));
+        var newDrillDownPostGuid = Guid.NewGuid();
+        await _httpClient.PostAsync("/conversations/drilldown",
+                                    new StringContent(CreateNewDrillDownPostRequestJason(newDrillDownPostGuid, newConvoGuid, creationTime.AddMinutes(1)),
+                                                      System.Text.Encoding.UTF8, "application/json"));
+
+        var newCommentPostGuid = Guid.NewGuid();
+        await _httpClient.PostAsync("/conversations/comment",
+                                    new StringContent(CreateNewCommentPostRequestJson(newCommentPostGuid, newConvoGuid, creationTime.AddMinutes(2)),
+                                                      System.Text.Encoding.UTF8, "application/json"));
+
+
+
+        // Act
+        var conversationPK = $"CONVO#{newConvoGuid}";
+        var response = await _httpClient.GetAsync($"/conversations/{Uri.EscapeDataString(conversationPK)}/posts");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadAsStringAsync();
+        result.Should().NotBeEmpty();
+
+        var postsList = JsonSerializer.Deserialize<List<string>>(result);
+        var posts = postsList!.Select(json => JsonSerializer.Deserialize<Dictionary<string, string>>(json)).ToList();
+
+        posts.Should().NotBeNull();
+        posts.Should().HaveCount(3);
+
+        posts[0]!["PK"].Should().Be(conversationPK);
+        posts[0]!["SK"].Should().Be($"#CM#{newCommentPostGuid}");
+
+        posts[1]!["PK"].Should().Be(conversationPK);
+        posts[1]!["SK"].Should().Be($"#DD#{newDrillDownPostGuid}");
+
+        posts[2]!["PK"].Should().Be(conversationPK);
+        posts[2]!["SK"].Should().Be("METADATA");
+    }
+
+    [Fact]
+    public async Task GET_ConversationPosts_Should_Return_400_For_Invalid_Path_Format()
+    {
+        // Act
+        var response = await _httpClient.GetAsync("/conversations//posts");
+        //var response = await _httpClient.GetAsync("/conversations/invalid/path/format");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().Contain("Invalid path format");
+    }
+
+    #endregion
+
+
 
     /*
 
@@ -161,87 +328,6 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
     #endregion
 
-    #region POST /conversations/comment Tests
-
-    [Fact]
-    public async Task POST_ConversationsComment_Should_Add_Comment_Successfully()
-    {
-        // Arrange
-        var request = new AppendCommentPostRequest
-        {
-            ConversationPK = "test-conversation-id",
-            ParentPostSK = "test-parent-post-id",
-            NewCommentGuid = Guid.NewGuid(),
-            Author = "TestUser",
-            MessageBody = "This is a comment",
-            UtcCreationTime = DateTimeOffset.UtcNow
-        };
-
-        // Act
-        var response = await _httpClient.PostAsJsonAsync("/conversations/comment", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadAsStringAsync();
-        result.Should().NotBeEmpty();
-    }
-
-    [Fact]
-    public async Task POST_ConversationsComment_Should_Return_400_For_Invalid_Request()
-    {
-        // Arrange
-        var invalidJson = "{ invalid json }";
-        var content = new StringContent(invalidJson, System.Text.Encoding.UTF8, "application/json");
-
-        // Act
-        var response = await _httpClient.PostAsync("/conversations/comment", content);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    #endregion
-
-    #region POST /conversations/conclusion Tests
-
-    [Fact]
-    public async Task POST_ConversationsConclusion_Should_Add_Conclusion_Successfully()
-    {
-        // Arrange
-        var request = new AppendConclusionPostRequest
-        {
-            ConversationPK = "test-conversation-id",
-            ParentPostSK = "test-parent-post-id",
-            NewConclusionGuid = Guid.NewGuid(),
-            Author = "TestUser",
-            MessageBody = "This is a conclusion",
-            UtcCreationTime = DateTimeOffset.UtcNow
-        };
-
-        // Act
-        var response = await _httpClient.PostAsJsonAsync("/conversations/conclusion", request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadAsStringAsync();
-        result.Should().NotBeEmpty();
-    }
-
-    [Fact]
-    public async Task POST_ConversationsConclusion_Should_Return_400_For_Invalid_Request()
-    {
-        // Arrange
-        var invalidJson = "{ invalid json }";
-        var content = new StringContent(invalidJson, System.Text.Encoding.UTF8, "application/json");
-
-        // Act
-        var response = await _httpClient.PostAsync("/conversations/conclusion", content);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    #endregion
 
     #region GET /conversations Tests
 
@@ -300,41 +386,6 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorMessage = await response.Content.ReadAsStringAsync();
         errorMessage.Should().Contain("Must be between 1870 and 9999");
-    }
-
-    #endregion
-
-    #region GET /conversations/{id}/posts Tests
-
-    [Fact]
-    public async Task GET_ConversationPosts_Should_Return_Posts_Successfully()
-    {
-        // Arrange
-        var conversationId = "test-conversation-id";
-
-        // Act
-        var response = await _httpClient.GetAsync($"/conversations/{conversationId}/posts");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadAsStringAsync();
-        result.Should().NotBeEmpty();
-
-        // Verify it's valid JSON array
-        var posts = JsonSerializer.Deserialize<List<string>>(result);
-        posts.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task GET_ConversationPosts_Should_Return_400_For_Invalid_Path_Format()
-    {
-        // Act
-        var response = await _httpClient.GetAsync("/conversations/invalid/path/format");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var errorMessage = await response.Content.ReadAsStringAsync();
-        errorMessage.Should().Contain("Invalid path format");
     }
 
     #endregion
@@ -430,6 +481,28 @@ public class ConversationsApiHttpTests : IAsyncLifetime
             "ParentPostSK": "",
             "Author": "HttpTestUser",
             "MessageBody": "This is a drill-down post",
+            "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
+        }
+        """;
+
+    private static string CreateNewCommentPostRequestJson(Guid newCommentGuid, Guid convoGuid, DateTimeOffset updateAt) => $$"""
+        {
+            "NewCommentGuid": "{{newCommentGuid}}",
+            "ConversationPK": "CONVO#{{convoGuid}}",
+            "ParentPostSK": "",
+            "Author": "HttpTestUser",
+            "MessageBody": "This is a comment post",
+            "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
+        }
+        """;
+
+    private static string CreateNewConclusionPostRequestJson(Guid newConclusionGuid, Guid convoGuid, DateTimeOffset updateAt) => $$"""
+        {
+            "NewConclusionGuid": "{{newConclusionGuid}}",
+            "ConversationPK": "CONVO#{{convoGuid}}",
+            "ParentPostSK": "",
+            "Author": "HttpTestUser",
+            "MessageBody": "This is a conclusion post",
             "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
         }
         """;
