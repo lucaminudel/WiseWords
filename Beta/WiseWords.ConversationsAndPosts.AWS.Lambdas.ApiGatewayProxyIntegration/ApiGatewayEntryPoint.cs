@@ -9,18 +9,23 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration
 public class ApiGatewayEntryPoint
 {
     private readonly Functions _lambdaFunctions;
+    private readonly ILoggerObserver _observer;
+
 
     public ApiGatewayEntryPoint()
     {
         var dynamoDbServiceUrl = Environment.GetEnvironmentVariable("DYNAMODB_SERVICE_URL") ?? "http://localhost:8000";
         _lambdaFunctions = new Functions(new Uri(dynamoDbServiceUrl));
+        _observer = new LoggerObserver("Api Gateway");
     }
 
     public async Task<APIGatewayProxyResponse> RouteHttpRequestToLambda(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        _observer.OnStart($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+
         try
         {
-            return request.HttpMethod switch
+            var response = request.HttpMethod switch
             {
                 "POST" => await (request.Path switch
                 {
@@ -44,9 +49,16 @@ public class ApiGatewayEntryPoint
 
                 _ => CreateResponse(405, "Method not allowed"),
             };
+
+            _observer.OnSuccess($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
+            return response;
+
         }
         catch (Exception ex)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+
             return CreateResponse(500, $"{{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}");
         }
     }
@@ -54,56 +66,79 @@ public class ApiGatewayEntryPoint
 
     private async Task<APIGatewayProxyResponse> RoutePostConversations(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+
         TryToSerialise(request.Body, out CreateNewConversationRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, $"HTTP error code {errorNumber}");
+
             return CreateResponse(errorNumber, errorMessage);
         }
 
         try
         {
             var result = await _lambdaFunctions.CreateNewConversationHandler(nullOrValidLambdaHandlerRequest, context);
+
+            _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
             return CreateResponse(200, result);
         }
         catch (ArgumentException ex)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, ex);
+
             return CreateResponse(400, $"Invalid request: {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, ex);
+
             return CreateResponse(400, $"Invalid operation: {ex.Message}");
         }
         catch (TaskCanceledException ex)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, ex);
+
             return CreateResponse(408, $"Request timeout: {ex.Message}");
         }
         catch (JsonException ex)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, ex);
+
             return CreateResponse(400, $"JSON serialization error: {ex.Message}");
         }
         catch (Amazon.DynamoDBv2.AmazonDynamoDBException ex)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, ex);
+
             return CreateResponse(503, $"DynamoDB service error: {ex.Message}");
         }
         catch (Exception ex)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, ex);
             return CreateResponse(500, $"Internal server error: {ex.Message}");
         }
     }
 
     private async Task<APIGatewayProxyResponse> RouteGetConversations(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        _observer.OnStart($"HTTP Request Router={nameof(RouteGetConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         var upsatedAtYearValidationResult = ValidateUpdatedAtYearQueryStringRequest(request);
         if (!upsatedAtYearValidationResult.IsValid)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RouteGetConversations)}", context, "HTTP error code 400");
+
             return CreateResponse(400, upsatedAtYearValidationResult.ErrorMessage);
         }
 
         var filterByAuthorValidationResult = ValidateFilterByAuthorQueryStringRequest(request);
         if (!filterByAuthorValidationResult.IsValid)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RouteGetConversations)}", context, "HTTP error code 400");
+
             return CreateResponse(400, filterByAuthorValidationResult.ErrorMessage);
         }
 
@@ -113,8 +148,20 @@ public class ApiGatewayEntryPoint
             FilterByAuthor = filterByAuthorValidationResult.Author
         };
 
-        var result = await _lambdaFunctions.RetrieveConversationsHandler(lambdaHandlerRequest, context);
-        return CreateResponse(200, JsonSerializer.Serialize(result));
+        try
+        {
+            var result = await _lambdaFunctions.RetrieveConversationsHandler(lambdaHandlerRequest, context);
+
+            _observer.OnSuccess($"HTTP Request Router={nameof(RouteGetConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
+            return CreateResponse(200, JsonSerializer.Serialize(result));
+        }
+        catch (Exception ex)
+        {
+            _observer.OnError($"HTTP Request Router={nameof(RouteGetConversations)}", context, ex);
+            return CreateResponse(500, $"Internal server error: {ex.Message}");
+            
+        }
     }
 
     private async Task<APIGatewayProxyResponse> RouteGetConversationPosts(APIGatewayProxyRequest request, ILambdaContext context)

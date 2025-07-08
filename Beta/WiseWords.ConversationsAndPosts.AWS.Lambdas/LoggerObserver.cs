@@ -2,10 +2,10 @@ using Amazon.Lambda.Core;
 
 namespace WiseWords.ConversationsAndPosts.AWS.Lambdas;
 
-public class LambdaLoggerObserver : IHandlerObserver
+public class LoggerObserver : ILoggerObserver
 {
     private readonly string _prefix;
-    public LambdaLoggerObserver(string logPrefix) 
+    public LoggerObserver(string logPrefix)
     {
         _prefix = logPrefix;
     }
@@ -15,6 +15,9 @@ public class LambdaLoggerObserver : IHandlerObserver
     public void OnSuccess(string message, ILambdaContext context)
         => context.Logger.LogLine($"[{_prefix} success] {message}");
 
+    public void OnError(string message, ILambdaContext context, string errorDetails)
+        => context.Logger.LogLine($"[{_prefix} error] {message}, {errorDetails}");
     public void OnError(string message, ILambdaContext context, Exception ex)
-        => context.Logger.LogLine($"[{_prefix} error] {message} Exception: {ex.Message} StackTrace: {ex.StackTrace}");
+        =>  OnError(message, context, $"Exception: {ex.Message} StackTrace: {ex.StackTrace}");
+
 }

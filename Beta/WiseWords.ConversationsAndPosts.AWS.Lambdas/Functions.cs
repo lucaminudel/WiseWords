@@ -8,14 +8,14 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
     public class Functions
     {
         private readonly DataStore.WiseWordsTable _service;
-        private readonly IHandlerObserver _observer;
+        private readonly ILoggerObserver _observer;
 
 
-        public Functions(Uri dynamoDbServiceUrl) : this(dynamoDbServiceUrl, new LambdaLoggerObserver("Lambda"))
+        public Functions(Uri dynamoDbServiceUrl) : this(dynamoDbServiceUrl, new LoggerObserver("Lambda"))
         {
         }
 
-        public Functions(Uri dynamoDbServiceUrl, IHandlerObserver observer)
+        public Functions(Uri dynamoDbServiceUrl, ILoggerObserver observer)
         {
             ValidateServiceUrl(dynamoDbServiceUrl);
             _service = new DataStore.WiseWordsTable(dynamoDbServiceUrl);
