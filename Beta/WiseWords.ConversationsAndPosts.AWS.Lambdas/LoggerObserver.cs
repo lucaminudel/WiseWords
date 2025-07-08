@@ -18,6 +18,6 @@ public class LoggerObserver : ILoggerObserver
     public void OnError(string message, ILambdaContext context, string errorDetails)
         => context.Logger.LogLine($"[{_prefix} error] {message}, {errorDetails}");
     public void OnError(string message, ILambdaContext context, Exception ex)
-        =>  OnError(message, context, $"Exception: {ex.Message} StackTrace: {ex.StackTrace}");
+        =>  OnError(message, context, $"Exception: {ex.GetType()} {ex.Message} StackTrace: {ex.StackTrace}");
 
 }
