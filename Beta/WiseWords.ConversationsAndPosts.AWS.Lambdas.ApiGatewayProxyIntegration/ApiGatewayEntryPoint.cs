@@ -261,28 +261,60 @@ public class ApiGatewayEntryPoint
 
     private async Task<APIGatewayProxyResponse> RoutePostConversationsComment(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+
         TryToSerialise(request.Body, out AppendCommentPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsComment)}", context, $"HTTP error code {errorNumber}");
+
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        var result = await _lambdaFunctions.AppendCommentPostHandler(nullOrValidLambdaHandlerRequest, context);
-        return CreateResponse(200, result);
+        try
+        {
+            var result = await _lambdaFunctions.AppendCommentPostHandler(nullOrValidLambdaHandlerRequest, context);
+
+            _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
+            return CreateResponse(200, result);
+        }
+        catch (Exception ex)
+        {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsComment)}", context, ex);
+
+            return CreateResponse(500, $"Internal server error: {ex.Message}");
+        }
     }
 
     private async Task<APIGatewayProxyResponse> RoutePostConversationsConclusion(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+
         TryToSerialise(request.Body, out AppendConclusionPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsConclusion)}", context, $"HTTP error code {errorNumber}");
+
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        var result = await _lambdaFunctions.AppendConclusionPostHandler(nullOrValidLambdaHandlerRequest, context);
-        return CreateResponse(200, result);
+        try
+        {
+            var result = await _lambdaFunctions.AppendConclusionPostHandler(nullOrValidLambdaHandlerRequest, context);
+
+            _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
+            return CreateResponse(200, result);
+        }
+        catch (Exception ex)
+        {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsConclusion)}", context, ex);
+
+            return CreateResponse(500, $"Internal server error: {ex.Message}");
+        }
     }
 
 
