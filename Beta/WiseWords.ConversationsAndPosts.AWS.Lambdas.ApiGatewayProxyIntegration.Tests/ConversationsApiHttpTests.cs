@@ -287,6 +287,103 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
     #endregion
 
+    #region GET /conversations Tests
+
+    [Fact]
+    public async Task GET_Conversations_Should_Return_Conversations_Successfully()
+    {
+        // Arrange 
+        var updatedAtYear = 2024;
+        var filterByUniqueAuthor = "HttpTestUser" + Guid.NewGuid().ToString();
+        
+        var convo1Guid = GetNewConversationGuid();
+        var convo2Guid = GetNewConversationGuid();
+        var targetYearTime = new DateTimeOffset(2024, 6, 15, 10, 0, 0, TimeSpan.Zero);
+        
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(convo1Guid, filterByUniqueAuthor, targetYearTime),
+                                                      System.Text.Encoding.UTF8, "application/json"));
+        
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(convo2Guid, filterByUniqueAuthor, targetYearTime.AddHours(1)),
+                                                      System.Text.Encoding.UTF8, "application/json"));
+        
+        var convo3Guid = GetNewConversationGuid();
+        var differentYearTime = new DateTimeOffset(2023, 6, 15, 10, 0, 0, TimeSpan.Zero);
+        
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(convo3Guid, filterByUniqueAuthor, differentYearTime),
+                                                      System.Text.Encoding.UTF8, "application/json"));
+
+        // Act
+        var response = await _httpClient.GetAsync($"/conversations?updatedAtYear={updatedAtYear}&filterByAuthor={filterByUniqueAuthor}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadAsStringAsync();
+        result.Should().NotBeEmpty();
+
+        // Verify it's valid JSON array (first step)
+        var conversations = JsonSerializer.Deserialize<List<string>>(result);
+        conversations.Should().NotBeNull();
+        
+        // Should return exactly 2 conversations (the ones from 2024)
+        conversations.Should().HaveCount(2);
+        
+        // Verify the correct conversations are returned by checking their PKs (second step)
+        var expectedPK1 = $"CONVO#{convo1Guid}";
+        var expectedPK2 = $"CONVO#{convo2Guid}";
+        var unexpectedPK3 = $"CONVO#{convo3Guid}";
+        
+        var returnedPKs = conversations.Select(conversationJson => 
+        {
+            var conversation = JsonSerializer.Deserialize<Dictionary<string, object>>(conversationJson);
+            return conversation!["PK"].ToString();
+        }).ToList();
+        
+        returnedPKs.Should().Contain(expectedPK1);
+        returnedPKs.Should().Contain(expectedPK2);
+        returnedPKs.Should().NotContain(unexpectedPK3);
+    }
+
+
+    [Fact]
+    public async Task GET_Conversations_Should_Return_400_For_Missing_UpdatedAtYear()
+    {
+        // Act
+        var response = await _httpClient.GetAsync("/conversations");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().Contain("Empty updatedAtYear");
+    }
+
+    [Fact]
+    public async Task GET_Conversations_Should_Return_400_For_Invalid_UpdatedAtYear()
+    {
+        // Act
+        var response = await _httpClient.GetAsync("/conversations?updatedAtYear=invalid");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().Contain("Invalid updatedAtYear");
+    }
+
+    [Fact]
+    public async Task GET_Conversations_Should_Return_400_For_OutOfRange_UpdatedAtYear()
+    {
+        // Act
+        var response = await _httpClient.GetAsync("/conversations?updatedAtYear=1800");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().Contain("Must be between 1970 and 9999.");
+    }
+
+    #endregion
 
 
     /*
@@ -329,66 +426,6 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     #endregion
 
 
-    #region GET /conversations Tests
-
-    [Fact]
-    public async Task GET_Conversations_Should_Return_Conversations_Successfully()
-    {
-        // Arrange
-        var updatedAtYear = 2024;
-        var filterByAuthor = "TestUser";
-
-        // Act
-        var response = await _httpClient.GetAsync($"/conversations?updatedAtYear={updatedAtYear}&filterByAuthor={filterByAuthor}");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadAsStringAsync();
-        result.Should().NotBeEmpty();
-
-        // Verify it's valid JSON array
-        var conversations = JsonSerializer.Deserialize<List<string>>(result);
-        conversations.Should().NotBeNull();
-    }
-
-
-    [Fact]
-    public async Task GET_Conversations_Should_Return_400_For_Missing_UpdatedAtYear()
-    {
-        // Act
-        var response = await _httpClient.GetAsync("/conversations");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var errorMessage = await response.Content.ReadAsStringAsync();
-        errorMessage.Should().Contain("Empty updatedAtYear");
-    }
-
-    [Fact]
-    public async Task GET_Conversations_Should_Return_400_For_Invalid_UpdatedAtYear()
-    {
-        // Act
-        var response = await _httpClient.GetAsync("/conversations?updatedAtYear=invalid");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var errorMessage = await response.Content.ReadAsStringAsync();
-        errorMessage.Should().Contain("Invalid updatedAtYear");
-    }
-
-    [Fact]
-    public async Task GET_Conversations_Should_Return_400_For_OutOfRange_UpdatedAtYear()
-    {
-        // Act
-        var response = await _httpClient.GetAsync("/conversations?updatedAtYear=1800");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var errorMessage = await response.Content.ReadAsStringAsync();
-        errorMessage.Should().Contain("Must be between 1870 and 9999");
-    }
-
-    #endregion
 
     #region OPTIONS Tests
 
@@ -463,13 +500,15 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         return guid;
     }
 
-    private static string CreateNewConversatonRequestJason(Guid guid, DateTimeOffset updateAt) => $$"""
+
+    private static string CreateNewConversatonRequestJason(Guid guid, DateTimeOffset updateAt) => CreateNewConversatonRequestJason(guid, "}HttpTestUser", updateAt);
+    private static string CreateNewConversatonRequestJason(Guid guid, string Author, DateTimeOffset updateAt) => $$"""
         {
             "NewGuid": "{{guid}}",
             "ConvoType": 2,
             "Title": "Test Conversation tilet",
             "MessageBody": "This is a test conversation message body",
-            "Author": "HttpTestUser",
+            "Author": "{{Author}}",
             "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
         }
         """;

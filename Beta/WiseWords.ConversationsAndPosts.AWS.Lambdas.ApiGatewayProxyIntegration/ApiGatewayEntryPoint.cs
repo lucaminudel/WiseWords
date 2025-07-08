@@ -47,7 +47,7 @@ public class ApiGatewayEntryPoint
         }
         catch (Exception ex)
         {
-            return CreateResponse(500, ex.Message);
+            return CreateResponse(500, $"{{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}");
         }
     }
 
@@ -94,19 +94,23 @@ public class ApiGatewayEntryPoint
 
     private async Task<APIGatewayProxyResponse> RouteGetConversations(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        var updatedAtYearStr = request.QueryStringParameters?["updatedAtYear"];
-        var filterByAuthor = request.QueryStringParameters?["filterByAuthor"];
 
-        var validationResult = ValidateUpdatedAtYear(updatedAtYearStr);
-        if (!validationResult.IsValid)
+        var upsatedAtYearValidationResult = ValidateUpdatedAtYearQueryStringRequest(request);
+        if (!upsatedAtYearValidationResult.IsValid)
         {
-            return CreateResponse(400, validationResult.ErrorMessage);
+            return CreateResponse(400, upsatedAtYearValidationResult.ErrorMessage);
+        }
+
+        var filterByAuthorValidationResult = ValidateFilterByAuthorQueryStringRequest(request);
+        if (!filterByAuthorValidationResult.IsValid)
+        {
+            return CreateResponse(400, filterByAuthorValidationResult.ErrorMessage);
         }
 
         var lambdaHandlerRequest = new RetrieveConversationsRequest
         {
-            UpdatedAtYear = validationResult.Year,
-            FilterByAuthor = filterByAuthor ?? string.Empty
+            UpdatedAtYear = upsatedAtYearValidationResult.Year,
+            FilterByAuthor = filterByAuthorValidationResult.Author
         };
 
         var result = await _lambdaFunctions.RetrieveConversationsHandler(lambdaHandlerRequest, context);
@@ -186,28 +190,6 @@ public class ApiGatewayEntryPoint
         return CreateResponse(200, result);
     }
 
-    private (bool IsValid, int Year, string ErrorMessage) ValidateUpdatedAtYear(string? yearStr)
-    {
-        if (string.IsNullOrEmpty(yearStr))
-        {
-            return (false, 0, "Empty updatedAtYear. Must be a valid integer..");
-        }
-
-        if (!int.TryParse(yearStr, out var year))
-        {
-            return (false, 0, "Invalid updatedAtYear. Must be a valid integer.");
-        }
-
-        const int minYear = 1870;
-        const int maxYear = 9999;
-
-        if (year < minYear || year > maxYear)
-        {
-            return (false, 0, $"Invalid updatedAtYear. Must be between {minYear} and {maxYear}.");
-        }
-
-        return (true, year, "");
-    }
 
     private APIGatewayProxyResponse CreateResponse(int statusCode, string body)
     {
@@ -254,6 +236,61 @@ public class ApiGatewayEntryPoint
 
         errorNumber = 0;
         errorMessage = string.Empty;
+    }
+
+    private (bool IsValid, int Year, string ErrorMessage) ValidateUpdatedAtYearQueryStringRequest(APIGatewayProxyRequest request)
+    {
+        string? yearStr;
+
+        if (false == request.QueryStringParameters?.ContainsKey("updatedAtYear"))
+        {
+            return (false, 0, "Missing updatedAtYear. It must be included in the query string.");
+
+        }
+
+        yearStr = request.QueryStringParameters?["updatedAtYear"];
+
+
+        if (string.IsNullOrEmpty(yearStr))
+        {
+            return (false, 0, "Empty updatedAtYear. Must be a valid integer.");
+        }
+
+        if (!int.TryParse(yearStr, out var year))
+        {
+            return (false, 0, "Invalid updatedAtYear. Must be a valid integer.");
+        }
+
+        const int minYear = 1970;
+        const int maxYear = 9999;
+
+        if (year < minYear || maxYear > year)
+        {
+            return (false, 0, $"Invalid updatedAtYear value '{year}'. Must be between {minYear} and {maxYear}.");
+        }
+
+        return (true, year, "");
+    }
+
+    private (bool IsValid, string Author, string ErrorMessage) ValidateFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
+    {
+        string? authorStr;
+
+        if (false == request.QueryStringParameters?.ContainsKey("filterByAuthor"))
+        {
+            return (false, string.Empty, "Missing filterByAuthor. It must be included in the query string.");
+
+        }
+
+        authorStr = request.QueryStringParameters?["filterByAuthor"];
+
+
+        if (string.IsNullOrEmpty(authorStr))
+        {
+            return (false, string.Empty, "Empty filterByAuthor. Must be a not empty username.");
+        }
+
+        return (true, authorStr, string.Empty);
     }
 
 }
