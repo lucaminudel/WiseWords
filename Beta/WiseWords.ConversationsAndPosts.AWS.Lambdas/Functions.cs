@@ -11,7 +11,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
         private readonly IHandlerObserver _observer;
 
 
-        public Functions(Uri dynamoDbServiceUrl) : this(dynamoDbServiceUrl, new LambdaLoggerObserver())
+        public Functions(Uri dynamoDbServiceUrl) : this(dynamoDbServiceUrl, new LambdaLoggerObserver("Lambda"))
         {
         }
 
