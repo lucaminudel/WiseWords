@@ -264,7 +264,7 @@ public class ApiGatewayEntryPoint
         const int minYear = 1970;
         const int maxYear = 9999;
 
-        if (year < minYear || maxYear > year)
+        if (year < minYear || maxYear < year)
         {
             return (false, 0, $"Invalid updatedAtYear value '{year}'. Must be between {minYear} and {maxYear}.");
         }

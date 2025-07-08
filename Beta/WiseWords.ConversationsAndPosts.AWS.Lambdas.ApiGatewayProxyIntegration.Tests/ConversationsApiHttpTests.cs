@@ -223,7 +223,6 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
     #endregion
 
-
     #region GET /conversations/{id}/posts Tests
 
     [Fact]
@@ -385,23 +384,41 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
     #endregion
 
-
-    /*
-
-
     #region POST /conversations/delete Tests
 
     [Fact]
     public async Task POST_ConversationsDelete_Should_Delete_Conversation_Successfully()
     {
-        // Arrange
-        var request = new DeleteConversationRequest
+        // Arrange - Create a conversation with posts first
+        var newConvoGuid = GetNewConversationGuid();
+        var creationTime = DateTimeOffset.UtcNow;
+        
+        // Create the conversation
+        await _httpClient.PostAsync("/conversations",
+                                   new StringContent(CreateNewConversatonRequestJason(newConvoGuid, creationTime),
+                                                     System.Text.Encoding.UTF8, "application/json"));
+        
+        // Add a comment post
+        await _httpClient.PostAsync("/conversations/comment",
+                                   new StringContent(CreateNewCommentPostRequestJson(Guid.NewGuid(), newConvoGuid, creationTime.AddMinutes(1)),
+                                                     System.Text.Encoding.UTF8, "application/json"));
+        
+        // Add a drill-down post
+        await _httpClient.PostAsync("/conversations/drilldown",
+                                   new StringContent(CreateNewDrillDownPostRequestJason(Guid.NewGuid(), newConvoGuid, creationTime.AddMinutes(2)),
+                                                     System.Text.Encoding.UTF8, "application/json"));
+
+        // Create delete request JSON
+        var conversationPK = $"CONVO#{newConvoGuid}";
+        var deleteRequestJson = $$"""
         {
-            ConversationPK = "test-conversation-id"
-        };
+            "ConversationPK": "{{conversationPK}}"
+        }
+        """;
 
         // Act
-        var response = await _httpClient.PostAsJsonAsync("/conversations/delete", request);
+        var response = await _httpClient.PostAsync("/conversations/delete",
+                                                  new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json"));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -424,8 +441,6 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     }
 
     #endregion
-
-
 
     #region OPTIONS Tests
 
@@ -491,7 +506,8 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
     #endregion
 
-    */
+
+
     private Guid GetNewConversationGuid()
     {
         var guid = Guid.NewGuid();
@@ -553,8 +569,16 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
         while (_CleanupConversationPosts.Count > 0)
         {
-            _CleanupConversationPosts.Dequeue();
-            //           await _db.AdministrativeNonAtomicDeleteConversationAndPosts(_dbCleanupConversationPosts.Dequeue());
+ 
+            var conversationPK = _CleanupConversationPosts.Dequeue();
+            var deleteRequestJson = $$"""
+            {
+                "ConversationPK": "{{conversationPK}}"
+            }
+            """;
+
+            var response = await _httpClient.PostAsync("/conversations/delete",
+                                                        new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json"));
         }
 
         _httpClient?.Dispose();
