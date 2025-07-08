@@ -203,29 +203,60 @@ public class ApiGatewayEntryPoint
 
     private async Task<APIGatewayProxyResponse> RoutePostConversationsDelete(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversationsDelete)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+
         TryToSerialise(request.Body, out DeleteConversationRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsDelete)}", context, $"HTTP error code {errorNumber}");
+
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        await _lambdaFunctions.AdministrativeNonAtomicDeleteConversationAndPostsHandler(nullOrValidLambdaHandlerRequest, context);
-        return CreateResponse(200, "Deleted");
+        try
+        {
+            await _lambdaFunctions.AdministrativeNonAtomicDeleteConversationAndPostsHandler(nullOrValidLambdaHandlerRequest, context);
+
+            _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversationsDelete)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
+            return CreateResponse(200, "Deleted");
+        }
+        catch (Exception ex)
+        {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsDelete)}", context, ex);
+
+            return CreateResponse(500, $"Internal server error: {ex.Message}");
+        }
     }
 
     private async Task<APIGatewayProxyResponse> RoutePostConversationsDrillDownPost(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         TryToSerialise(request.Body, out AppendDrillDownPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsDrillDownPost)}", context, $"HTTP error code {errorNumber}");
+
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        var result = await _lambdaFunctions.AppendDrillDownPostHandler(nullOrValidLambdaHandlerRequest, context);
-        return CreateResponse(200, result);
+        try
+        {
+            var result = await _lambdaFunctions.AppendDrillDownPostHandler(nullOrValidLambdaHandlerRequest, context);
+
+            _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
+            return CreateResponse(200, result);
+        }
+        catch (Exception ex)
+        {
+            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsDrillDownPost)}", context, ex);
+
+            return CreateResponse(500, $"Internal server error: {ex.Message}");
+        }
     }
 
     private async Task<APIGatewayProxyResponse> RoutePostConversationsComment(APIGatewayProxyRequest request, ILambdaContext context)
