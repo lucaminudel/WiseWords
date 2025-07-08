@@ -118,6 +118,7 @@ public class ApiGatewayEntryPoint
         catch (Exception ex)
         {
             _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, ex);
+
             return CreateResponse(500, $"Internal server error: {ex.Message}");
         }
     }
@@ -159,6 +160,7 @@ public class ApiGatewayEntryPoint
         catch (Exception ex)
         {
             _observer.OnError($"HTTP Request Router={nameof(RouteGetConversations)}", context, ex);
+
             return CreateResponse(500, $"Internal server error: {ex.Message}");
             
         }
@@ -166,11 +168,14 @@ public class ApiGatewayEntryPoint
 
     private async Task<APIGatewayProxyResponse> RouteGetConversationPosts(APIGatewayProxyRequest request, ILambdaContext context)
     {
+        _observer.OnStart($"HTTP Request Router={nameof(RouteGetConversationPosts)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         var segments = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
         if (segments.Length != 3 || segments[0] != "conversations" || segments[2] != "posts")
         {
+            _observer.OnError($"HTTP Request Router={nameof(RouteGetConversationPosts)}", context, "HTTP error code 400");
+
             return CreateResponse(400, $"Invalid path format. Path:{request.Path}");
         }
 
@@ -179,8 +184,20 @@ public class ApiGatewayEntryPoint
             ConversationPK = segments[1]
         };
 
-        var result = await _lambdaFunctions.RetrieveConversationPostsHandler(lambdaHandlerRequest, context);
-        return CreateResponse(200, JsonSerializer.Serialize(result));
+        try
+        {
+            var result = await _lambdaFunctions.RetrieveConversationPostsHandler(lambdaHandlerRequest, context);
+
+            _observer.OnSuccess($"HTTP Request Router={nameof(RouteGetConversationPosts)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
+            return CreateResponse(200, JsonSerializer.Serialize(result));
+        }
+        catch (Exception ex)
+        {
+            _observer.OnError($"HTTP Request Router={nameof(RouteGetConversationPosts)}", context, ex);
+            
+            return CreateResponse(500, $"Internal server error: {ex.Message}");
+        }
 
     }
 
