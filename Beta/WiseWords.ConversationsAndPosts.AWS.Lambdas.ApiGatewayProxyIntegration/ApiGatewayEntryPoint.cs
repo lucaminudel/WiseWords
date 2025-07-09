@@ -9,19 +9,21 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration
 public class ApiGatewayEntryPoint
 {
     private readonly Functions _lambdaFunctions;
-    private readonly ILoggerObserver _observer;
+    private readonly ILoggerObserver _routingObserver;
 
+    private readonly ILoggerObserver _forwardingObserver;
 
     public ApiGatewayEntryPoint()
     {
         var dynamoDbServiceUrl = Environment.GetEnvironmentVariable("DYNAMODB_SERVICE_URL") ?? "http://localhost:8000";
         _lambdaFunctions = new Functions(new Uri(dynamoDbServiceUrl));
-        _observer = new LoggerObserver("Api Gateway");
+        _routingObserver = new LoggerObserver("Api Gateway Routing");
+        _forwardingObserver = new LoggerObserver("Api Gateway Forwarding");
     }
 
     public async Task<APIGatewayProxyResponse> RouteHttpRequestToLambda(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _observer.OnStart($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _routingObserver.OnStart($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         try
         {
@@ -29,19 +31,19 @@ public class ApiGatewayEntryPoint
             {
                 "POST" => await (request.Path switch
                 {
-                    "/conversations" => RoutePostConversations(request, context),
-                    "/conversations/delete" => RoutePostConversationsDelete(request, context),
-                    "/conversations/drilldown" => RoutePostConversationsDrillDownPost(request, context),
-                    "/conversations/comment" => RoutePostConversationsComment(request, context),
-                    "/conversations/conclusion" => RoutePostConversationsConclusion(request, context),
+                    "/conversations" => ForwardPostConversations(request, context),
+                    "/conversations/delete" => ForwardPostConversationsDelete(request, context),
+                    "/conversations/drilldown" => ForwardPostConversationsDrillDownPost(request, context),
+                    "/conversations/comment" => ForwardPostConversationsComment(request, context),
+                    "/conversations/conclusion" => ForwardPostConversationsConclusion(request, context),
                     _ => Task.FromResult(CreateResponse(404, "Not found"))
                 }),
 
                 "GET" => await (request.Path switch
                 {
-                    "/conversations" => RouteGetConversations(request, context),
+                    "/conversations" => ForwardGetConversations(request, context),
                     _ when request.Path.StartsWith("/conversations/") && request.Path.EndsWith("/posts")
-                                     => RouteGetConversationPosts(request, context),
+                                     => ForwardGetConversationPosts(request, context),
                     _ => Task.FromResult(CreateResponse(404, "Not found"))
                 }),
 
@@ -50,72 +52,73 @@ public class ApiGatewayEntryPoint
                 _ => CreateResponse(405, "Method not allowed"),
             };
 
-            _observer.OnSuccess($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+            _routingObserver.OnSuccess($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
 
             return response;
 
         }
         catch (ArgumentException ex)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
             return CreateResponse(400, $"Invalid request: {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
             return CreateResponse(400, $"Invalid operation: {ex.Message}");
         }
         catch (OperationCanceledException ex)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
             return CreateResponse(408, $"Request cancelled: {ex.Message}");
         }
         catch (Amazon.Runtime.AmazonServiceException ex)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
             return CreateResponse(503, $"Amazon service error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
             return CreateResponse(500, $"Internal server error: {{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}");
         }
     }
 
 
-    private async Task<APIGatewayProxyResponse> RoutePostConversations(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardPostConversations(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         TryToSerialise(request.Body, out CreateNewConversationRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversations)}", context, $"HTTP error code {errorNumber}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversations)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
 
             return CreateResponse(errorNumber, errorMessage);
         }
 
         var result = await _lambdaFunctions.CreateNewConversationHandler(nullOrValidLambdaHandlerRequest, context);
 
-        _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+        _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
         return CreateResponse(200, result);
     }
 
-    private async Task<APIGatewayProxyResponse> RouteGetConversations(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardGetConversations(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _observer.OnStart($"HTTP Request Router={nameof(RouteGetConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardGetConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         var upsatedAtYearValidationResult = ValidateUpdatedAtYearQueryStringRequest(request);
         if (!upsatedAtYearValidationResult.IsValid)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RouteGetConversations)}", context, "HTTP error code 400");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code 400, HTTP error messag {upsatedAtYearValidationResult.ErrorMessage}");
 
             return CreateResponse(400, upsatedAtYearValidationResult.ErrorMessage);
         }
@@ -123,7 +126,7 @@ public class ApiGatewayEntryPoint
         var filterByAuthorValidationResult = ValidateFilterByAuthorQueryStringRequest(request);
         if (!filterByAuthorValidationResult.IsValid)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RouteGetConversations)}", context, "HTTP error code 400");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code 400, HTTP error messag {filterByAuthorValidationResult.ErrorMessage}");
 
             return CreateResponse(400, filterByAuthorValidationResult.ErrorMessage);
         }
@@ -136,22 +139,25 @@ public class ApiGatewayEntryPoint
 
         var result = await _lambdaFunctions.RetrieveConversationsHandler(lambdaHandlerRequest, context);
 
-        _observer.OnSuccess($"HTTP Request Router={nameof(RouteGetConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+        _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardGetConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
         return CreateResponse(200, JsonSerializer.Serialize(result));
     }
 
-    private async Task<APIGatewayProxyResponse> RouteGetConversationPosts(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardGetConversationPosts(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _observer.OnStart($"HTTP Request Router={nameof(RouteGetConversationPosts)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         var segments = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
         if (segments.Length != 3 || segments[0] != "conversations" || segments[2] != "posts")
         {
-            _observer.OnError($"HTTP Request Router={nameof(RouteGetConversationPosts)}", context, "HTTP error code 400");
+            var errorNumber = 400;
+            var errorMessage = $"Invalid path format. Path:{request.Path}";
 
-            return CreateResponse(400, $"Invalid path format. Path:{request.Path}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}", context,  $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
+
+            return CreateResponse(errorNumber, errorMessage);
         }
 
         var lambdaHandlerRequest = new RetrieveConversationPostsRequest
@@ -161,88 +167,88 @@ public class ApiGatewayEntryPoint
 
         var result = await _lambdaFunctions.RetrieveConversationPostsHandler(lambdaHandlerRequest, context);
 
-        _observer.OnSuccess($"HTTP Request Router={nameof(RouteGetConversationPosts)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+        _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
         return CreateResponse(200, JsonSerializer.Serialize(result));
 
     }
 
-    private async Task<APIGatewayProxyResponse> RoutePostConversationsDelete(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardPostConversationsDelete(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversationsDelete)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsDelete)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         TryToSerialise(request.Body, out DeleteConversationRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsDelete)}", context, $"HTTP error code {errorNumber}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsDelete)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
 
             return CreateResponse(errorNumber, errorMessage);
         }
 
         await _lambdaFunctions.AdministrativeNonAtomicDeleteConversationAndPostsHandler(nullOrValidLambdaHandlerRequest, context);
 
-        _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversationsDelete)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+        _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsDelete)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
         return CreateResponse(200, "Deleted");
     }
 
-    private async Task<APIGatewayProxyResponse> RoutePostConversationsDrillDownPost(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardPostConversationsDrillDownPost(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         TryToSerialise(request.Body, out AppendDrillDownPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsDrillDownPost)}", context, $"HTTP error code {errorNumber}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
 
             return CreateResponse(errorNumber, errorMessage);
         }
 
         var result = await _lambdaFunctions.AppendDrillDownPostHandler(nullOrValidLambdaHandlerRequest, context);
 
-        _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+        _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
         return CreateResponse(200, result);
     }
 
-    private async Task<APIGatewayProxyResponse> RoutePostConversationsComment(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardPostConversationsComment(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         TryToSerialise(request.Body, out AppendCommentPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsComment)}", context, $"HTTP error code {errorNumber}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
 
             return CreateResponse(errorNumber, errorMessage);
         }
 
         var result = await _lambdaFunctions.AppendCommentPostHandler(nullOrValidLambdaHandlerRequest, context);
 
-        _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+        _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
         return CreateResponse(200, result);
     }
 
-    private async Task<APIGatewayProxyResponse> RoutePostConversationsConclusion(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardPostConversationsConclusion(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _observer.OnStart($"HTTP Request Router={nameof(RoutePostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         TryToSerialise(request.Body, out AppendConclusionPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
 
         if (nullOrValidLambdaHandlerRequest == null)
         {
-            _observer.OnError($"HTTP Request Router={nameof(RoutePostConversationsConclusion)}", context, $"HTTP error code {errorNumber}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
 
             return CreateResponse(errorNumber, errorMessage);
         }
 
         var result = await _lambdaFunctions.AppendConclusionPostHandler(nullOrValidLambdaHandlerRequest, context);
 
-        _observer.OnSuccess($"HTTP Request Router={nameof(RoutePostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+        _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
         return CreateResponse(200, result);
     }
