@@ -95,20 +95,21 @@ public class ApiGatewayEntryPoint
     {
         _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
-        TryToSerialise(request.Body, out CreateNewConversationRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
+        TryToSerialise(request.Body, out CreateNewConversationRequest? validLambdaHandlerRequestOrNull, out int errorNumber, out string errorMessage);
 
-        if (nullOrValidLambdaHandlerRequest == null)
+        if (validLambdaHandlerRequestOrNull == null)
         {
             _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversations)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
 
             return CreateResponse(errorNumber, errorMessage);
         }
 
-        var result = await _lambdaFunctions.CreateNewConversationHandler(nullOrValidLambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.CreateNewConversationHandler(validLambdaHandlerRequestOrNull, context);
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
-
-        return CreateResponse(200, result);
+        
+        var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString("CONVO#") + validLambdaHandlerRequestOrNull.NewGuid.ToString()}/posts" } };
+        return CreateResponse(201, result, locationHeader);
     }
 
     private async Task<APIGatewayProxyResponse> ForwardGetConversations(APIGatewayProxyRequest request, ILambdaContext context)
@@ -123,7 +124,7 @@ public class ApiGatewayEntryPoint
             return CreateResponse(400, upsatedAtYearValidationResult.ErrorMessage);
         }
 
-        var filterByAuthorValidationResult = ValidateFilterByAuthorQueryStringRequest(request);
+        var filterByAuthorValidationResult = ValidateOptonalFilterByAuthorQueryStringRequest(request);
         if (!filterByAuthorValidationResult.IsValid)
         {
             _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code 400, HTTP error messag {filterByAuthorValidationResult.ErrorMessage}");
@@ -253,21 +254,30 @@ public class ApiGatewayEntryPoint
         return CreateResponse(200, result);
     }
 
-
     private APIGatewayProxyResponse CreateResponse(int statusCode, string body)
+        => CreateResponse(statusCode, body, new Dictionary<string, string>());
+    private APIGatewayProxyResponse CreateResponse(int statusCode, string body, Dictionary<string, string> additionalHeaders)
     {
+        var headers = new Dictionary<string, string>
+        {
+            // In production replace the * in the header below with an url to only allow access
+            // to the API from web pages from trusted domains
+            { "Access-Control-Allow-Origin", "*" },
+            { "Access-Control-Allow-Headers", "Content-Type" },
+            { "Access-Control-Allow-Methods", "OPTIONS,POST,GET" }
+        };
+
+        foreach (var keyVal in additionalHeaders)
+        {
+            headers[keyVal.Key] = keyVal.Value;
+        }
+
         return new APIGatewayProxyResponse
         {
             StatusCode = statusCode,
             Body = body,
-            Headers = new Dictionary<string, string>
-            {
-                // In production replace the * in the header below with an url to only allow access
-                // to the API from web pages from trusted domains
-                { "Access-Control-Allow-Origin", "*" },
-                { "Access-Control-Allow-Headers", "Content-Type" },
-                { "Access-Control-Allow-Methods", "OPTIONS,POST,GET" }
-            }
+            Headers = headers
+
         };
     }
 
@@ -335,13 +345,13 @@ public class ApiGatewayEntryPoint
         return (true, year, "");
     }
 
-    private (bool IsValid, string Author, string ErrorMessage) ValidateFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
+    private (bool IsValid, string Author, string ErrorMessage) ValidateOptonalFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
     {
         string? authorStr;
 
         if (false == request.QueryStringParameters?.ContainsKey("filterByAuthor"))
         {
-            return (false, string.Empty, "Missing filterByAuthor. It must be included in the query string.");
+            return (true, string.Empty, string.Empty);
 
         }
 
