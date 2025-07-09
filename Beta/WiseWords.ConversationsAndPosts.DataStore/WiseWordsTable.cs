@@ -70,7 +70,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             return conversation.ToString();
         }
 
-        public async Task<List<string>> RetrieveConversations(int updatedAtYear, string filterByauthor = "")
+        public async Task<List<Dictionary<string, string>>> RetrieveConversations(int updatedAtYear, string filterByauthor = "")
         {
             if (updatedAtYear < 1970)
                 throw new ArgumentException("Invalid year", nameof(updatedAtYear));
@@ -112,12 +112,10 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
             });
 
-            var jsonResults = conversations
-                .Select(doc => JsonSerializer.Serialize(
-                    doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()),
-                    JsonOptions))
+            var objectResults = conversations
+                .Select(doc => doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()))
                 .ToList();
-            return jsonResults;
+            return objectResults;
 
         }
 

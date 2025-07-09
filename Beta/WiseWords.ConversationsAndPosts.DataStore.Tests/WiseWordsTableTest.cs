@@ -120,7 +120,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             
             for (int i = 0; i < retrievedConversations.Count; i++)
             {
-                var retrieved = DeserialiseToStringDictionary.This(retrievedConversations[i]);
+                var retrieved = retrievedConversations[i];
                 var expected = expectedConversationsInOrder[i];
 
                 retrieved["PK"].Should().Be(expected["PK"]);

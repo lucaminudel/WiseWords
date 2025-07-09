@@ -45,7 +45,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var response = await _httpClient.PostAsync("/conversations", content);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var result = await response.Content.ReadAsStringAsync();
         result.Should().NotBeEmpty();
 
