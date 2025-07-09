@@ -60,7 +60,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
         }
 
-        public async Task<List<string>> RetrieveConversationPostsHandler(RetrieveConversationPostsRequest req, ILambdaContext context)
+        public async Task<List<Dictionary<string, string>>> RetrieveConversationPostsHandler(RetrieveConversationPostsRequest req, ILambdaContext context)
         {
             _observer.OnStart($"Handler={nameof(RetrieveConversationPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(req.ConversationPK)}={req.ConversationPK}", context);
 
@@ -88,6 +88,12 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
                 await _service.AdministrativeNonAtomicDeleteConversationAndPosts(req.ConversationPK);
 
                 _observer.OnSuccess($"Handler={nameof(AdministrativeNonAtomicDeleteConversationAndPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _observer.OnError($"Handler={nameof(AdministrativeNonAtomicDeleteConversationAndPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                throw;
+                
             }
             catch (Exception ex)
             {

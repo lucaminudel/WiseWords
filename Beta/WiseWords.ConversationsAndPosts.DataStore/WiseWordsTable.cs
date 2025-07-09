@@ -119,7 +119,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
         }
 
-        public async Task<List<string>> RetrieveConversationPosts(string conversationPK)
+        public async Task<List<Dictionary<string, string>>> RetrieveConversationPosts(string conversationPK)
         {
             ValidateConversationPkIntegrity(conversationPK);
 
@@ -147,12 +147,10 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                 conversationPosts = await search.GetNextSetAsync();
             });
 
-            var jsonResults = conversationPosts
-                .Select(doc => JsonSerializer.Serialize(
-                    doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()),
-                    JsonOptions))
+            var objectResults = conversationPosts
+                .Select(doc => doc.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsString()))
                 .ToList();
-            return jsonResults;
+            return objectResults;
         }
 
         public async Task AdministrativeNonAtomicDeleteConversationAndPosts(string conversationPK)
@@ -163,7 +161,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
             if (conversationPosts.Count == 0)
             {
-                return;
+                throw new InvalidOperationException("Cannot delete item: item not found");
             }
 
             await AsyncExecuteWithDynamoDB(async (client, context) =>
@@ -171,7 +169,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                 var batchWrite = context.CreateBatchWrite<PostSerialiser>();
 
                 var posts = conversationPosts
-                    .Select(json => JsonSerializer.Deserialize<PostSerialiser>(json, JsonOptions))
+                    .Select(dict => JsonSerializer.Deserialize<PostSerialiser>(JsonSerializer.Serialize(dict, JsonOptions), JsonOptions))
                     .ToList();
 
                 posts.ForEach(batchWrite.AddDeleteItem!);

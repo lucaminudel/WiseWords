@@ -601,7 +601,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var allPosts = await _db.RetrieveConversationPosts(conversationFields["PK"]);
 
             // Assert
-            var parsedPosts = allPosts.Select(json => DeserialiseToStringDictionary.This(json)).ToList();
+            var parsedPosts = allPosts;
             parsedPosts.Should().HaveCount(5);
 
             // Verify conversation (should be last in sort order)
@@ -764,10 +764,17 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
         public async Task DisposeAsync()
         {
-            
+
             while (_dbCleanupConversationPostTest.Count > 0)
             {
-                await _db.AdministrativeNonAtomicDeleteConversationAndPosts(_dbCleanupConversationPostTest.Dequeue());
+                try
+                {
+                    await _db.AdministrativeNonAtomicDeleteConversationAndPosts(_dbCleanupConversationPostTest.Dequeue());
+                }
+                catch (InvalidOperationException)
+                {
+                    // Item not found, ingnore and proceed with the next one
+                }
             }
             
         }

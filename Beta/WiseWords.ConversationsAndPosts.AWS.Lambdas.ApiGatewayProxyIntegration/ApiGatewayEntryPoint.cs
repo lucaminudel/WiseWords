@@ -1,6 +1,7 @@
-using Amazon.Lambda.APIGatewayEvents;
-using Amazon.Lambda.Core;
+using System.Net;
 using System.Text.Json;
+using Amazon.Lambda.Core;
+using Amazon.Lambda.APIGatewayEvents;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
@@ -32,11 +33,10 @@ public class ApiGatewayEntryPoint
                 "POST" => await (request.Path switch
                 {
                     "/conversations" => ForwardPostConversations(request, context),
-                    "/conversations/delete" => ForwardPostConversationsDelete(request, context),
                     "/conversations/drilldown" => ForwardPostConversationsDrillDownPost(request, context),
                     "/conversations/comment" => ForwardPostConversationsComment(request, context),
                     "/conversations/conclusion" => ForwardPostConversationsConclusion(request, context),
-                    _ => Task.FromResult(CreateResponse(404, "Not found"))
+                    _ => Task.FromResult(CreateResponse(HttpStatusCode.NotFound, "Not found"))
                 }),
 
                 "GET" => await (request.Path switch
@@ -44,12 +44,20 @@ public class ApiGatewayEntryPoint
                     "/conversations" => ForwardGetConversations(request, context),
                     _ when request.Path.StartsWith("/conversations/") && request.Path.EndsWith("/posts")
                                      => ForwardGetConversationPosts(request, context),
-                    _ => Task.FromResult(CreateResponse(404, "Not found"))
+                    _ => Task.FromResult(CreateResponse(HttpStatusCode.NotFound, "Not found"))
                 }),
 
-                "OPTIONS" => CreateResponse(200, ""),
+                "DELETE" => await (request.Path switch
+                {
+                    _ when request.Path.StartsWith("/conversations/") && 
+                          !request.Path.EndsWith("/posts") 
+                                    => ForwardDeleteConversations(request, context),
+                    _ => Task.FromResult(CreateResponse(HttpStatusCode.NotFound, "Not found"))
+                }),
 
-                _ => CreateResponse(405, "Method not allowed"),
+                "OPTIONS" => CreateResponse(HttpStatusCode.OK, ""),
+
+                _ => CreateResponse(HttpStatusCode.MethodNotAllowed, "Method not allowed"),
             };
 
             _routingObserver.OnSuccess($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
@@ -62,31 +70,31 @@ public class ApiGatewayEntryPoint
         {
             _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
-            return CreateResponse(400, $"Invalid request: {ex.Message}");
+            return CreateResponse(HttpStatusCode.BadRequest, $"Invalid request: {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {
             _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
-            return CreateResponse(400, $"Invalid operation: {ex.Message}");
+            return CreateResponse(HttpStatusCode.BadRequest, $"Invalid operation: {ex.Message}");
         }
         catch (OperationCanceledException ex)
         {
             _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
-            return CreateResponse(408, $"Request cancelled: {ex.Message}");
+            return CreateResponse(HttpStatusCode.RequestTimeout, $"Request cancelled: {ex.Message}");
         }
         catch (Amazon.Runtime.AmazonServiceException ex)
         {
             _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
-            return CreateResponse(503, $"Amazon service error: {ex.Message}");
+            return CreateResponse(HttpStatusCode.ServiceUnavailable, $"Amazon service error: {ex.Message}");
         }
         catch (Exception ex)
         {
             _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
 
-            return CreateResponse(500, $"Internal server error: {{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}");
+            return CreateResponse(HttpStatusCode.InternalServerError, $"Internal server error: {{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}");
         }
     }
 
@@ -95,13 +103,13 @@ public class ApiGatewayEntryPoint
     {
         _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
-        TryToSerialise(request.Body, out CreateNewConversationRequest? validLambdaHandlerRequestOrNull, out int errorNumber, out string errorMessage);
+        TryToSerialise(request.Body, out CreateNewConversationRequest? validLambdaHandlerRequestOrNull, out HttpStatusCode errorStatusCode, out string errorMessage);
 
         if (validLambdaHandlerRequestOrNull == null)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversations)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversations)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
-            return CreateResponse(errorNumber, errorMessage);
+            return CreateResponse(errorStatusCode, errorMessage);
         }
 
         var result = await _lambdaFunctions.CreateNewConversationHandler(validLambdaHandlerRequestOrNull, context);
@@ -109,7 +117,7 @@ public class ApiGatewayEntryPoint
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
         
         var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString("CONVO#") + validLambdaHandlerRequestOrNull.NewGuid.ToString()}/posts" } };
-        return CreateResponse(201, result, locationHeader);
+        return CreateResponse(HttpStatusCode.Created, result, locationHeader);
     }
 
     private async Task<APIGatewayProxyResponse> ForwardGetConversations(APIGatewayProxyRequest request, ILambdaContext context)
@@ -119,17 +127,17 @@ public class ApiGatewayEntryPoint
         var upsatedAtYearValidationResult = ValidateUpdatedAtYearQueryStringRequest(request);
         if (!upsatedAtYearValidationResult.IsValid)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code 400, HTTP error messag {upsatedAtYearValidationResult.ErrorMessage}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code {(int)upsatedAtYearValidationResult.ErrorStatusCode}, HTTP error message {upsatedAtYearValidationResult.ErrorMessage}");
 
-            return CreateResponse(400, upsatedAtYearValidationResult.ErrorMessage);
+            return CreateResponse(upsatedAtYearValidationResult.ErrorStatusCode, upsatedAtYearValidationResult.ErrorMessage);
         }
 
         var filterByAuthorValidationResult = ValidateOptonalFilterByAuthorQueryStringRequest(request);
         if (!filterByAuthorValidationResult.IsValid)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code 400, HTTP error messag {filterByAuthorValidationResult.ErrorMessage}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code {(int)filterByAuthorValidationResult.ErrorStatusCode}, HTTP error message {filterByAuthorValidationResult.ErrorMessage}");
 
-            return CreateResponse(400, filterByAuthorValidationResult.ErrorMessage);
+            return CreateResponse(filterByAuthorValidationResult.ErrorStatusCode, filterByAuthorValidationResult.ErrorMessage);
         }
 
         var lambdaHandlerRequest = new RetrieveConversationsRequest
@@ -142,7 +150,7 @@ public class ApiGatewayEntryPoint
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardGetConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        return CreateResponse(200, JsonSerializer.Serialize(result));
+        return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(result));
     }
 
     private async Task<APIGatewayProxyResponse> ForwardGetConversationPosts(APIGatewayProxyRequest request, ILambdaContext context)
@@ -153,12 +161,12 @@ public class ApiGatewayEntryPoint
 
         if (segments.Length != 3 || segments[0] != "conversations" || segments[2] != "posts")
         {
-            var errorNumber = 400;
+            var errorStatusCode = HttpStatusCode.BadRequest;
             var errorMessage = $"Invalid path format. Path:{request.Path}";
 
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}", context,  $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}", context,  $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
-            return CreateResponse(errorNumber, errorMessage);
+            return CreateResponse(errorStatusCode, errorMessage);
         }
 
         var lambdaHandlerRequest = new RetrieveConversationPostsRequest
@@ -170,93 +178,117 @@ public class ApiGatewayEntryPoint
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        return CreateResponse(200, JsonSerializer.Serialize(result));
+        return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(result));
 
     }
 
-    private async Task<APIGatewayProxyResponse> ForwardPostConversationsDelete(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardDeleteConversations(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsDelete)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardDeleteConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
-        TryToSerialise(request.Body, out DeleteConversationRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
-
-        if (nullOrValidLambdaHandlerRequest == null)
+        var segments = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length != 2 || segments[0] != "conversations")
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsDelete)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
+            var errorStatusCode = HttpStatusCode.BadRequest;
+            var errorMessage = $"Invalid path format. Path:{request.Path}";
 
-            return CreateResponse(errorNumber, errorMessage);
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardDeleteConversations)}", context,  $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+
+            return CreateResponse(errorStatusCode, errorMessage);
         }
 
-        await _lambdaFunctions.AdministrativeNonAtomicDeleteConversationAndPostsHandler(nullOrValidLambdaHandlerRequest, context);
+        var deleteConversationRequest = new DeleteConversationRequest
+        {
+            ConversationPK = segments[1]
+        };
+        
+        try
+        {
+            await _lambdaFunctions.AdministrativeNonAtomicDeleteConversationAndPostsHandler(deleteConversationRequest, context);
 
-        _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsDelete)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+            _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardDeleteConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        return CreateResponse(200, "Deleted");
+            return CreateResponse(HttpStatusCode.NoContent, string.Empty);
+        }
+        catch (InvalidOperationException)
+        {
+            var errorStatusCode = HttpStatusCode.NotFound;
+            var errorMessage = "Item not found";
+
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardDeleteConversations)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+
+            return CreateResponse(errorStatusCode, errorMessage);
+
+        }
     }
 
     private async Task<APIGatewayProxyResponse> ForwardPostConversationsDrillDownPost(APIGatewayProxyRequest request, ILambdaContext context)
     {
         _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
-        TryToSerialise(request.Body, out AppendDrillDownPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
+        TryToSerialise(request.Body, out AppendDrillDownPostRequest? validLambdaHandlerRequestOrNull, out HttpStatusCode errorStatusCode, out string errorMessage);
 
-        if (nullOrValidLambdaHandlerRequest == null)
+        if (validLambdaHandlerRequestOrNull == null)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
-            return CreateResponse(errorNumber, errorMessage);
+            return CreateResponse(errorStatusCode, errorMessage);
         }
 
-        var result = await _lambdaFunctions.AppendDrillDownPostHandler(nullOrValidLambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.AppendDrillDownPostHandler(validLambdaHandlerRequestOrNull, context);
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        return CreateResponse(200, result);
+        var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" } };
+
+        return CreateResponse(HttpStatusCode.Created, result, locationHeader);
     }
 
     private async Task<APIGatewayProxyResponse> ForwardPostConversationsComment(APIGatewayProxyRequest request, ILambdaContext context)
     {
         _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
-        TryToSerialise(request.Body, out AppendCommentPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
+        TryToSerialise(request.Body, out AppendCommentPostRequest? validLambdaHandlerRequestOrNull, out HttpStatusCode errorStatusCode, out string errorMessage);
 
-        if (nullOrValidLambdaHandlerRequest == null)
+        if (validLambdaHandlerRequestOrNull == null)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
-            return CreateResponse(errorNumber, errorMessage);
+            return CreateResponse(errorStatusCode, errorMessage);
         }
 
-        var result = await _lambdaFunctions.AppendCommentPostHandler(nullOrValidLambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.AppendCommentPostHandler(validLambdaHandlerRequestOrNull, context);
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        return CreateResponse(200, result);
+        var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" } };
+        return CreateResponse(HttpStatusCode.Created, result, locationHeader);
     }
 
     private async Task<APIGatewayProxyResponse> ForwardPostConversationsConclusion(APIGatewayProxyRequest request, ILambdaContext context)
     {
         _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
-        TryToSerialise(request.Body, out AppendConclusionPostRequest? nullOrValidLambdaHandlerRequest, out int errorNumber, out string errorMessage);
+        TryToSerialise(request.Body, out AppendConclusionPostRequest? validLambdaHandlerRequestOrNull, out HttpStatusCode errorStatusCode, out string errorMessage);
 
-        if (nullOrValidLambdaHandlerRequest == null)
+        if (validLambdaHandlerRequestOrNull == null)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}", context, $"HTTP error code {errorNumber}, HTTP error messag {errorMessage}");
+            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
-            return CreateResponse(errorNumber, errorMessage);
+            return CreateResponse(errorStatusCode, errorMessage);
         }
 
-        var result = await _lambdaFunctions.AppendConclusionPostHandler(nullOrValidLambdaHandlerRequest, context);
+        var result = await _lambdaFunctions.AppendConclusionPostHandler(validLambdaHandlerRequestOrNull, context);
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        return CreateResponse(200, result);
+        var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" } };
+        return CreateResponse(HttpStatusCode.Created, result, locationHeader);
     }
 
-    private APIGatewayProxyResponse CreateResponse(int statusCode, string body)
+    private APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body)
         => CreateResponse(statusCode, body, new Dictionary<string, string>());
-    private APIGatewayProxyResponse CreateResponse(int statusCode, string body, Dictionary<string, string> additionalHeaders)
+    private APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body, Dictionary<string, string> additionalHeaders)
     {
         var headers = new Dictionary<string, string>
         {
@@ -274,20 +306,20 @@ public class ApiGatewayEntryPoint
 
         return new APIGatewayProxyResponse
         {
-            StatusCode = statusCode,
+            StatusCode = (int)statusCode,
             Body = body,
             Headers = headers
 
         };
     }
 
-    private void TryToSerialise<T>(string body, out T? nullOrValidRequest, out int errorNumber, out string errorMessage)
+    private void TryToSerialise<T>(string body, out T? validRequestOrNull, out HttpStatusCode errorStatusCode, out string errorMessage)
     {
 
         if (string.IsNullOrEmpty(body))
         {
-            nullOrValidRequest = default;
-            errorNumber = 400;
+            validRequestOrNull = default;
+            errorStatusCode = HttpStatusCode.BadRequest;
             errorMessage = "Empty request body.";
 
             return;
@@ -295,29 +327,29 @@ public class ApiGatewayEntryPoint
 
         try
         {
-            nullOrValidRequest = JsonSerializer.Deserialize<T>(body);
+            validRequestOrNull = JsonSerializer.Deserialize<T>(body);
         }
         catch (Exception ex)
         {
-            errorNumber = 400;
+            errorStatusCode = HttpStatusCode.BadRequest;
             errorMessage = $"Invalid request body. {{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}";
-            nullOrValidRequest = default;
+            validRequestOrNull = default;
 
             return;
 
         }
 
-        errorNumber = 0;
+        errorStatusCode = HttpStatusCode.OK;
         errorMessage = string.Empty;
     }
 
-    private (bool IsValid, int Year, string ErrorMessage) ValidateUpdatedAtYearQueryStringRequest(APIGatewayProxyRequest request)
+    private (bool IsValid, int Year, HttpStatusCode ErrorStatusCode, string ErrorMessage) ValidateUpdatedAtYearQueryStringRequest(APIGatewayProxyRequest request)
     {
         string? yearStr;
 
         if (false == request.QueryStringParameters?.ContainsKey("updatedAtYear"))
         {
-            return (false, 0, "Missing updatedAtYear. It must be included in the query string.");
+            return (false, 0, HttpStatusCode.BadRequest, "Missing updatedAtYear. It must be included in the query string.");
 
         }
 
@@ -326,12 +358,12 @@ public class ApiGatewayEntryPoint
 
         if (string.IsNullOrEmpty(yearStr))
         {
-            return (false, 0, "Empty updatedAtYear. Must be a valid integer.");
+            return (false, 0, HttpStatusCode.BadRequest, "Empty updatedAtYear. Must be a valid integer.");
         }
 
         if (!int.TryParse(yearStr, out var year))
         {
-            return (false, 0, "Invalid updatedAtYear. Must be a valid integer.");
+            return (false, 0, HttpStatusCode.BadRequest, "Invalid updatedAtYear. Must be a valid integer.");
         }
 
         const int minYear = 1970;
@@ -339,19 +371,19 @@ public class ApiGatewayEntryPoint
 
         if (year < minYear || maxYear < year)
         {
-            return (false, 0, $"Invalid updatedAtYear value '{year}'. Must be between {minYear} and {maxYear}.");
+            return (false, 0, HttpStatusCode.BadRequest, $"Invalid updatedAtYear value '{year}'. Must be between {minYear} and {maxYear}.");
         }
 
-        return (true, year, "");
+        return (true, year, HttpStatusCode.OK, string.Empty);
     }
 
-    private (bool IsValid, string Author, string ErrorMessage) ValidateOptonalFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
+    private (bool IsValid, string Author, HttpStatusCode ErrorStatusCode, string ErrorMessage) ValidateOptonalFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
     {
         string? authorStr;
 
         if (false == request.QueryStringParameters?.ContainsKey("filterByAuthor"))
         {
-            return (true, string.Empty, string.Empty);
+            return (true, string.Empty, HttpStatusCode.OK, string.Empty);
 
         }
 
@@ -360,10 +392,10 @@ public class ApiGatewayEntryPoint
 
         if (string.IsNullOrEmpty(authorStr))
         {
-            return (false, string.Empty, "Empty filterByAuthor. Must be a not empty username.");
+            return (false, string.Empty, HttpStatusCode.BadRequest, "Empty filterByAuthor. Must be a not empty username.");
         }
 
-        return (true, authorStr, string.Empty);
+        return (true, authorStr, HttpStatusCode.OK, string.Empty);
     }
 
 }

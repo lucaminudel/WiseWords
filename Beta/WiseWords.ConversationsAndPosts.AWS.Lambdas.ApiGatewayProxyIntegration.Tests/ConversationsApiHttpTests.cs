@@ -46,6 +46,9 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.Headers.Location.Should().NotBeNull();
+        response.Headers.Location.ToString().Should().Be($"/conversations/CONVO%23{conversationGuid}/posts");
+        
         var result = await response.Content.ReadAsStringAsync();
         result.Should().NotBeEmpty();
 
@@ -109,7 +112,10 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var response = await _httpClient.PostAsync("/conversations/drilldown", content);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.Headers.Location.Should().NotBeNull();
+        response.Headers.Location.ToString().Should().Be($"/conversations/CONVO%23{newConvoGuid}/posts");
+        
         var result = await response.Content.ReadAsStringAsync();
         result.Should().NotBeEmpty();
         
@@ -153,7 +159,10 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var response = await _httpClient.PostAsync("/conversations/comment", content);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.Headers.Location.Should().NotBeNull();
+        response.Headers.Location.ToString().Should().Be($"/conversations/CONVO%23{newConvoGuid}/posts");
+        
         var result = await response.Content.ReadAsStringAsync();
         result.Should().NotBeEmpty();
 
@@ -196,7 +205,10 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var response = await _httpClient.PostAsync("/conversations/conclusion", content);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.Headers.Location.Should().NotBeNull();
+        response.Headers.Location.ToString().Should().Be($"/conversations/CONVO%23{newConvoGuid}/posts");
+        
         var result = await response.Content.ReadAsStringAsync();
         result.Should().NotBeEmpty();
 
@@ -254,8 +266,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var result = await response.Content.ReadAsStringAsync();
         result.Should().NotBeEmpty();
 
-        var postsList = JsonSerializer.Deserialize<List<string>>(result);
-        var posts = postsList!.Select(json => JsonSerializer.Deserialize<Dictionary<string, string>>(json)).ToList();
+        var posts = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(result);
 
         posts.Should().NotBeNull();
         posts.Should().HaveCount(3);
@@ -275,7 +286,6 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     {
         // Act
         var response = await _httpClient.GetAsync("/conversations//posts");
-        //var response = await _httpClient.GetAsync("/conversations/invalid/path/format");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -322,7 +332,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         result.Should().NotBeEmpty();
 
         // Verify it's valid JSON array (first step)
-        var conversations = JsonSerializer.Deserialize<List<string>>(result);
+        var conversations = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(result);
         conversations.Should().NotBeNull();
         
         // Should return exactly 2 conversations (the ones from 2024)
@@ -333,9 +343,8 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var expectedPK2 = $"CONVO#{convo2Guid}";
         var unexpectedPK3 = $"CONVO#{convo3Guid}";
         
-        var returnedPKs = conversations.Select(conversationJson => 
+        var returnedPKs = conversations.Select(conversation => 
         {
-            var conversation = JsonSerializer.Deserialize<Dictionary<string, object>>(conversationJson);
             return conversation!["PK"].ToString();
         }).ToList();
         
@@ -386,7 +395,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     #region POST /conversations/delete Tests
 
     [Fact]
-    public async Task POST_ConversationsDelete_Should_Delete_Conversation_Successfully()
+    public async Task DELETE_ConversationsDelete_Should_Delete_Conversation_Successfully()
     {
         // Arrange - Create a conversation with posts first
         var newConvoGuid = GetNewConversationGuid();
@@ -409,31 +418,23 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
         // Create delete request JSON
         var conversationPK = $"CONVO#{newConvoGuid}";
-        var deleteRequestJson = $$"""
-        {
-            "ConversationPK": "{{conversationPK}}"
-        }
-        """;
 
         // Act
-        var response = await _httpClient.PostAsync("/conversations/delete",
-                                                  new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json"));
+        var response = await _httpClient.DeleteAsync($"/conversations/{Uri.EscapeDataString(conversationPK)}");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         var result = await response.Content.ReadAsStringAsync();
-        result.Should().Be("Deleted");
+        result.Should().Be(string.Empty);
     }
 
     [Fact]
-    public async Task POST_ConversationsDelete_Should_Return_400_For_Invalid_Request()
+    public async Task DELETE_ConversationsDelete_Should_Return_400_For_Invalid_Request()
     {
         // Arrange
-        var invalidJson = "{ invalid json }";
-        var content = new StringContent(invalidJson, System.Text.Encoding.UTF8, "application/json");
 
         // Act
-        var response = await _httpClient.PostAsync("/conversations/delete", content);
+        var response = await _httpClient.DeleteAsync("/conversations//");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -516,7 +517,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     }
 
 
-    private static string CreateNewConversatonRequestJason(Guid guid, DateTimeOffset updateAt) => CreateNewConversatonRequestJason(guid, "}HttpTestUser", updateAt);
+    private static string CreateNewConversatonRequestJason(Guid guid, DateTimeOffset updateAt) => CreateNewConversatonRequestJason(guid, "HttpTestUser", updateAt);
     private static string CreateNewConversatonRequestJason(Guid guid, string Author, DateTimeOffset updateAt) => $$"""
         {
             "NewGuid": "{{guid}}",
@@ -570,14 +571,8 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         {
  
             var conversationPK = _CleanupConversationPosts.Dequeue();
-            var deleteRequestJson = $$"""
-            {
-                "ConversationPK": "{{conversationPK}}"
-            }
-            """;
 
-            var response = await _httpClient.PostAsync("/conversations/delete",
-                                                        new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json"));
+            await _httpClient.DeleteAsync($"/conversations/{Uri.EscapeDataString(conversationPK)}");
         }
 
         _httpClient?.Dispose();
