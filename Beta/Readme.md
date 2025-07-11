@@ -1,11 +1,6 @@
 # Wise Words Beta: Production-Ready Implementation
 
-After the Spikes, I moved to consolidate all the components into this **Beta**gradually. The remaining steps, still to be carried out, consist of: 
-- the implementation of the User Interface, 
-- gradual shift of the DynamoDb and the code into the Amazon Cloud, 
-- the implementation of the authentication with Amazon Cognito, 
-- validation that the current logging works well with Amazon CloudWatch monitoring and observability solution, 
-- automatic deploy, CI/CD.
+After the Spikes, I consolidate all the key components into this **Beta**. 
 
  All this while continuing with the experimentation with **AI-Assisted** coding.
 
@@ -80,6 +75,15 @@ curl -i -X GET "http://localhost:3000/conversations?updatedAtYear=2025"
 #Delete a whole Conversation
 curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84
 ```
+
+## What's left to be implemented
+
+These and the steps that remain to be carried out: 
+- the implementation of the User Interface, 
+- gradual shift of the serverless Amazon DynamoDb, deployment of the Lambdas and Api Gateway into the Amazon Cloud account, 
+- the implementation of the authentication with Amazon Cognito, 
+- the validation of the current logging works and its integration with Amazon CloudWatch monitoring and observability,
+- automatic deploy, CI/CD.
 
 ## UI Mockups 
 
