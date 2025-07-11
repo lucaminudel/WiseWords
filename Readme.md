@@ -7,8 +7,8 @@ In short, *Wise Words* is a basic forum for finding answers to difficult questio
 **Wise Words** encourages having **one collaborative conversation at a time** by supporting simple linear comments - as opposed to nested comments that equate to multiple overlapping conversations and talking over each other.
 As the conversation unfolds, and the common understanding of the matter at hand grows, the forum allows consolidating the newfound understanding into **sub-questions, sub-problems, sub-dilemmas, and proposed conclusions** from which the conversation can proceed toward its destination. 
 
-- Here are the spikes: follow the [(link)](Spikes/readme.md) for the related details
-- Here is the Beta of *Wise Words*, still under development: follow the link [(link)](relative/path/to/readme.md) for the related details
+- Here are the spikes: follow the [(link)](Spikes/Readme.md) for the related details
+- Here is the Beta of *Wise Words*, still under development: follow the link [(link)](Beta/Readme.md) for the related details
 
 ## Technical design
 
