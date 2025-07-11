@@ -5,7 +5,7 @@ Below are the initial spikes I have done to explore and try-out the key technica
 
 ### Spike A: DynamoDb schema and basic operations code  
 
-Here in the DynamoDbLocalDockerImage folder [(link)](../../DynamoDbLocalDockerImage) is 
+Here in the DynamoDbLocalDockerImage folder [(link)](../DynamoDbLocalDockerImage) is 
 - the single-table db schema I have designed for the NoSQL DynamoDB
 - the scripts I have written to pull/create, start and stop the db, the Docker image and containers.
 

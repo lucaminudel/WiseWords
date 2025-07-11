@@ -32,11 +32,12 @@ With the possibility of quickly and simply evolving the design to support increa
 
 graph TD
     %% Class Definitions first
-    classDef frontend fill:#fbe8a6,stroke:#333,stroke-width:1px;
-    classDef auth fill:#b3d9ff,stroke:#333,stroke-width:1px;
-    classDef api fill:#c1f0c1,stroke:#333,stroke-width:1px;
-    classDef db fill:#ffd6cc,stroke:#333,stroke-width:1px;
-    classDef sdk fill:#e0ccff,stroke:#333,stroke-width:1px;
+    classDef frontend fill:#fbe8a6,stroke:#333,stroke-width:1px,color:#000000;
+    classDef auth fill:#b3d9ff,stroke:#333,stroke-width:1px,color:#000000;
+    classDef api fill:#c1f0c1,stroke:#333,stroke-width:1px,color:#000000;
+    classDef db fill:#ffd6cc,stroke:#333,stroke-width:1px,color:#000000;
+    classDef sdk fill:#e0ccff,stroke:#333,stroke-width:1px,color:#000000;
+
 
     %% Nodes (square brackets) with simplified labels (no parentheses)
     S3[S3 Bucket - Static Website Hosting]
