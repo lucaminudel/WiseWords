@@ -88,8 +88,8 @@ Here in the **SpikeB.WiseWordsAWSLambdaFacade** folder [(link)](SpikeB.WiseWords
 
 Here in the **SpikeB.DynamoDbAccessCode** folder [(link)](SpikeB.DynamoDbAccessCode) there is a simplified/placeholder implementation of the data access code from Spike A, for the lambdas to use.
 
-Here in the **SpikeB.WiseWordsAWSLambdaFacade.Tests** folder [(link)](SpikeB.WiseWordsAWSLambdaFacade.Tests) there are unit tests for the lambdas using a mock context and the Amazon.Lambda.TestUtilities library. The tests validate request/response serialisation and verify proper error handling. This spike has also been successfully tested locally with the **AWS Lambda .NET Mock Lambda Test Tool** as part of the test strategy for local testing.
-
+Here in the **SpikeB.WiseWordsAWSLambdaFacade.Tests** folder [(link)](SpikeB.WiseWordsAWSLambdaFacade.Tests) there are unit tests for the lambdas using a manually coded mock context that could be replaced by one provided by the library Amazon.Lambda.TestUtilities. These unit tests validate request/response serialisation and verify proper error handling. 
+This spike has also been successfully tested locally with the **AWS Lambda .NET Mock Lambda Test Tool** as part of the test strategy for local testing.
 
 I have implemented these related Lambda functions in a single Handler Class:
 
@@ -100,6 +100,39 @@ I have implemented these related Lambda functions in a single Handler Class:
 5. **AppendCommentPostHandler**: Adds comment posts in a flat threading structure
 6. **AppendConclusionPostHandler**: Adds a conclusion post (solutions/answers/choices)
 7. **AdministrativeNonAtomicDeleteConversationAndPostsHandler**: is an Administrative function that deletes an entire conversation tree. It is Non-atomic (for efficiency reasons, this is an acceptable trade-off at this stage)
+
+This is the command to run the **AWS Lambda .NET Mock Lambda Test Tool** from the command line, which opens a web page from wich it is possible to invoke the lambdas:
+
+```bash
+dotnet-lambda-test-tool-8.0  
+```
+
+And these are a few payload examples that I used to manually invoke the lambdas via the web page:
+```code
+
+# CreateNewConversationHandler
+{"NewGuid":"123e4567-e89b-12d3-a456-426614174000", "ConvoType":1, "Title":"Hello Title", "MessageBody":"Message body Hi", "Author":"MikeG", "UtcCreationTime":"2024-07-03T12:00:00Z"}
+
+# RetrieveConversationsHandler
+{"UpdatedAtYear": 2024}
+
+# AppendCommentPostHandler
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000", "ParentPostSK":"", "NewCommentGuid":"1506b802-b38c-414b-9f1d-99e7304f1eab", "Author":"LukeJ","MessageBody":"Hellp new body", "UpdatedAtYear":"2025", "ConvoType":"PROBLEM", "UpdatedAt":"1751686529" }
+
+# AppendDrillDownPostHandler
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000", "ParentPostSK":"", "NewDrillDownGuid":"9b4b401f-a2e2-41ca-b572-61c116c1071a", "Author":"VictorW","MessageBody":"Drill down body", "UpdatedAtYear":"2025",  "UpdatedAt":"1751686529" }
+
+# AppendConclusionPostHandler
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000", "ParentPostSK":"", "NewConclusionGuid":"c6dcf772-dbb1-4916-9c44-c144e8a55c2a", "Author":"JudyB","MessageBody":"Conclusion body", "UpdatedAtYear":"2025",  "UpdatedAt":"1751686529" }
+
+# RetrieveConversationPostsHandler
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000"}
+
+# AdministrativeNonAtomicDeleteConversationAndPostsHandler
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000"}
+
+```
+
 
 The learnings from this Spike B are the foundation for the following implementation of the API Gateway integration Spike.
 
@@ -125,5 +158,22 @@ The AI-Assited code generation led to a mixed RESTful and RPC style and some gen
 
 As mentioned previously, I used **AWS SAM Integration** that runs locally on Docker, to deploy and test locally the API Gateway + Lambda Integration.
 
-During this Spike, I discovered the lack of native support for multi-project .NET solutions in AWS SAM, and I have found a different strategy to deploy the application in SAM.
+During this Spike, I discovered the lack of native support for multi-project .NET solutions in AWS SAM, and I have found a different strategy to deploy the application in SAM. This is the command I used to build all the code for the local SAM Docker:
 
+```bash
+dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish -r linux-x64
+```
+
+And this is the command I used to deploy the code build locally to the local SAM Docker: 
+
+```bash
+sam local start-api  --template template.yaml
+```
+
+instead of the common
+```bash
+sam build
+sam local start-api  --template template.yaml 
+```
+
+One last note on the limitation of **AWS SAM Integration** local Docker container. I could not download and run the remote debugger and, from my local IDE, remotely debug  the code of this Spike running on the SAM local Docker, because the container did not have even the basic commands like tar, needed for the installation. Instead, where needed, I used the logger to print out the diagnostic info I needed.
