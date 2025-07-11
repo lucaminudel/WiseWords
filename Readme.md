@@ -38,7 +38,6 @@ graph TD
     classDef db fill:#ffd6cc,stroke:#333,stroke-width:1px,color:#000000;
     classDef sdk fill:#e0ccff,stroke:#333,stroke-width:1px,color:#000000;
 
-
     %% Nodes (square brackets) with simplified labels (no parentheses)
     S3[S3 Bucket - Static Website Hosting]
     CloudFront[Amazon CloudFront - CDN]
