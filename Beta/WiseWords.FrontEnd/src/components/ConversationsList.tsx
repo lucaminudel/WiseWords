@@ -33,13 +33,12 @@ const ConversationsList: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const year = new Date().getFullYear();
-        const resp = await fetch(`/conversations?updatedAtYear=${year}`);
+        const year = 2025; // Use fixed year per user context
+        const resp = await fetch(`http://localhost:3000/conversations?updatedAtYear=${year}`);
         if (!resp.ok) throw new Error(`API error: ${resp.status}`);
-        const text = await resp.text();
         let data: ApiConversation[] = [];
         try {
-          data = JSON.parse(text);
+          data = await resp.json();
         } catch (e) {
           throw new Error('API did not return valid JSON');
         }
@@ -90,14 +89,20 @@ const ConversationsList: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {conversations.map((conv) => (
-                <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '10px 8px' }}>{CONVO_TYPE_DISPLAY[conv.ConvoType] || conv.ConvoType}</td>
-                  <td style={{ padding: '10px 8px', color: 'var(--primary-color)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>{conv.Title}</td>
-                  <td style={{ padding: '10px 8px' }}>{conv.Author}</td>
-                  <td style={{ padding: '10px 8px' }}>{formatDate(conv.UpdatedAt)}</td>
-                </tr>
-              ))}
+              {conversations.map((conv) => {
+                let typeColor = 'var(--color-text-primary)';
+                if (conv.ConvoType === 'QUESTION') typeColor = 'var(--color-question)';
+                else if (conv.ConvoType === 'PROBLEM') typeColor = 'var(--color-problem)';
+                else if (conv.ConvoType === 'DILEMMA') typeColor = 'var(--color-dilemma)';
+                return (
+                  <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{CONVO_TYPE_DISPLAY[conv.ConvoType] || conv.ConvoType}</td>
+                    <td style={{ padding: '4px 8px', color: 'var(--primary-color)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>{conv.Title}</td>
+                    <td style={{ padding: '4px 8px' }}>{conv.Author}</td>
+                    <td style={{ padding: '4px 8px' }}>{formatDate(conv.UpdatedAt)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
