@@ -1,4 +1,3 @@
-import './styles/App.css';
 import LandingPage from './components/LandingPage';
 import ConversationsList from './components/ConversationsList';
 import { Routes, Route } from 'react-router-dom';

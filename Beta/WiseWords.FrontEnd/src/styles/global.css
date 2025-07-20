@@ -1,0 +1,221 @@
+:root {
+  /* Wise Words Color Palette */
+  --color-background: #0F0F0F;
+  --color-elevation: #181818;
+  --color-text-primary: #F5F5F5;
+  --color-text-secondary: #B0B0B0;
+  --color-accent: #5E8BFF;
+  --color-accent-hover: #3C6FFF;
+  --color-danger: #FF4F5A;
+  --color-success: #29D398;
+  
+  /* Conversation Type Colors */
+  --color-question: #5E8BFF;
+  --color-problem: #FF4F5A;
+  --color-dilemma: #F5A623;
+  --color-solution: #29D398;
+  
+  /* Additional UI Colors */
+  --color-border: rgba(245, 245, 245, 0.1);
+  --color-primary: var(--color-accent);
+  --text-color: var(--color-text-primary);
+  --error-color: var(--color-danger);
+  
+  /* Typography */
+  font-family: 'Orbitron', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+  
+  /* Color scheme */
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  
+  /* Font rendering */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-primary);
+  font-family: 'Orbitron', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 900;
+  line-height: 1.2;
+  margin: 0;
+}
+
+h1 {
+  font-size: 3.2rem;
+}
+
+h2 {
+  font-size: 2.4rem;
+}
+
+h3 {
+  font-size: 1.8rem;
+}
+
+p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* Links */
+a {
+  font-weight: 500;
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+/* Buttons */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: 'Orbitron', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-accent);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+button:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Utility Classes */
+.button {
+  background-color: var(--color-accent);
+  color: var(--color-text-primary);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  font-weight: 700;
+  font-family: 'Orbitron', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: all 0.2s ease;
+}
+
+.button:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.button-secondary {
+  background-color: var(--color-text-secondary);
+}
+
+.button-secondary:hover {
+  background-color: var(--color-text-primary);
+  color: var(--color-background);
+}
+
+/* Form Elements */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: bold;
+  color: var(--color-text-primary);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: var(--color-elevation);
+  color: var(--color-text-primary);
+  font-family: 'Orbitron', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-color: var(--color-accent);
+}
+
+/* Status Messages */
+.error {
+  color: var(--color-danger);
+  margin-top: 0.25rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-secondary);
+}
+
+/* App Layout (if needed) */
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}

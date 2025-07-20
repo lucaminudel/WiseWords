@@ -54,9 +54,9 @@ const ConversationsList: React.FC = () => {
   }, []);
 
   return (
-    <div className="landing-page">
-      <header style={{ position: 'absolute', top: 24, left: 32, zIndex: 10, width: 'fit-content' }}>
-        <div className="app-title" style={{ fontSize: '1.8rem', lineHeight: 1, gap: '0.2rem' }}>
+    <div className="landing-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+      <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start', fontSize: '1.8rem', lineHeight: 1, gap: '0.2rem', fontFamily: 'Orbitron, Inter, sans-serif', fontWeight: 900, letterSpacing: '0.08em' }}>
           <span className="title-word">
             <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7 }}>W</span>
             <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em' }}>ISE</span>
@@ -68,9 +68,9 @@ const ConversationsList: React.FC = () => {
           </span>
         </div>
       </header>
-      <div className="landing-content">
+      <div className="landing-content" style={{ maxWidth: '90%', width: '90%', alignSelf: 'center' }}>
         <h2 style={{ marginBottom: 32, textAlign: 'center' }}>
-          Conversations ({new Date().getFullYear()})
+          Conversations 
         </h2>
         {loading ? (
           <div style={{ textAlign: 'center', color: 'var(--text-color)' }}>Loading...</div>
@@ -98,7 +98,9 @@ const ConversationsList: React.FC = () => {
                   <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{CONVO_TYPE_DISPLAY[conv.ConvoType] || conv.ConvoType}</td>
                     <td style={{ padding: '4px 8px', color: 'var(--primary-color)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>{conv.Title}</td>
-                    <td style={{ padding: '4px 8px' }}>{conv.Author}</td>
+                    <td style={{ padding: '4px 8px' }} title={conv.Author.length > 13 ? conv.Author : undefined}>
+                      {conv.Author.length > 13 ? conv.Author.substring(0, 12) + '…' : conv.Author}
+                    </td>
                     <td style={{ padding: '4px 8px' }}>{formatDate(conv.UpdatedAt)}</td>
                   </tr>
                 );
