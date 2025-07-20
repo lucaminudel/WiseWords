@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/LandingPage.css';
 
 const LandingPage: React.FC = () => {
+  const navigate = useNavigate();
+  
   const handleEnterForum = () => {
-    // TODO: Navigate to forum page when implemented
-    console.log('Navigate to forum');
+    navigate('/conversations');
   };
 
   return (
