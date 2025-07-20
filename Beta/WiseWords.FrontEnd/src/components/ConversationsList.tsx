@@ -27,6 +27,15 @@ const ConversationsList: React.FC = () => {
   const [conversations, setConversations] = useState<ApiConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showNewConversationForm, setShowNewConversationForm] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    type: 'QUESTION',
+    title: '',
+    author: '',
+    messageBody: ''
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,6 +61,76 @@ const ConversationsList: React.FC = () => {
     };
     fetchData();
   }, []);
+
+  const handleNewConversation = () => {
+    setShowNewConversationForm(true);
+  };
+
+  const handleCancel = () => {
+    setShowNewConversationForm(false);
+    setFormError(null);
+    setFormData({
+      type: 'QUESTION',
+      title: '',
+      author: '',
+      messageBody: ''
+    });
+  };
+
+  const handleCreate = async () => {
+    // Validate all fields
+    if (!formData.type.trim() || !formData.title.trim() || !formData.author.trim() || !formData.messageBody.trim()) {
+      setFormError('Please fill in all fields');
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError(null);
+
+    try {
+      const newGuid = crypto.randomUUID();
+      const convoTypeMap = { 'QUESTION': 0, 'PROBLEM': 1, 'DILEMMA': 2 };
+      
+      const requestBody = {
+        NewGuid: newGuid,
+        ConvoType: convoTypeMap[formData.type as keyof typeof convoTypeMap],
+        Title: formData.title.trim(),
+        MessageBody: formData.messageBody.trim(),
+        Author: formData.author.trim(),
+        UtcCreationTime: new Date().toISOString()
+      };
+
+      const response = await fetch('http://localhost:3000/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create conversation: ${response.status} ${errorText}`);
+      }
+
+      // Refresh the conversations list
+      const year = 2025;
+      const resp = await fetch(`http://localhost:3000/conversations?updatedAtYear=${year}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data)) {
+          setConversations(data);
+        }
+      }
+
+      // Reset form and hide it
+      handleCancel();
+    } catch (err: any) {
+      setFormError(err.message || 'Failed to create conversation');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="landing-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
@@ -108,7 +187,202 @@ const ConversationsList: React.FC = () => {
             </tbody>
           </table>
         )}
+        
+        {/* New Conversation Button - aligned right */}
+        {!showNewConversationForm && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem', width: '100%' }}>
+            <button 
+              onClick={handleNewConversation}
+              style={{
+                backgroundColor: 'var(--color-accent)',
+                color: 'var(--color-text-primary)',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontFamily: 'Orbitron, Inter, sans-serif',
+                fontSize: '1rem',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-accent)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              New Conversation
+            </button>
+          </div>
+        )}
+
       </div>
+      
+      {/* New Conversation Form - below the conversations list */}
+      {showNewConversationForm && (
+        <div style={{ 
+          marginTop: '2rem', 
+          padding: '2rem', 
+          backgroundColor: 'var(--color-elevation)', 
+          borderRadius: '12px',
+          border: '1px solid var(--color-border)',
+          maxWidth: '90%',
+          width: '90%',
+          alignSelf: 'center'
+        }}>
+          <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>Create New Conversation</h3>
+          
+          {/* Form Error Display */}
+          {formError && (
+            <div style={{ 
+              color: 'var(--color-danger)', 
+              backgroundColor: 'rgba(255, 79, 90, 0.1)',
+              padding: '0.75rem',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              border: '1px solid var(--color-danger)'
+            }}>
+              {formError}
+            </div>
+          )}
+          
+          {/* Form Fields - ordered: Type, Title, Message, Author */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Type Field */}
+            <div className="form-group">
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Type</label>
+              <select 
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Orbitron, Inter, sans-serif',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="QUESTION">Question</option>
+                <option value="PROBLEM">Problem</option>
+                <option value="DILEMMA">Dilemma</option>
+              </select>
+            </div>
+            
+            {/* Title Field */}
+            <div className="form-group">
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Title</label>
+              <input 
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter conversation title"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Orbitron, Inter, sans-serif',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+            
+            {/* Message Body Field */}
+            <div className="form-group">
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Message</label>
+              <textarea 
+                value={formData.messageBody}
+                onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
+                placeholder="Enter your message or question"
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Orbitron, Inter, sans-serif',
+                  fontSize: '1rem',
+                  resize: 'vertical',
+                  minHeight: '100px'
+                }}
+              />
+            </div>
+            
+            {/* Author Field - LAST */}
+            <div className="form-group">
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Author</label>
+              <input 
+                type="text"
+                value={formData.author}
+                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                placeholder="Enter your name"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Orbitron, Inter, sans-serif',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+            
+            {/* Form Buttons */}
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <button 
+                onClick={handleCancel}
+                disabled={submitting}
+                style={{
+                  backgroundColor: 'var(--color-text-secondary)',
+                  color: 'var(--color-background)',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                  fontFamily: 'Orbitron, Inter, sans-serif',
+                  fontSize: '1rem',
+                  opacity: submitting ? 0.6 : 1,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreate}
+                disabled={submitting}
+                style={{
+                  backgroundColor: 'var(--color-accent)',
+                  color: 'var(--color-text-primary)',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                  fontFamily: 'Orbitron, Inter, sans-serif',
+                  fontSize: '1rem',
+                  opacity: submitting ? 0.6 : 1,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {submitting ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
