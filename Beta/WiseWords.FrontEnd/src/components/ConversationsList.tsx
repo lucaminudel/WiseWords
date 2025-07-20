@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import '../styles/LandingPage.css';
 
 // Map API ConvoType string to display
@@ -36,6 +36,7 @@ const ConversationsList: React.FC = () => {
     author: '',
     messageBody: ''
   });
+  const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,6 +65,18 @@ const ConversationsList: React.FC = () => {
 
   const handleNewConversation = () => {
     setShowNewConversationForm(true);
+    // Use anchor navigation for reliable scrolling
+    setTimeout(() => {
+      // Navigate to the form anchor
+      window.location.hash = '#new-conversation-form';
+      // Focus on the first input field (Type dropdown)
+      if (formRef.current) {
+        const firstInput = formRef.current.querySelector('select, input, textarea') as HTMLElement;
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }
+    }, 100);
   };
 
   const handleCancel = () => {
@@ -74,6 +87,12 @@ const ConversationsList: React.FC = () => {
       title: '',
       author: '',
       messageBody: ''
+    });
+    // Clear hash and scroll to top to show logo/header
+    window.location.hash = '';
+    window.scrollTo({ 
+      top: 0, 
+      behavior: 'smooth' 
     });
   };
 
@@ -223,16 +242,19 @@ const ConversationsList: React.FC = () => {
       
       {/* New Conversation Form - below the conversations list */}
       {showNewConversationForm && (
-        <div style={{ 
-          marginTop: '2rem', 
-          padding: '2rem', 
-          backgroundColor: 'var(--color-elevation)', 
-          borderRadius: '12px',
-          border: '1px solid var(--color-border)',
-          maxWidth: '90%',
-          width: '90%',
-          alignSelf: 'center'
-        }}>
+        <div 
+          id="new-conversation-form"
+          ref={formRef}
+          style={{ 
+            marginTop: '2rem', 
+            padding: '2rem', 
+            backgroundColor: 'var(--color-elevation)', 
+            borderRadius: '12px',
+            border: '1px solid var(--color-border)',
+            maxWidth: '90%',
+            width: '90%',
+            alignSelf: 'center'
+          }}>
           <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>Create New Conversation</h3>
           
           {/* Form Error Display */}
