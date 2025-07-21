@@ -8,6 +8,16 @@ const CONVO_TYPE_DISPLAY: Record<string, string> = {
   DILEMMA: 'Dilemma',
 };
 
+// Get conversation type color
+const getConversationTypeColor = (type: string): string => {
+  switch (type) {
+    case 'QUESTION': return 'var(--color-question)';
+    case 'PROBLEM': return 'var(--color-problem)';
+    case 'DILEMMA': return 'var(--color-dilemma)';
+    default: return 'var(--color-text-primary)';
+  }
+};
+
 interface ApiConversation {
   Author: string;
   Title: string;
@@ -285,45 +295,25 @@ const ConversationsList: React.FC = () => {
                   border: '1px solid var(--color-border)',
                   borderRadius: '8px',
                   backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
+                  color: getConversationTypeColor(formData.type),
                   fontFamily: 'Orbitron, Inter, sans-serif',
                   fontSize: '1rem'
                 }}
               >
-                <option value="QUESTION">Question</option>
-                <option value="PROBLEM">Problem</option>
-                <option value="DILEMMA">Dilemma</option>
+                <option value="QUESTION">Question - a question looking for an answer - allows for comments, sub-questions, and proposed answers</option>
+                <option value="PROBLEM">Problem - a problem looking for a solution - allows for comments, sub-problems, and proposed solutions</option>
+                <option value="DILEMMA">Dilemma - a difficult choice between multiple options - allows for comments, sub-dilemmas, and proposed resolutions</option>
               </select>
             </div>
             
-            {/* Title Field */}
-            <div className="form-group">
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Title</label>
-              <input 
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter conversation title"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Orbitron, Inter, sans-serif',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
             
             {/* Message Body Field */}
             <div className="form-group">
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Message</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Opening message</label>
               <textarea 
                 value={formData.messageBody}
                 onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
-                placeholder="Enter your message or question"
+                placeholder={"Provide a short summary of the crux of the matter.\nDescribe the context, circumstances, and constraints.\nDescribe what is your end goal, and the outcome you are looking for, from this conversation."}
                 rows={4}
                 style={{
                   width: '100%',
@@ -339,7 +329,28 @@ const ConversationsList: React.FC = () => {
                 }}
               />
             </div>
-            
+
+            {/* Title Field */}
+            <div className="form-group">
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Title</label>
+              <input 
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Provide a short title that summarises what the conversation is about"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Orbitron, Inter, sans-serif',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
             {/* Author Field - LAST */}
             <div className="form-group">
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Author</label>
