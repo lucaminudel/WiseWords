@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import '../styles/LandingPage.css';
 
 // Map API ConvoType string to display
@@ -205,7 +206,21 @@ const ConversationsList: React.FC = () => {
                 return (
                   <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{CONVO_TYPE_DISPLAY[conv.ConvoType] || conv.ConvoType}</td>
-                    <td style={{ padding: '4px 8px', color: 'var(--primary-color)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>{conv.Title}</td>
+                    <td style={{ padding: '4px 8px' }}>
+                      <Link 
+                        to={`/conversations/${encodeURIComponent(conv.PK.replace('CONVO#', ''))}`}
+                        className="conversation-title-link"
+                        style={{
+                          color: 'var(--primary-color)',
+                          fontWeight: 600,
+                          textDecoration: 'underline',
+                          textUnderlineOffset: 3,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {conv.Title}
+                      </Link>
+                    </td>
                     <td style={{ padding: '4px 8px' }} title={conv.Author.length > 13 ? conv.Author : undefined}>
                       {conv.Author.length > 13 ? conv.Author.substring(0, 12) + '…' : conv.Author}
                     </td>

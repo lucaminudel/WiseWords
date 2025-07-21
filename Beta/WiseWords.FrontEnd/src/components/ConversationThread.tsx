@@ -1,0 +1,513 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+
+interface Post {
+  PK: string;
+  SK: string;
+  MessageBody: string;
+  Author: string;
+  UpdatedAt: string;
+  Title?: string;
+  ConvoType?: string;
+}
+
+const ConversationThread: React.FC = () => {
+  const { conversationId } = useParams<{ conversationId: string }>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [conversation, setConversation] = useState<Post | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  
+  // Sort posts to move solutions to the end of their sibling groups
+  const sortPosts = (postsToSort: Post[]): Post[] => {
+    if (!Array.isArray(postsToSort) || postsToSort.length === 0) {
+      return [];
+    }
+
+    // Create a copy of the array to avoid mutating the original
+    const sorted = [...postsToSort];
+    
+    // Function to get the indentation level based on SK
+    const getIndentLevel = (sk: string): number => {
+      if (sk === 'METADATA') return 0;
+      return (sk.match(/#/g) || []).length - 1; // Count # to determine depth
+    };
+    
+    
+    // Function to check if a post is a solution
+    const isSolution = (sk: string): boolean => {
+      return sk.includes('#CC#');
+    };
+    
+    // First pass: Move all solution posts to the end of their sibling groups
+    let madeChanges = true;
+    while (madeChanges) {
+      madeChanges = false;
+      
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const current = sorted[i];
+        
+        // Skip if not a solution or if it's the metadata
+        if (current.SK === 'METADATA' || !isSolution(current.SK)) {
+          continue;
+        }
+        
+        const next = sorted[i + 1];
+        if (next.SK === 'METADATA') {
+          continue; // Don't move past metadata
+        }
+        
+        const currentLevel = getIndentLevel(current.SK);
+        const nextLevel = getIndentLevel(next.SK);
+        
+        // If next post has lower indentation than current solution, stop
+        // Otherwise, continue swapping
+        if (nextLevel < currentLevel) {
+          continue;
+        }
+        
+        // If we get here, we can swap the current solution with the next post
+        [sorted[i], sorted[i + 1]] = [sorted[i + 1], sorted[i]];
+        madeChanges = true;
+      }
+    }
+    
+    return sorted;
+  };
+
+  useEffect(() => {
+    const fetchConversation = async () => {
+      try {
+        // Add CONVO# prefix to the conversation ID if it's not already there
+        const fullConversationId = conversationId?.startsWith('CONVO#') 
+          ? conversationId 
+          : `CONVO#${conversationId}`;
+          
+        console.log('Fetching posts for conversation:', fullConversationId);
+        const response = await fetch(`http://localhost:3000/conversations/${encodeURIComponent(fullConversationId)}/posts`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch conversation: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log('API Response:', data);
+        
+        if (!Array.isArray(data)) {
+          throw new Error('Invalid response format: expected an array of posts');
+        }
+        
+        // The last item is the conversation metadata
+        const conversationData = data.find((item: Post) => item.SK === 'METADATA');
+        const postsData = data.filter((item: Post) => item.SK !== 'METADATA');
+        
+        if (!conversationData) {
+          throw new Error('Conversation metadata not found in response');
+        }
+        
+        console.log('Conversation data:', conversationData);
+        console.log('Posts data:', postsData);
+        
+        // Combine conversation data with posts for sorting
+        const allPosts = [conversationData, ...postsData];
+        
+        setConversation(conversationData);
+        setPosts(postsData);
+        
+        // Log the sorted posts for debugging
+        console.log('Sorted posts:', sortPosts(allPosts));
+      } catch (err) {
+        console.error('Error fetching conversation:', err);
+        setError(err instanceof Error ? err.message : 'An error occurred while loading the conversation');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (conversationId) {
+      fetchConversation();
+    }
+  }, [conversationId]);
+
+  // Get conversation type color
+  const getConversationTypeColor = (type?: string): string => {
+    switch (type) {
+      case 'QUESTION': return 'var(--color-question)';
+      case 'PROBLEM': return 'var(--color-problem)';
+      case 'DILEMMA': return 'var(--color-dilemma)';
+      default: return 'var(--color-text-primary)';
+    }
+  };
+
+  // Get display text for post type by checking the last occurrence of type markers
+  const getPostTypeDisplay = (sk: string, convoType?: string): string => {
+    if (sk === 'METADATA') return '';
+    
+    // Find the last occurrence of each type marker
+    const lastCC = sk.lastIndexOf('#CC#');
+    const lastDD = sk.lastIndexOf('#DD#');
+    const lastCM = sk.lastIndexOf('#CM#');
+    
+    // Determine which marker appears last
+    const lastMarker = Math.max(lastCC, lastDD, lastCM);
+    
+    // If no markers found, default to Comment
+    if (lastMarker === -1) return 'Comment';
+    
+    // Check which marker was the last one
+    if (lastMarker === lastCC) {
+      switch(convoType) {
+        case 'QUESTION': return 'Proposed Answer';
+        case 'PROBLEM': return 'Proposed Solution';
+        case 'DILEMMA': return 'Proposed Choice';
+        default: return 'Conclusion';
+      }
+    } else if (lastMarker === lastDD) {
+      switch(convoType) {
+        case 'QUESTION': return 'Sub-question';
+        case 'PROBLEM': return 'Sub-problem';
+        case 'DILEMMA': return 'Sub-dilemma';
+        default: return 'Drill-down';
+      }
+    } else if (lastMarker === lastCM) {
+      return 'Comment';
+    }
+    
+    // Default to Comment if no type is determined
+    return 'Comment';
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '200px',
+        color: 'var(--color-text-secondary)'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '2rem',
+          backgroundColor: 'var(--color-background-secondary)',
+          borderRadius: '8px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid var(--color-border)',
+            borderTopColor: 'var(--color-accent)',
+            borderRadius: '50%',
+            margin: '0 auto 1rem',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <p>Loading conversation...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        padding: '2rem',
+        backgroundColor: 'var(--color-background-secondary)', 
+        borderRadius: '8px',
+        borderLeft: '4px solid var(--color-danger)',
+        margin: '1rem 0',
+        color: 'var(--color-text-primary)'
+      }}>
+        <h3 style={{ marginTop: 0, color: 'var(--color-danger)' }}>Error Loading Conversation</h3>
+        <p>{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{
+            backgroundColor: 'var(--color-danger)',
+            color: 'white',
+            border: 'none',
+            padding: '0.5rem 1rem',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginTop: '1rem'
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!conversation) {
+    return (
+      <div className="landing-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+        <header style={{ padding: '24px 32px', marginBottom: '2rem', width: '100%' }}>
+          <Link to="/conversations" style={{ textDecoration: 'none' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start', fontSize: '1.8rem', lineHeight: 1, gap: '0.2rem', fontFamily: 'Orbitron, Inter, sans-serif', fontWeight: 900, letterSpacing: '0.08em' }}>
+              <span className="title-word">
+                <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7 }}>W</span>
+                <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em' }}>ISE</span>
+              </span>
+              <span style={{ width: '0.4rem', display: 'inline-block' }}></span>
+              <span className="title-word">
+                <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7, color: 'var(--color-accent)' }}>W</span>
+                <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em', color: 'var(--color-text-primary)' }}>ORDS</span>
+              </span>
+            </div>
+          </Link>
+        </header>
+        <div style={{ 
+          width: '100%',
+          maxWidth: '800px',
+          margin: '0 auto',
+          padding: '20px',
+          borderLeft: '4px solid var(--color-border)',
+          backgroundColor: 'var(--color-background-secondary)',
+          borderRadius: '8px',
+          marginTop: '20px'
+        }}>
+          <h3>Conversation Not Found</h3>
+          <p>The requested conversation could not be found or may have been deleted.</p>
+          <button 
+            onClick={() => window.history.back()}
+            style={{
+              backgroundColor: 'var(--color-primary)',
+              color: 'white',
+              border: 'none',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              marginTop: '1rem'
+            }}
+          >
+            Back to Conversations
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="landing-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+      <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
+        <Link to="/conversations" style={{ textDecoration: 'none' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start', fontSize: '1.8rem', lineHeight: 1, gap: '0.2rem', fontFamily: 'Orbitron, Inter, sans-serif', fontWeight: 900, letterSpacing: '0.08em' }}>
+            <span className="title-word">
+              <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7 }}>W</span>
+              <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em' }}>ISE</span>
+            </span>
+            <span style={{ width: '0.4rem', display: 'inline-block' }}></span>
+            <span className="title-word">
+              <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7, color: 'var(--color-accent)' }}>W</span>
+              <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em', color: 'var(--color-text-primary)' }}>ORDS</span>
+            </span>
+          </div>
+        </Link>
+      </header>
+      <div style={{ 
+        width: '90%',
+        margin: '0 auto',
+        padding: '24px',
+        color: 'var(--color-text-primary)',
+        fontFamily: 'Inter, sans-serif'
+      }}>
+        <div style={{ 
+          backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+          padding: '24px',
+          borderRadius: '8px',
+          marginBottom: '24px'
+        }}>
+          {conversation.ConvoType && (
+            <div style={{ 
+              color: getConversationTypeColor(conversation.ConvoType),
+              fontWeight: 600,
+              marginBottom: '8px',
+              fontSize: '0.9rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {conversation.ConvoType.toLowerCase()}
+            </div>
+          )}
+          <h1 style={{ 
+            margin: '0 0 16px 0',
+            fontSize: '1.8rem',
+            fontWeight: 600
+          }}>
+            {conversation.Title}
+          </h1>
+        
+        <div style={{ 
+          marginBottom: '16px',
+          whiteSpace: 'pre-line',
+          lineHeight: '1.6'
+        }}>
+          {conversation.MessageBody}
+        </div>
+        
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          color: 'var(--color-text-secondary, #bbbbbb)',
+          fontSize: '0.9rem',
+          marginTop: '16px',
+          paddingTop: '12px',
+          borderTop: '1px solid var(--color-border, #444)'
+        }}>
+          <span>by <strong>{conversation.Author}</strong> • {new Date(Number(conversation.UpdatedAt) * 1000).toLocaleString()}</span>
+          <div style={{ marginLeft: 'auto' }}>
+            <button style={buttonStyle}>Comment</button>
+            <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+              Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
+                   conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
+            </button>
+            <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+              {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
+               conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <h2 style={{ 
+        fontSize: '1.5rem',
+        margin: '32px 0 16px 0',
+        paddingBottom: '8px',
+        borderBottom: '1px solid var(--color-border, #444)'
+      }}>
+        Responses
+      </h2>
+      
+      {sortPosts([conversation, ...posts]).length <= 1 ? (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '32px',
+          color: 'var(--color-text-secondary)'
+        }}>
+          No responses yet. Be the first to respond!
+        </div>
+      ) : (
+        <div>
+          {sortPosts([conversation, ...posts])
+            .filter(post => post.SK !== 'METADATA') // Skip the root conversation post since it's already rendered
+            .map((post) => {
+            const isDrillDown = post.SK.includes('#DD#');
+            const isConclusion = post.SK.includes('#CC#');
+            const postType = getPostTypeDisplay(post.SK, conversation.ConvoType);
+            const depth = (post.SK.match(/#/g) || []).length - 1; // Count # to determine depth
+            
+            return (
+              <div 
+                key={post.SK} 
+                style={{ 
+                  marginLeft: `${Math.min(depth, 3) * 24}px`,
+                  marginTop: '16px',
+                  padding: '16px',
+                  backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+                  borderRadius: '8px'
+                }}
+              >
+                {postType && (
+                  <div style={{ 
+                    color: postType === 'Comment'
+                      ? 'var(--color-text-secondary)'
+                      : getConversationTypeColor(conversation.ConvoType),
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                    fontSize: '0.9rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    {postType}
+                  </div>
+                )}
+                
+                <div style={{ 
+                  whiteSpace: 'pre-line',
+                  lineHeight: '1.6',
+                  marginBottom: '12px'
+                }}>
+                  {post.MessageBody}
+                </div>
+                
+                <div style={{ 
+                  fontSize: '0.85rem',
+                  color: 'var(--color-text-secondary, #bbbbbb)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingTop: '8px',
+                  borderTop: '1px solid var(--color-border, #333)'
+                }}>
+                  <span>by <strong>{post.Author}</strong> • {new Date(Number(post.UpdatedAt) * 1000).toLocaleString()}</span>
+                  <div>
+                    {/* Root conversation post */}
+                    {post.SK === 'METADATA' && (
+                      <>
+                        <button style={buttonStyle}>Comment</button>
+                        <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+                          Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
+                               conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
+                        </button>
+                        <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+                          {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
+                           conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Comment post */}
+                    {!isDrillDown && !isConclusion && post.SK !== 'METADATA' && (
+                      <button style={buttonStyle}>Reply with quote</button>
+                    )}
+                    
+                    {/* Drill-down post */}
+                    {isDrillDown && !isConclusion && (
+                      <>
+                        <button style={buttonStyle}>Comment</button>
+                        <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+                          Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
+                               conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
+                        </button>
+                        <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+                          {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
+                           conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Conclusion post */}
+                    {isConclusion && (
+                      <button style={buttonStyle}>Comment</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      </div>
+    </div>
+  );
+};
+
+const buttonStyle = {
+  backgroundColor: 'var(--color-accent)',
+  color: 'var(--color-text-primary)',
+  border: 'none',
+  padding: '0.3rem 0.7rem',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontWeight: 700,
+  fontFamily: 'Orbitron, Inter, sans-serif',
+  fontSize: '0.85rem',
+  transition: 'all 0.2s ease',
+  ':hover': {
+    backgroundColor: 'var(--color-accent-hover)',
+    transform: 'translateY(-1px)'
+  },
+  ':active': {
+    transform: 'translateY(0)'
+  }
+};
+
+export default ConversationThread;
