@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { sortPosts } from '../utils/postSorter';
+import { getPostType, getPostTypeDisplay, getPostDepth } from '../utils/postTypeUtils';
+import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
+import { formatUnixTimestamp } from '../utils/dateUtils';
 
 export interface Post {
   PK: string;
@@ -83,43 +86,6 @@ const ConversationThread: React.FC = () => {
     }
   };
 
-  // Get display text for post type by checking the last occurrence of type markers
-  const getPostTypeDisplay = (sk: string, convoType?: string): string => {
-    if (sk === 'METADATA') return '';
-    
-    // Find the last occurrence of each type marker
-    const lastCC = sk.lastIndexOf('#CC#');
-    const lastDD = sk.lastIndexOf('#DD#');
-    const lastCM = sk.lastIndexOf('#CM#');
-    
-    // Determine which marker appears last
-    const lastMarker = Math.max(lastCC, lastDD, lastCM);
-    
-    // If no markers found, default to Comment
-    if (lastMarker === -1) return 'Comment';
-    
-    // Check which marker was the last one
-    if (lastMarker === lastCC) {
-      switch(convoType) {
-        case 'QUESTION': return 'Proposed Answer';
-        case 'PROBLEM': return 'Proposed Solution';
-        case 'DILEMMA': return 'Proposed Choice';
-        default: return 'Conclusion';
-      }
-    } else if (lastMarker === lastDD) {
-      switch(convoType) {
-        case 'QUESTION': return 'Sub-question';
-        case 'PROBLEM': return 'Sub-problem';
-        case 'DILEMMA': return 'Sub-dilemma';
-        default: return 'Drill-down';
-      }
-    } else if (lastMarker === lastCM) {
-      return 'Comment';
-    }
-    
-    // Default to Comment if no type is determined
-    return 'Comment';
-  };
 
   if (loading) {
     return (
@@ -300,16 +266,14 @@ const ConversationThread: React.FC = () => {
           paddingTop: '12px',
           borderTop: '1px solid var(--color-border, #444)'
         }}>
-          <span>by <strong>{conversation.Author}</strong> • {new Date(Number(conversation.UpdatedAt) * 1000).toLocaleString()}</span>
+          <span>by <strong>{conversation.Author}</strong> • {formatUnixTimestamp(conversation.UpdatedAt)}</span>
           <div style={{ marginLeft: 'auto' }}>
             <button data-testid="comment-button" type="button" style={buttonStyle}>Comment</button>
             <button data-testid="sub-question-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-              Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
-                   conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
+              {getAddSubActionButtonText(conversation.ConvoType)}
             </button>
             <button data-testid="propose-answer-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-              {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
-               conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
+              {getProposeSolutionButtonText(conversation.ConvoType)}
             </button>
           </div>
         </div>
@@ -337,18 +301,12 @@ const ConversationThread: React.FC = () => {
           {sortPosts([conversation, ...posts])
             .filter(post => post.SK !== 'METADATA') // Skip the root conversation post since it's already rendered
             .map((post) => {
-            // Determine post type by checking the last occurrence of type markers (same logic as getPostTypeDisplay)
-            const lastCC = post.SK.lastIndexOf('#CC#');
-            const lastDD = post.SK.lastIndexOf('#DD#');
-            const lastCM = post.SK.lastIndexOf('#CM#');
-            const lastMarker = Math.max(lastCC, lastDD, lastCM);
-            
-            const isDrillDown = lastMarker === lastDD;
-            const isConclusion = lastMarker === lastCC;
-            const isComment = lastMarker === lastCM || lastMarker === -1;
+            // Use utility functions for post type detection
+            const postTypeInfo = getPostType(post.SK);
+            const { isDrillDown, isConclusion, isComment } = postTypeInfo;
             
             const postType = getPostTypeDisplay(post.SK, conversation.ConvoType);
-            const depth = (post.SK.match(/#/g) || []).length - 1; // Count # to determine depth
+            const depth = getPostDepth(post.SK);
             
             return (
               <div 
@@ -394,19 +352,17 @@ const ConversationThread: React.FC = () => {
                   paddingTop: '8px',
                   borderTop: '1px solid var(--color-border, #333)'
                 }}>
-                  <span>by <strong>{post.Author}</strong> • {new Date(Number(post.UpdatedAt) * 1000).toLocaleString()}</span>
+                  <span>by <strong>{post.Author}</strong> • {formatUnixTimestamp(post.UpdatedAt)}</span>
                   <div>
                     {/* Root conversation post */}
                     {post.SK === 'METADATA' && (
                       <>
                         <button data-testid="comment-button" style={buttonStyle}>Comment</button>
                         <button data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
-                               conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
+                          {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
-                           conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
+                          {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
                       </>
                     )}
@@ -421,12 +377,10 @@ const ConversationThread: React.FC = () => {
                       <>
                         <button type="button" data-testid="comment-button" style={buttonStyle}>Comment</button>
                         <button type="button" data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
-                               conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
+                          {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button type="button" data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
-                           conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
+                          {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
                       </>
                     )}

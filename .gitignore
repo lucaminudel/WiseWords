@@ -35,3 +35,4 @@ Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Test
 Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests/obj
 Beta/.vscode
 Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/publish
+Beta/node_modules
