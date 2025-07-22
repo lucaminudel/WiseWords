@@ -24,12 +24,19 @@
   align-items: flex-end;
   justify-content: center;
   margin-bottom: 2.5rem;
-  gap: 0.7rem;
-  font-family: 'Orbitron', 'Inter', sans-serif;
-  font-weight: 900;
-  letter-spacing: 0.08em;
   width: 100%;
-  font-size: 4rem;
+}
+
+.landing-logo {
+  font-size: 4rem !important;
+}
+
+.landing-logo :global(.bigW) {
+  font-size: 10rem !important;
+}
+
+.accent {
+  color: var(--color-accent);
 }
 
 
