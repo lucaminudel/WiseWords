@@ -1,0 +1,11 @@
+[
+  {
+    "PK": "CONVO#123",
+    "SK": "METADATA",
+    "Title": "Test Question",
+    "MessageBody": "What is the meaning of life?",
+    "Author": "Alice",
+    "UpdatedAt": "1690000000",
+    "ConvoType": "QUESTION"
+  }
+]

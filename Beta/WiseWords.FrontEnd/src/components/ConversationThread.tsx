@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { sortPosts } from '../utils/postSorter';
 
-interface Post {
+export interface Post {
   PK: string;
   SK: string;
   MessageBody: string;
@@ -18,62 +19,7 @@ const ConversationThread: React.FC = () => {
   const [conversation, setConversation] = useState<Post | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   
-  // Sort posts to move solutions to the end of their sibling groups
-  const sortPosts = (postsToSort: Post[]): Post[] => {
-    if (!Array.isArray(postsToSort) || postsToSort.length === 0) {
-      return [];
-    }
 
-    // Create a copy of the array to avoid mutating the original
-    const sorted = [...postsToSort];
-    
-    // Function to get the indentation level based on SK
-    const getIndentLevel = (sk: string): number => {
-      if (sk === 'METADATA') return 0;
-      return (sk.match(/#/g) || []).length - 1; // Count # to determine depth
-    };
-    
-    
-    // Function to check if a post is a solution
-    const isSolution = (sk: string): boolean => {
-      return sk.includes('#CC#');
-    };
-    
-    // First pass: Move all solution posts to the end of their sibling groups
-    let madeChanges = true;
-    while (madeChanges) {
-      madeChanges = false;
-      
-      for (let i = 0; i < sorted.length - 1; i++) {
-        const current = sorted[i];
-        
-        // Skip if not a solution or if it's the metadata
-        if (current.SK === 'METADATA' || !isSolution(current.SK)) {
-          continue;
-        }
-        
-        const next = sorted[i + 1];
-        if (next.SK === 'METADATA') {
-          continue; // Don't move past metadata
-        }
-        
-        const currentLevel = getIndentLevel(current.SK);
-        const nextLevel = getIndentLevel(next.SK);
-        
-        // If next post has lower indentation than current solution, stop
-        // Otherwise, continue swapping
-        if (nextLevel < currentLevel) {
-          continue;
-        }
-        
-        // If we get here, we can swap the current solution with the next post
-        [sorted[i], sorted[i + 1]] = [sorted[i + 1], sorted[i]];
-        madeChanges = true;
-      }
-    }
-    
-    return sorted;
-  };
 
   useEffect(() => {
     const fetchConversation = async () => {
@@ -309,12 +255,14 @@ const ConversationThread: React.FC = () => {
         color: 'var(--color-text-primary)',
         fontFamily: 'Inter, sans-serif'
       }}>
-        <div style={{ 
-          backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-          padding: '24px',
-          borderRadius: '8px',
-          marginBottom: '24px'
-        }}>
+        <div 
+          data-testid="post-container"
+          style={{ 
+            backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+            padding: '24px',
+            borderRadius: '8px',
+            marginBottom: '24px'
+          }}>
           {conversation.ConvoType && (
             <div style={{ 
               color: getConversationTypeColor(conversation.ConvoType),
@@ -354,12 +302,12 @@ const ConversationThread: React.FC = () => {
         }}>
           <span>by <strong>{conversation.Author}</strong> • {new Date(Number(conversation.UpdatedAt) * 1000).toLocaleString()}</span>
           <div style={{ marginLeft: 'auto' }}>
-            <button style={buttonStyle}>Comment</button>
-            <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+            <button data-testid="comment-button" type="button" style={buttonStyle}>Comment</button>
+            <button data-testid="sub-question-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
               Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
                    conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
             </button>
-            <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+            <button data-testid="propose-answer-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
               {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
                conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
             </button>
@@ -389,14 +337,23 @@ const ConversationThread: React.FC = () => {
           {sortPosts([conversation, ...posts])
             .filter(post => post.SK !== 'METADATA') // Skip the root conversation post since it's already rendered
             .map((post) => {
-            const isDrillDown = post.SK.includes('#DD#');
-            const isConclusion = post.SK.includes('#CC#');
+            // Determine post type by checking the last occurrence of type markers (same logic as getPostTypeDisplay)
+            const lastCC = post.SK.lastIndexOf('#CC#');
+            const lastDD = post.SK.lastIndexOf('#DD#');
+            const lastCM = post.SK.lastIndexOf('#CM#');
+            const lastMarker = Math.max(lastCC, lastDD, lastCM);
+            
+            const isDrillDown = lastMarker === lastDD;
+            const isConclusion = lastMarker === lastCC;
+            const isComment = lastMarker === lastCM || lastMarker === -1;
+            
             const postType = getPostTypeDisplay(post.SK, conversation.ConvoType);
             const depth = (post.SK.match(/#/g) || []).length - 1; // Count # to determine depth
             
             return (
               <div 
-                key={post.SK} 
+                key={post.SK}
+                data-testid="post-container"
                 style={{ 
                   marginLeft: `${Math.min(depth, 3) * 24}px`,
                   marginTop: '16px',
@@ -442,12 +399,12 @@ const ConversationThread: React.FC = () => {
                     {/* Root conversation post */}
                     {post.SK === 'METADATA' && (
                       <>
-                        <button style={buttonStyle}>Comment</button>
-                        <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+                        <button data-testid="comment-button" style={buttonStyle}>Comment</button>
+                        <button data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
                           Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
                                conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
                         </button>
-                        <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+                        <button data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
                           {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
                            conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
                         </button>
@@ -455,19 +412,19 @@ const ConversationThread: React.FC = () => {
                     )}
                     
                     {/* Comment post */}
-                    {!isDrillDown && !isConclusion && post.SK !== 'METADATA' && (
-                      <button style={buttonStyle}>Reply with quote</button>
+                    {isComment && post.SK !== 'METADATA' && (
+                      <button type="button" data-testid="reply-quote-button" style={buttonStyle}>Reply with quote</button>
                     )}
                     
                     {/* Drill-down post */}
                     {isDrillDown && !isConclusion && (
                       <>
-                        <button style={buttonStyle}>Comment</button>
-                        <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+                        <button type="button" data-testid="comment-button" style={buttonStyle}>Comment</button>
+                        <button type="button" data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
                           Add {conversation.ConvoType === 'QUESTION' ? 'Sub-question' : 
                                conversation.ConvoType === 'PROBLEM' ? 'Sub-problem' : 'Sub-dilemma'}
                         </button>
-                        <button style={{ ...buttonStyle, marginLeft: '8px' }}>
+                        <button type="button" data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
                           {conversation.ConvoType === 'QUESTION' ? 'Propose Answer' : 
                            conversation.ConvoType === 'PROBLEM' ? 'Suggest Solution' : 'Propose Choice'}
                         </button>
@@ -476,7 +433,7 @@ const ConversationThread: React.FC = () => {
                     
                     {/* Conclusion post */}
                     {isConclusion && (
-                      <button style={buttonStyle}>Comment</button>
+                      <button type="button" data-testid="comment-button" style={buttonStyle}>Comment</button>
                     )}
                   </div>
                 </div>
@@ -509,5 +466,6 @@ const buttonStyle = {
     transform: 'translateY(0)'
   }
 };
+
 
 export default ConversationThread;

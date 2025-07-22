@@ -1,0 +1,46 @@
+[
+  {
+    "PK": "CONVO#123",
+    "SK": "METADATA",
+    "Title": "Test Question",
+    "MessageBody": "Root question",
+    "Author": "Alice",
+    "UpdatedAt": "1690000000",
+    "ConvoType": "QUESTION"
+  },
+  {
+    "PK": "CONVO#123",
+    "SK": "#CM#1",
+    "MessageBody": "Root level comment",
+    "Author": "Bob",
+    "UpdatedAt": "1690000100"
+  },
+  {
+    "PK": "CONVO#123",
+    "SK": "#DD#1",
+    "MessageBody": "Root level sub-question",
+    "Author": "Charlie",
+    "UpdatedAt": "1690000200"
+  },
+  {
+    "PK": "CONVO#123",
+    "SK": "#DD#1#CM#1",
+    "MessageBody": "Nested comment",
+    "Author": "David",
+    "UpdatedAt": "1690000300"
+  },
+  {
+    "PK": "CONVO#123",
+    "SK": "#DD#1#DD#1",
+    "MessageBody": "Nested sub-question",
+    "Author": "Eve",
+    "UpdatedAt": "1690000400"
+  },
+  {
+    "PK": "CONVO#123",
+    "SK": "#CC#1",
+    "MessageBody": "Proposed solution",
+    "Author": "Frank",
+    "UpdatedAt": "1690000500"
+  }
+]
