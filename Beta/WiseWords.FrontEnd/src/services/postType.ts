@@ -115,7 +115,8 @@ export const postTypeService = {
    * Gets the depth level of a post based on its SK.
    */
   getPostDepth(sk: string): number {
-    return (sk.match(/#/g) || []).length - 1;
+    if (sk === 'METADATA') return 0;
+    return (sk.match(/#/g) || []).length / 2;
   },
 
   /**

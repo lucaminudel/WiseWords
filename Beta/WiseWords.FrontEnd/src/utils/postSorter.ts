@@ -1,8 +1,6 @@
 import { Post } from '../types/conversation';
 import { postTypeService } from '../services/postType';
 
-// getIndentLevel function removed - using getPostDepth directly
-
 // Function to check if a post is a solution
 // Now uses the correct last-marker logic
 const isSolution = (sk: string): boolean => {

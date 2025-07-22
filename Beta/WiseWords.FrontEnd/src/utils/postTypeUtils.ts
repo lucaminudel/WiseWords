@@ -101,17 +101,6 @@ export const getPostTypeDisplay = (sk: string, convoType?: string): string => {
   return 'Comment';
 };
 
-/**
- * Calculates the depth/indentation level of a post based on its SK.
- * Matches the original component logic: count # characters minus 1.
- * 
- * @param sk - The sort key
- * @returns Depth level (0 for METADATA, 1+ for nested posts)
- */
-export const getPostDepth = (sk: string): number => {
-  if (sk === 'METADATA') return 0;
-  return (sk.match(/#/g) || []).length - 1;
-};
 
 /**
  * Checks if a post is a solution/conclusion post based on the LAST marker.

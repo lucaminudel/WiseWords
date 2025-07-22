@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { 
   getPostType, 
   getPostTypeDisplay, 
-  getPostDepth,
   isSolutionPost,
   isDrillDownPost,
   isCommentPost
 } from '../postTypeUtils';
+import { postTypeService } from '../../services/postType';
 
 describe('postTypeUtils', () => {
   describe('getPostType', () => {
@@ -147,29 +147,29 @@ describe('postTypeUtils', () => {
 
   describe('getPostDepth', () => {
     it('should return 0 for METADATA', () => {
-      expect(getPostDepth('METADATA')).toBe(0);
+      expect(postTypeService.getPostDepth('METADATA')).toBe(0);
     });
 
     it('should return 1 for first level posts', () => {
-      expect(getPostDepth('#CM#1')).toBe(1);
-      expect(getPostDepth('#DD#1')).toBe(1);
-      expect(getPostDepth('#CC#1')).toBe(1);
+      expect(postTypeService.getPostDepth('#CM#1')).toBe(1);
+      expect(postTypeService.getPostDepth('#DD#1')).toBe(1);
+      expect(postTypeService.getPostDepth('#CC#1')).toBe(1);
     });
 
-    it('should return correct depth for second level posts', () => {
-      expect(getPostDepth('#CM#1#CM#1')).toBe(3); // 4 # characters - 1 = 3
-      expect(getPostDepth('#DD#1#CM#1')).toBe(3); // 4 # characters - 1 = 3
-      expect(getPostDepth('#CM#1#DD#1')).toBe(3); // 4 # characters - 1 = 3
+    it('should return correct depth for nested posts', () => {
+      expect(postTypeService.getPostDepth('#CM#1#CM#1')).toBe(2); // 4 # characters / 2 = 2
+      expect(postTypeService.getPostDepth('#DD#1#CM#1')).toBe(2); // 4 # characters / 2 = 2
+      expect(postTypeService.getPostDepth('#CM#1#DD#1')).toBe(2); // 4 # characters / 2 = 2
     });
 
-    it('should return correct depth for deeply nested posts', () => {
-      expect(getPostDepth('#DD#1#CM#1#DD#2#CC#1')).toBe(7); // 8 # characters - 1 = 7
-      expect(getPostDepth('#CM#1#CM#2#CM#3#CM#4#CM#5')).toBe(9); // 10 # characters - 1 = 9
+    it('should handle deeply nested posts', () => {
+      expect(postTypeService.getPostDepth('#DD#1#CM#1#DD#2#CC#1')).toBe(4); // 8 # characters / 2 = 4
+      expect(postTypeService.getPostDepth('#CM#1#CM#2#CM#3#CM#4#CM#5')).toBe(5); // 10 # characters / 2 = 5
     });
 
-    it('should handle posts with no standard markers', () => {
-      expect(getPostDepth('#1')).toBe(0); // 1 # character - 1 = 0
-      expect(getPostDepth('#1#2')).toBe(1); // 2 # characters - 1 = 1
+    it('should handle malformed SKs', () => {
+      expect(postTypeService.getPostDepth('#1')).toBe(0.5); // 1 # character / 2 = 0.5
+      expect(postTypeService.getPostDepth('#1#2')).toBe(1); // 2 # characters / 2 = 1
     });
   });
 

@@ -157,12 +157,12 @@ describe('ConversationThread Component Rendering', () => {
     cy.contains('Nested comment')
       .closest('[data-testid="post-container"]')
       .should('have.attr', 'style')
-      .and('include', 'margin-left: 72px') // 3 levels deep = 72px (based on actual component logic)
+      .and('include', 'margin-left: 96px') // 3 levels deep = 72px (based on actual component logic)
       
     cy.contains('Nested sub-question')
       .closest('[data-testid="post-container"]')
       .should('have.attr', 'style')
-      .and('include', 'margin-left: 72px') // 3 levels deep = 72px
+      .and('include', 'margin-left: 96px') // 3 levels deep = 72px
   })
 
   it('should handle router integration correctly', () => {

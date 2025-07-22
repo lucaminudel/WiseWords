@@ -267,7 +267,7 @@ const ConversationThread: React.FC = () => {
                 key={post.SK}
                 data-testid="post-container"
                 style={{ 
-                  marginLeft: `${Math.min(depth, 3) * 24}px`,
+                  marginLeft: `${Math.min(depth, 3) * 48}px`,
                   marginTop: '16px',
                   padding: '16px',
                   backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
