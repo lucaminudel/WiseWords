@@ -1,0 +1,41 @@
+.container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-start;
+  font-size: 1.8rem;
+  line-height: 1;
+  gap: 0.2rem;
+  font-family: Orbitron, Inter, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.link {
+  text-decoration: none;
+}
+
+.titleWord {
+  display: flex;
+  align-items: baseline;
+}
+
+.bigW {
+  font-size: 3.2rem;
+  line-height: 0.7;
+}
+
+.accent {
+  color: var(--color-accent);
+}
+
+.smallLetters {
+  font-size: 1.35rem;
+  margin-left: 0.1em;
+  color: var(--color-text-primary);
+}
+
+.spacer {
+  width: 0.4rem;
+  display: inline-block;
+}

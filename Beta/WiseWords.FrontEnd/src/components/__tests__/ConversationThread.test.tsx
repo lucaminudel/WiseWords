@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Post } from '../ConversationThread';
+import { Post } from '../../types/conversation';
 import { sortPosts } from '../../utils/postSorter';
 
 describe('sortPosts', () => {
@@ -11,6 +11,7 @@ describe('sortPosts', () => {
         const posts: Post[] = [{
             PK: '1',
             SK: 'METADATA',
+            Title: 'Test Title',
             MessageBody: 'test',
             Author: 'test',
             UpdatedAt: '123'

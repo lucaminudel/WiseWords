@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { sortPosts } from '../postSorter';
-import { Post } from '../../components/ConversationThread';
+import { Post } from '../../types/conversation';
 
 // Helper function to create test posts
 const createPost = (sk: string, messageBody: string = 'Test message'): Post => ({
   PK: 'CONVO#123',
   SK: sk,
+  Title: 'Test Title',
   MessageBody: messageBody,
   Author: 'Test Author',
   UpdatedAt: '1690000000'

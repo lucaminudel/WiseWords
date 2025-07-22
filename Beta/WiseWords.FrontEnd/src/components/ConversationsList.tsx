@@ -1,38 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/LandingPage.css';
+import { Logo } from './Logo';
+import { getConversationTypeColor, getConversationTypeLabel } from '../utils/conversationUtils';
+import { formatUnixTimestamp } from '../utils/dateUtils';
+import { ApiConversation } from '../types/conversation';
 
-// Map API ConvoType string to display
-const CONVO_TYPE_DISPLAY: Record<string, string> = {
-  QUESTION: 'Question',
-  PROBLEM: 'Problem',
-  DILEMMA: 'Dilemma',
-};
+// Duplicated logic moved to utils/conversationUtils.ts and types/conversation.ts
 
-// Get conversation type color
-const getConversationTypeColor = (type: string): string => {
-  switch (type) {
-    case 'QUESTION': return 'var(--color-question)';
-    case 'PROBLEM': return 'var(--color-problem)';
-    case 'DILEMMA': return 'var(--color-dilemma)';
-    default: return 'var(--color-text-primary)';
-  }
-};
-
-interface ApiConversation {
-  Author: string;
-  Title: string;
-  UpdatedAtYear: string;
-  PK: string; // format: 'CONVO#guid'
-  ConvoType: string; // e.g. 'PROBLEM'
-  UpdatedAt: string; // epoch seconds as string
-}
-
-const formatDate = (epoch: string) => {
-  if (!epoch) return '';
-  const date = new Date(Number(epoch) * 1000);
-  return date.toLocaleDateString();
-};
+// formatDate logic moved to utils/dateUtils.ts
 
 const ConversationsList: React.FC = () => {
   const [conversations, setConversations] = useState<ApiConversation[]>([]);
@@ -165,17 +141,7 @@ const ConversationsList: React.FC = () => {
   return (
     <div className="landing-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
       <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start', fontSize: '1.8rem', lineHeight: 1, gap: '0.2rem', fontFamily: 'Orbitron, Inter, sans-serif', fontWeight: 900, letterSpacing: '0.08em' }}>
-          <span className="title-word">
-            <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7 }}>W</span>
-            <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em' }}>ISE</span>
-          </span>
-          <span style={{ width: '0.4rem', display: 'inline-block' }}></span>
-          <span className="title-word">
-            <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7, color: 'var(--color-accent)' }}>W</span>
-            <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em', color: 'var(--color-text-primary)' }}>ORDS</span>
-          </span>
-        </div>
+        <Logo />
       </header>
       <div className="landing-content" style={{ maxWidth: '90%', width: '90%', alignSelf: 'center' }}>
         <h2 style={{ marginBottom: 32, textAlign: 'center' }}>
@@ -205,7 +171,7 @@ const ConversationsList: React.FC = () => {
                 else if (conv.ConvoType === 'DILEMMA') typeColor = 'var(--color-dilemma)';
                 return (
                   <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{CONVO_TYPE_DISPLAY[conv.ConvoType] || conv.ConvoType}</td>
+                    <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{getConversationTypeLabel(conv.ConvoType)}</td>
                     <td style={{ padding: '4px 8px' }}>
                       <Link 
                         to={`/conversations/${encodeURIComponent(conv.PK.replace('CONVO#', ''))}`}
@@ -224,7 +190,7 @@ const ConversationsList: React.FC = () => {
                     <td style={{ padding: '4px 8px' }} title={conv.Author.length > 13 ? conv.Author : undefined}>
                       {conv.Author.length > 13 ? conv.Author.substring(0, 12) + '…' : conv.Author}
                     </td>
-                    <td style={{ padding: '4px 8px' }}>{formatDate(conv.UpdatedAt)}</td>
+                    <td style={{ padding: '4px 8px' }}>{formatUnixTimestamp(conv.UpdatedAt)}</td>
                   </tr>
                 );
               })}

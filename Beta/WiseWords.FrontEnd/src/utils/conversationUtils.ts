@@ -1,3 +1,13 @@
+/**
+ * Conversation utilities for shared conversation-related logic
+ */
+
+/**
+ * Gets the CSS color variable for a conversation type.
+ * 
+ * @param type - The conversation type
+ * @returns CSS color variable string
+ */
 export const getConversationTypeColor = (type?: string): string => {
     switch (type) {
         case 'QUESTION': return 'var(--color-question)';
@@ -7,39 +17,33 @@ export const getConversationTypeColor = (type?: string): string => {
     }
 };
 
-export const getPostTypeDisplay = (sk: string, convoType?: string): string => {
-    if (sk === 'METADATA') return '';
-    
-    // Find the last occurrence of each type marker
-    const lastCC = sk.lastIndexOf('#CC#');
-    const lastDD = sk.lastIndexOf('#DD#');
-    const lastCM = sk.lastIndexOf('#CM#');
-    
-    // Determine which marker appears last
-    const lastMarker = Math.max(lastCC, lastDD, lastCM);
-    
-    // If no markers found, default to Comment
-    if (lastMarker === -1) return 'Comment';
-    
-    // Check which marker was the last one
-    if (lastMarker === lastCC) {
-        switch(convoType) {
-            case 'QUESTION': return 'Proposed Answer';
-            case 'PROBLEM': return 'Proposed Solution';
-            case 'DILEMMA': return 'Proposed Choice';
-            default: return 'Conclusion';
-        }
-    } else if (lastMarker === lastDD) {
-        switch(convoType) {
-            case 'QUESTION': return 'Sub-question';
-            case 'PROBLEM': return 'Sub-problem';
-            case 'DILEMMA': return 'Sub-dilemma';
-            default: return 'Drill-down';
-        }
-    } else if (lastMarker === lastCM) {
-        return 'Comment';
-    }
-    
-    // Default to Comment if no type is determined
-    return 'Comment';
+/**
+ * Conversation type display labels mapping
+ */
+export const CONVERSATION_TYPE_LABELS = {
+    QUESTION: 'Question',
+    PROBLEM: 'Problem', 
+    DILEMMA: 'Dilemma',
+} as const;
+
+/**
+ * Gets the display label for a conversation type.
+ * 
+ * @param type - The conversation type
+ * @returns Human-readable conversation type label
+ */
+export const getConversationTypeLabel = (type?: string): string => {
+    if (!type) return 'Unknown';
+    return CONVERSATION_TYPE_LABELS[type as keyof typeof CONVERSATION_TYPE_LABELS] || type;
+};
+
+/**
+ * Normalizes a conversation ID to include the CONVO# prefix if missing.
+ * 
+ * @param conversationId - The conversation ID (with or without prefix)
+ * @returns Normalized conversation ID with CONVO# prefix
+ */
+export const normalizeConversationId = (conversationId?: string): string => {
+    if (!conversationId) return '';
+    return conversationId.startsWith('CONVO#') ? conversationId : `CONVO#${conversationId}`;
 };

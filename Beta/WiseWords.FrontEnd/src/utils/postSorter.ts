@@ -1,11 +1,7 @@
-import { Post } from '../components/ConversationThread';
-import { getPostDepth, isSolutionPost } from './postTypeUtils';
+import { Post } from '../types/conversation';
+import { isSolutionPost } from './postTypeUtils';
 
-// Function to get the indentation level based on SK
-// Now uses the shared utility function
-const getIndentLevel = (sk: string): number => {
-  return getPostDepth(sk);
-};
+// getIndentLevel function removed - using getPostDepth directly
 
 // Function to check if a post is a solution
 // Now uses the correct last-marker logic

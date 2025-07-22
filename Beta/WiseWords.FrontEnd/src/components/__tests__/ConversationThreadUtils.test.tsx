@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getConversationTypeColor, getPostTypeDisplay } from '../../utils/conversationUtils';
+import { getConversationTypeColor } from '../../utils/conversationUtils';
+import { getPostTypeDisplay } from '../../utils/postTypeUtils';
 
 describe('getConversationTypeColor', () => {
     it('should return question color for QUESTION type', () => {

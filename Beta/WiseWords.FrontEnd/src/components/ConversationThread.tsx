@@ -1,19 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Logo } from './Logo';
 import { sortPosts } from '../utils/postSorter';
 import { getPostType, getPostTypeDisplay, getPostDepth } from '../utils/postTypeUtils';
 import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
 import { formatUnixTimestamp } from '../utils/dateUtils';
+import { getConversationTypeColor, normalizeConversationId } from '../utils/conversationUtils';
+import { ApiService } from '../services/apiService';
+import { Post } from '../types/conversation';
 
-export interface Post {
-  PK: string;
-  SK: string;
-  MessageBody: string;
-  Author: string;
-  UpdatedAt: string;
-  Title?: string;
-  ConvoType?: string;
-}
+// Post interface moved to types/conversation.ts
 
 const ConversationThread: React.FC = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -27,17 +23,11 @@ const ConversationThread: React.FC = () => {
   useEffect(() => {
     const fetchConversation = async () => {
       try {
-        // Add CONVO# prefix to the conversation ID if it's not already there
-        const fullConversationId = conversationId?.startsWith('CONVO#') 
-          ? conversationId 
-          : `CONVO#${conversationId}`;
+        // Use centralized API service and conversation ID normalization
+        const fullConversationId = normalizeConversationId(conversationId);
           
         console.log('Fetching posts for conversation:', fullConversationId);
-        const response = await fetch(`http://localhost:3000/conversations/${encodeURIComponent(fullConversationId)}/posts`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch conversation: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
+        const data = await ApiService.fetchConversationPosts(fullConversationId);
         console.log('API Response:', data);
         
         if (!Array.isArray(data)) {
@@ -77,14 +67,7 @@ const ConversationThread: React.FC = () => {
   }, [conversationId]);
 
   // Get conversation type color
-  const getConversationTypeColor = (type?: string): string => {
-    switch (type) {
-      case 'QUESTION': return 'var(--color-question)';
-      case 'PROBLEM': return 'var(--color-problem)';
-      case 'DILEMMA': return 'var(--color-dilemma)';
-      default: return 'var(--color-text-primary)';
-    }
-  };
+  // getConversationTypeColor moved to utils/conversationUtils.ts
 
 
   if (loading) {
@@ -200,19 +183,7 @@ const ConversationThread: React.FC = () => {
   return (
     <div className="landing-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
       <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
-        <Link to="/conversations" style={{ textDecoration: 'none' }}>
-          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start', fontSize: '1.8rem', lineHeight: 1, gap: '0.2rem', fontFamily: 'Orbitron, Inter, sans-serif', fontWeight: 900, letterSpacing: '0.08em' }}>
-            <span className="title-word">
-              <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7 }}>W</span>
-              <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em' }}>ISE</span>
-            </span>
-            <span style={{ width: '0.4rem', display: 'inline-block' }}></span>
-            <span className="title-word">
-              <span className="big-w" style={{ fontSize: '3.2rem', lineHeight: 0.7, color: 'var(--color-accent)' }}>W</span>
-              <span className="small-letters" style={{ fontSize: '1.35rem', marginLeft: '0.1em', color: 'var(--color-text-primary)' }}>ORDS</span>
-            </span>
-          </div>
-        </Link>
+        <Logo linkTo="/conversations" />
       </header>
       <div style={{ 
         width: '90%',

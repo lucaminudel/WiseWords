@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/LandingPage.css';
+import { Logo } from './Logo';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,15 +14,7 @@ const LandingPage: React.FC = () => {
     <div className="landing-page">
       <div className="landing-content">
         <div className="app-title">
-          <span className="title-word">
-            <span className="big-w">W</span>
-            <span className="small-letters">ISE</span>
-          </span>
-          <span style={{ width: '1.2rem', display: 'inline-block' }} />
-          <span className="title-word">
-            <span className="big-w">W</span>
-            <span className="small-letters">ORDS</span>
-          </span>
+          <Logo />
         </div>
         
         <p className="app-description">
