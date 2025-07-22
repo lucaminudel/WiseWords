@@ -5,6 +5,7 @@ import { Logo } from './Logo';
 import { getConversationTypeColor, getConversationTypeLabel } from '../utils/conversationUtils';
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { ApiConversation } from '../types/conversation';
+import { api } from '../services/api';
 
 // Duplicated logic moved to utils/conversationUtils.ts and types/conversation.ts
 
@@ -31,15 +32,7 @@ const ConversationsList: React.FC = () => {
       setError(null);
       try {
         const year = 2025; // Use fixed year per user context
-        const resp = await fetch(`http://localhost:3000/conversations?updatedAtYear=${year}`);
-        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
-        let data: ApiConversation[] = [];
-        try {
-          data = await resp.json();
-        } catch (e) {
-          throw new Error('API did not return valid JSON');
-        }
-        if (!Array.isArray(data)) throw new Error('Unexpected API response');
+        const data = await api.getConversations(year);
         setConversations(data);
       } catch (err: any) {
         setError(err.message || 'Failed to load conversations');
@@ -94,40 +87,24 @@ const ConversationsList: React.FC = () => {
     setFormError(null);
 
     try {
-      const newGuid = crypto.randomUUID();
-      const convoTypeMap = { 'QUESTION': 0, 'PROBLEM': 1, 'DILEMMA': 2 };
-      
-      const requestBody = {
-        NewGuid: newGuid,
-        ConvoType: convoTypeMap[formData.type as keyof typeof convoTypeMap],
-        Title: formData.title.trim(),
-        MessageBody: formData.messageBody.trim(),
-        Author: formData.author.trim(),
-        UtcCreationTime: new Date().toISOString()
-      };
-
-      const response = await fetch('http://localhost:3000/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
+      await api.createConversation({
+        type: formData.type,
+        title: formData.title.trim(),
+        messageBody: formData.messageBody.trim(),
+        author: formData.author.trim()
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to create conversation: ${response.status} ${errorText}`);
-      }
+      await api.createConversation({
+        type: formData.type,
+        title: formData.title,
+        author: formData.author,
+        messageBody: formData.messageBody,
+      });
 
-      // Refresh the conversations list
-      const year = 2025;
-      const resp = await fetch(`http://localhost:3000/conversations?updatedAtYear=${year}`);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (Array.isArray(data)) {
-          setConversations(data);
-        }
-      }
+      // Refresh the list after creating
+      const year = 2025; // Use fixed year per user context
+      const data = await api.getConversations(year);
+      setConversations(data);
 
       // Reset form and hide it
       handleCancel();

@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Logo } from './Logo';
 import { sortPosts } from '../utils/postSorter';
-import { getPostType, getPostTypeDisplay, getPostDepth } from '../utils/postTypeUtils';
-import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
+import { api } from '../services/api';
 import { formatUnixTimestamp } from '../utils/dateUtils';
-import { getConversationTypeColor, normalizeConversationId } from '../utils/conversationUtils';
-import { ApiService } from '../services/apiService';
+import { getConversationTypeColor } from '../utils/conversationUtils';
+import { postTypeService } from '../services/postType';
 import { Post } from '../types/conversation';
 
 // Post interface moved to types/conversation.ts
@@ -23,16 +22,9 @@ const ConversationThread: React.FC = () => {
   useEffect(() => {
     const fetchConversation = async () => {
       try {
-        // Use centralized API service and conversation ID normalization
-        const fullConversationId = normalizeConversationId(conversationId);
-          
-        console.log('Fetching posts for conversation:', fullConversationId);
-        const data = await ApiService.fetchConversationPosts(fullConversationId);
-        console.log('API Response:', data);
-        
-        if (!Array.isArray(data)) {
-          throw new Error('Invalid response format: expected an array of posts');
-        }
+        if (!conversationId) return;
+
+        const data = await api.getConversationPosts(conversationId);
         
         // The last item is the conversation metadata
         const conversationData = data.find((item: Post) => item.SK === 'METADATA');
@@ -42,17 +34,8 @@ const ConversationThread: React.FC = () => {
           throw new Error('Conversation metadata not found in response');
         }
         
-        console.log('Conversation data:', conversationData);
-        console.log('Posts data:', postsData);
-        
-        // Combine conversation data with posts for sorting
-        const allPosts = [conversationData, ...postsData];
-        
         setConversation(conversationData);
         setPosts(postsData);
-        
-        // Log the sorted posts for debugging
-        console.log('Sorted posts:', sortPosts(allPosts));
       } catch (err) {
         console.error('Error fetching conversation:', err);
         setError(err instanceof Error ? err.message : 'An error occurred while loading the conversation');
@@ -241,10 +224,10 @@ const ConversationThread: React.FC = () => {
           <div style={{ marginLeft: 'auto' }}>
             <button data-testid="comment-button" type="button" style={buttonStyle}>Comment</button>
             <button data-testid="sub-question-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-              {getAddSubActionButtonText(conversation.ConvoType)}
+              {postTypeService.getAddSubActionButtonText(conversation.ConvoType)}
             </button>
             <button data-testid="propose-answer-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-              {getProposeSolutionButtonText(conversation.ConvoType)}
+              {postTypeService.getProposeSolutionButtonText(conversation.ConvoType)}
             </button>
           </div>
         </div>
@@ -273,11 +256,11 @@ const ConversationThread: React.FC = () => {
             .filter(post => post.SK !== 'METADATA') // Skip the root conversation post since it's already rendered
             .map((post) => {
             // Use utility functions for post type detection
-            const postTypeInfo = getPostType(post.SK);
+            const postTypeInfo = postTypeService.getPostType(post.SK);
             const { isDrillDown, isConclusion, isComment } = postTypeInfo;
             
-            const postType = getPostTypeDisplay(post.SK, conversation.ConvoType);
-            const depth = getPostDepth(post.SK);
+            const postType = postTypeService.getPostTypeDisplay(post.SK, conversation.ConvoType);
+            const depth = postTypeService.getPostDepth(post.SK);
             
             return (
               <div 
@@ -330,10 +313,10 @@ const ConversationThread: React.FC = () => {
                       <>
                         <button data-testid="comment-button" style={buttonStyle}>Comment</button>
                         <button data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {getAddSubActionButtonText(conversation.ConvoType)}
+                          {postTypeService.getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {getProposeSolutionButtonText(conversation.ConvoType)}
+                          {postTypeService.getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
                       </>
                     )}
@@ -348,10 +331,10 @@ const ConversationThread: React.FC = () => {
                       <>
                         <button type="button" data-testid="comment-button" style={buttonStyle}>Comment</button>
                         <button type="button" data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {getAddSubActionButtonText(conversation.ConvoType)}
+                          {postTypeService.getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button type="button" data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {getProposeSolutionButtonText(conversation.ConvoType)}
+                          {postTypeService.getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
                       </>
                     )}
