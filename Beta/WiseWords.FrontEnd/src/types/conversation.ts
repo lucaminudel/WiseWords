@@ -24,19 +24,32 @@ export interface Post extends Conversation {
 }
 
 /**
- * API response conversation interface (for ConversationsList)
+ * Interface for creating a new conversation (POST /conversations)
  */
-export interface ApiConversation {
+export interface CreateConversationRequest {
+  Title: string;
+  MessageBody: string;
+  Author: string;
+  ConvoType: number;  // Numeric value for the API
+  NewGuid: string;
+  UtcCreationTime: string;
+}
+
+/**
+ * Interface for conversation responses (GET /conversations)
+ */
+export interface ConversationResponse {
   PK: string;
   SK: string;
   Title: string;
   MessageBody: string;
   Author: string;
   UpdatedAt: string;
-  ConvoType: string | number; // Can be string (from API responses) or number (for API requests)
-  NewGuid?: string; // Required for creation requests
-  UtcCreationTime?: string; // Required for creation requests
+  ConvoType: string;  // String value from the API
 }
+
+// For backward compatibility
+export type ApiConversation = ConversationResponse;
 
 /**
  * Conversation type enumeration

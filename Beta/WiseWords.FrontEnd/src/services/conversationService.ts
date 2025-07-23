@@ -5,7 +5,7 @@
 
 import { conversationApi } from '../api/conversationApi';
 // Note: normalizeConversationId is handled in the API layer
-import { ApiConversation, Post } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post } from '../types/conversation';
 
 /**
  * High-level business service for conversation operations
@@ -14,7 +14,7 @@ export class ConversationService {
     /**
      * Fetch conversations for a specific year with business logic
      */
-    static async fetchConversations(year?: number): Promise<ApiConversation[]> {
+    static async fetchConversations(year?: number): Promise<ConversationResponse[]> {
         return conversationApi.fetchConversations(year);
     }
 
@@ -29,7 +29,7 @@ export class ConversationService {
     /**
      * Create a new conversation with validation
      */
-    static async createConversation(conversation: Partial<ApiConversation>): Promise<ApiConversation> {
+    static async createConversation(conversation: CreateConversationRequest): Promise<ConversationResponse> {
         // Add any business validation here
         return conversationApi.createConversation(conversation);
     }
@@ -39,8 +39,8 @@ export class ConversationService {
      */
     static async updateConversation(
         conversationId: string, 
-        updates: Partial<ApiConversation>
-    ): Promise<ApiConversation> {
+        updates: Partial<ConversationResponse>
+    ): Promise<ConversationResponse> {
         return conversationApi.updateConversation(conversationId, updates);
     }
 

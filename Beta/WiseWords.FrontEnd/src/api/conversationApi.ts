@@ -2,7 +2,7 @@
  * Pure API communication layer for conversation-related endpoints
  */
 
-import { ApiConversation, Post, ApiError } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, ApiError } from '../types/conversation';
 
 /**
  * Base API configuration
@@ -76,11 +76,9 @@ export const conversationApi = {
     /**
      * Fetch conversations for a specific year
      */
-    async fetchConversations(year?: number): Promise<ApiConversation[]> {
-        const url = year
-            ? `/conversations?updatedAtYear=${year}`
-            : `/conversations`;
-        return apiFetch<ApiConversation[]>(url);
+    fetchConversations: (year?: number): Promise<ConversationResponse[]> => {
+        const endpoint = year ? `/conversations?updatedAtYear=${year}` : '/conversations';
+        return apiFetch<ConversationResponse[]>(endpoint);
     },
 
     /**
@@ -98,8 +96,8 @@ export const conversationApi = {
     /**
      * Create a new conversation
      */
-    async createConversation(conversation: Partial<ApiConversation>): Promise<ApiConversation> {
-        return apiFetch<ApiConversation>('/conversations', {
+    createConversation: (conversation: CreateConversationRequest): Promise<ConversationResponse> => {
+        return apiFetch<ConversationResponse>('/conversations', {
             method: 'POST',
             body: JSON.stringify(conversation),
         });
@@ -108,12 +106,11 @@ export const conversationApi = {
     /**
      * Update an existing conversation
      */
-    async updateConversation(
+    updateConversation: (
         conversationId: string, 
-        updates: Partial<ApiConversation>
-    ): Promise<ApiConversation> {
-        const encodedId = encodeURIComponent(conversationId);
-        return apiFetch<ApiConversation>(`/conversations/${encodedId}`, {
+        updates: Partial<ConversationResponse>
+    ): Promise<ConversationResponse> => {
+        return apiFetch<ConversationResponse>(`/conversations/${encodeURIComponent(conversationId)}`, {
             method: 'PUT',
             body: JSON.stringify(updates),
         });

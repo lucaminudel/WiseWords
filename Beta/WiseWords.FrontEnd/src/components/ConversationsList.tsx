@@ -4,7 +4,7 @@ import '../styles/LandingPage.css';
 import { Logo } from './common/Logo';
 import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToNumber } from '../utils/conversationUtils';
 import { formatUnixTimestamp } from '../utils/dateUtils';
-import { ApiConversation } from '../types/conversation';
+import { ConversationResponse } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
 
 // Duplicated logic moved to utils/conversationUtils.ts and types/conversation.ts
@@ -12,7 +12,7 @@ import { ConversationService } from '../services/conversationService';
 // formatDate logic moved to utils/dateUtils.ts
 
 const ConversationsList: React.FC = () => {
-  const [conversations, setConversations] = useState<ApiConversation[]>([]);
+  const [conversations, setConversations] = useState<ConversationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewConversationForm, setShowNewConversationForm] = useState(false);
@@ -87,9 +87,12 @@ const ConversationsList: React.FC = () => {
     setFormError(null);
 
     try {
+      // Convert string type to number using the utility function
+      const convoTypeNumber = convertConvoTypeToNumber(formData.type);
+      
       await ConversationService.createConversation({
         NewGuid: crypto.randomUUID(),
-        ConvoType: convertConvoTypeToNumber(formData.type),
+        ConvoType: convoTypeNumber,
         Title: formData.title.trim(),
         MessageBody: formData.messageBody.trim(),
         Author: formData.author.trim(),
