@@ -11,6 +11,29 @@ export interface PostTypeInfo {
   markerType: PostMarkerType;
 }
 
+<<<<<<< HEAD
+=======
+interface PostTypeLabels {
+  drillDown: string;
+  conclusion: string;
+}
+
+const TYPE_LABELS: Record<ConversationType, PostTypeLabels> = {
+  QUESTION: {
+    drillDown: 'Sub-question',
+    conclusion: 'Proposed Answer'
+  },
+  PROBLEM: {
+    drillDown: 'Sub-problem',
+    conclusion: 'Proposed Solution'
+  },
+  DILEMMA: {
+    drillDown: 'Sub-dilemma',
+    conclusion: 'Proposed Choice'
+  }
+};
+
+>>>>>>> 5e319f7468a819d83bc0a214f4f067d3fa56b434
 export const postTypeService = {
   /**
    * Determines the post type by analyzing the last occurrence of type markers in the SK.
