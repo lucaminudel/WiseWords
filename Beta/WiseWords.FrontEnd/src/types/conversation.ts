@@ -33,7 +33,9 @@ export interface ApiConversation {
   MessageBody: string;
   Author: string;
   UpdatedAt: string;
-  ConvoType: string;
+  ConvoType: string | number; // Can be string (from API responses) or number (for API requests)
+  NewGuid?: string; // Required for creation requests
+  UtcCreationTime?: string; // Required for creation requests
 }
 
 /**

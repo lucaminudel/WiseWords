@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/LandingPage.css';
 import { Logo } from './common/Logo';
-import { getConversationTypeColor, getConversationTypeLabel } from '../utils/conversationUtils';
+import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToNumber } from '../utils/conversationUtils';
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { ApiConversation } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
@@ -88,10 +88,12 @@ const ConversationsList: React.FC = () => {
 
     try {
       await ConversationService.createConversation({
-        ConvoType: formData.type,
+        NewGuid: crypto.randomUUID(),
+        ConvoType: convertConvoTypeToNumber(formData.type),
         Title: formData.title.trim(),
         MessageBody: formData.messageBody.trim(),
-        Author: formData.author.trim()
+        Author: formData.author.trim(),
+        UtcCreationTime: new Date().toISOString()
       });
 
       // Refresh the list after creating
@@ -141,7 +143,7 @@ const ConversationsList: React.FC = () => {
                 else if (conv.ConvoType === 'DILEMMA') typeColor = 'var(--color-dilemma)';
                 return (
                   <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{getConversationTypeLabel(conv.ConvoType)}</td>
+                    <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{getConversationTypeLabel(typeof conv.ConvoType === 'string' ? conv.ConvoType : undefined)}</td>
                     <td style={{ padding: '4px 8px' }}>
                       <Link 
                         to={`/conversations/${encodeURIComponent(conv.PK.replace('CONVO#', ''))}`}
