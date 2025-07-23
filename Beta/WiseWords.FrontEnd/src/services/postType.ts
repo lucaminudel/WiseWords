@@ -1,4 +1,6 @@
-export type ConversationType = 'QUESTION' | 'PROBLEM' | 'DILEMMA';
+import { ConversationType } from '../types/conversation';
+import { CONVERSATION_POST_LABELS } from '../utils/conversationLabelsConstants';
+
 export type PostMarkerType = 'CC' | 'DD' | 'CM' | 'NONE';
 
 export interface PostTypeInfo {
@@ -8,34 +10,6 @@ export interface PostTypeInfo {
   lastMarker: number;
   markerType: PostMarkerType;
 }
-
-interface PostTypeLabels {
-  drillDown: string;
-  conclusion: string;
-  buttonAdd: string;
-  buttonPropose: string;
-}
-
-const TYPE_LABELS: Record<ConversationType, PostTypeLabels> = {
-  QUESTION: {
-    drillDown: 'Sub-question',
-    conclusion: 'Proposed Answer',
-    buttonAdd: 'Add Sub-question',
-    buttonPropose: 'Propose Answer'
-  },
-  PROBLEM: {
-    drillDown: 'Sub-problem',
-    conclusion: 'Proposed Solution',
-    buttonAdd: 'Add Sub-problem',
-    buttonPropose: 'Suggest Solution'
-  },
-  DILEMMA: {
-    drillDown: 'Sub-dilemma',
-    conclusion: 'Proposed Choice',
-    buttonAdd: 'Add Sub-dilemma',
-    buttonPropose: 'Propose Choice'
-  }
-};
 
 export const postTypeService = {
   /**
@@ -82,11 +56,9 @@ export const postTypeService = {
     if (sk === 'METADATA') return '';
     
     const { isComment, isConclusion, isDrillDown } = this.getPostType(sk);
-    const labels = TYPE_LABELS[convoType as ConversationType] || {
+    const labels = CONVERSATION_POST_LABELS[convoType as ConversationType] || {
       drillDown: 'Drill-down',
-      conclusion: 'Conclusion',
-      buttonAdd: 'Add Sub-item',
-      buttonPropose: 'Propose'
+      conclusion: 'Conclusion'
     };
     
     if (isComment) return 'Comment';
@@ -95,21 +67,6 @@ export const postTypeService = {
     return 'Comment';
   },
 
-  /**
-   * Gets the button text for adding sub-items.
-   */
-  getAddSubActionButtonText(convoType?: string): string {
-    const labels = TYPE_LABELS[convoType as ConversationType];
-    return labels?.buttonAdd || 'Add Sub-item';
-  },
-
-  /**
-   * Gets the button text for proposing solutions/answers.
-   */
-  getProposeSolutionButtonText(convoType?: string): string {
-    const labels = TYPE_LABELS[convoType as ConversationType];
-    return labels?.buttonPropose || 'Propose';
-  },
 
   /**
    * Gets the depth level of a post based on its SK.

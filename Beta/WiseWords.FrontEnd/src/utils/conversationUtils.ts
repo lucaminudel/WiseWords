@@ -2,6 +2,8 @@
  * Conversation utilities for shared conversation-related logic
  */
 
+import { CONVERSATION_TYPE_LABELS } from './conversationLabelsConstants';
+
 /**
  * Gets the CSS color variable for a conversation type.
  * 
@@ -18,15 +20,6 @@ export const getConversationTypeColor = (type?: string): string => {
 };
 
 /**
- * Conversation type display labels mapping
- */
-export const CONVERSATION_TYPE_LABELS = {
-    QUESTION: 'Question',
-    PROBLEM: 'Problem', 
-    DILEMMA: 'Dilemma',
-} as const;
-
-/**
  * Gets the display label for a conversation type.
  * 
  * @param type - The conversation type
@@ -37,13 +30,3 @@ export const getConversationTypeLabel = (type?: string): string => {
     return CONVERSATION_TYPE_LABELS[type as keyof typeof CONVERSATION_TYPE_LABELS] || type;
 };
 
-/**
- * Normalizes a conversation ID to include the CONVO# prefix if missing.
- * 
- * @param conversationId - The conversation ID (with or without prefix)
- * @returns Normalized conversation ID with CONVO# prefix
- */
-export const normalizeConversationId = (conversationId?: string): string => {
-    if (!conversationId) return '';
-    return conversationId.startsWith('CONVO#') ? conversationId : `CONVO#${conversationId}`;
-};

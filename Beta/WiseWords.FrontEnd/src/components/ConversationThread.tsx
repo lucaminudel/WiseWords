@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Logo } from './Logo';
 import { sortPosts } from '../utils/postSorter';
-import { api } from '../services/api';
+import { ApiService } from '../services/apiService';
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { getConversationTypeColor } from '../utils/conversationUtils';
 import { postTypeService } from '../services/postType';
+import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
 import { Post } from '../types/conversation';
 
 // Post interface moved to types/conversation.ts
@@ -24,7 +25,7 @@ const ConversationThread: React.FC = () => {
       try {
         if (!conversationId) return;
 
-        const data = await api.getConversationPosts(conversationId);
+        const data = await ApiService.fetchConversationPosts(conversationId);
         
         // The last item is the conversation metadata
         const conversationData = data.find((item: Post) => item.SK === 'METADATA');
@@ -224,10 +225,10 @@ const ConversationThread: React.FC = () => {
           <div style={{ marginLeft: 'auto' }}>
             <button data-testid="comment-button" type="button" style={buttonStyle}>Comment</button>
             <button data-testid="sub-question-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-              {postTypeService.getAddSubActionButtonText(conversation.ConvoType)}
+              {getAddSubActionButtonText(conversation.ConvoType)}
             </button>
             <button data-testid="propose-answer-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-              {postTypeService.getProposeSolutionButtonText(conversation.ConvoType)}
+              {getProposeSolutionButtonText(conversation.ConvoType)}
             </button>
           </div>
         </div>
@@ -313,10 +314,10 @@ const ConversationThread: React.FC = () => {
                       <>
                         <button data-testid="comment-button" style={buttonStyle}>Comment</button>
                         <button data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {postTypeService.getAddSubActionButtonText(conversation.ConvoType)}
+                          {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {postTypeService.getProposeSolutionButtonText(conversation.ConvoType)}
+                          {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
                       </>
                     )}
@@ -331,10 +332,10 @@ const ConversationThread: React.FC = () => {
                       <>
                         <button type="button" data-testid="comment-button" style={buttonStyle}>Comment</button>
                         <button type="button" data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {postTypeService.getAddSubActionButtonText(conversation.ConvoType)}
+                          {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button type="button" data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
-                          {postTypeService.getProposeSolutionButtonText(conversation.ConvoType)}
+                          {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
                       </>
                     )}

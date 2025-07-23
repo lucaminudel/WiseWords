@@ -41,6 +41,7 @@ export interface ApiConversation {
  */
 export type ConversationType = 'QUESTION' | 'PROBLEM' | 'DILEMMA';
 
+
 /**
  * API error response interface
  */

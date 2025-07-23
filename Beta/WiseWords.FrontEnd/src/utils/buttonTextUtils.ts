@@ -3,7 +3,9 @@
  * based on conversation type and action type.
  */
 
-export type ConversationType = 'QUESTION' | 'PROBLEM' | 'DILEMMA';
+import { ConversationType } from '../types/conversation';
+import { CONVERSATION_BUTTON_LABELS } from './conversationLabelsConstants';
+
 export type ButtonAction = 'sub-action' | 'propose-solution';
 
 /**
@@ -13,12 +15,8 @@ export type ButtonAction = 'sub-action' | 'propose-solution';
  * @returns Contextual button text for sub-actions
  */
 export const getSubActionButtonText = (convoType?: string): string => {
-  switch (convoType) {
-    case 'QUESTION': return 'Sub-question';
-    case 'PROBLEM': return 'Sub-problem';
-    case 'DILEMMA': return 'Sub-dilemma';
-    default: return 'Sub-question'; // Default fallback
-  }
+  const labels = CONVERSATION_BUTTON_LABELS[convoType as ConversationType];
+  return labels?.drillDown || 'Drill-down';
 };
 
 /**
@@ -28,12 +26,8 @@ export const getSubActionButtonText = (convoType?: string): string => {
  * @returns Contextual button text for proposing solutions
  */
 export const getProposeSolutionButtonText = (convoType?: string): string => {
-  switch (convoType) {
-    case 'QUESTION': return 'Propose Answer';
-    case 'PROBLEM': return 'Suggest Solution';
-    case 'DILEMMA': return 'Propose Choice';
-    default: return 'Propose Answer'; // Default fallback
-  }
+  const labels = CONVERSATION_BUTTON_LABELS[convoType as ConversationType];
+  return labels?.buttonPropose || 'Propose';
 };
 
 /**
@@ -43,5 +37,6 @@ export const getProposeSolutionButtonText = (convoType?: string): string => {
  * @returns Full button text with "Add" prefix
  */
 export const getAddSubActionButtonText = (convoType?: string): string => {
-  return `Add ${getSubActionButtonText(convoType)}`;
+  const labels = CONVERSATION_BUTTON_LABELS[convoType as ConversationType];
+  return labels?.buttonAdd || 'Add Sub-item';
 };

@@ -5,7 +5,7 @@ import { Logo } from './Logo';
 import { getConversationTypeColor, getConversationTypeLabel } from '../utils/conversationUtils';
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { ApiConversation } from '../types/conversation';
-import { api } from '../services/api';
+import { ApiService } from '../services/apiService';
 
 // Duplicated logic moved to utils/conversationUtils.ts and types/conversation.ts
 
@@ -32,7 +32,7 @@ const ConversationsList: React.FC = () => {
       setError(null);
       try {
         const year = 2025; // Use fixed year per user context
-        const data = await api.getConversations(year);
+        const data = await ApiService.fetchConversations(year);
         setConversations(data);
       } catch (err: any) {
         setError(err.message || 'Failed to load conversations');
@@ -87,23 +87,16 @@ const ConversationsList: React.FC = () => {
     setFormError(null);
 
     try {
-      await api.createConversation({
-        type: formData.type,
-        title: formData.title.trim(),
-        messageBody: formData.messageBody.trim(),
-        author: formData.author.trim()
-      });
-
-      await api.createConversation({
-        type: formData.type,
-        title: formData.title,
-        author: formData.author,
-        messageBody: formData.messageBody,
+      await ApiService.createConversation({
+        ConvoType: formData.type,
+        Title: formData.title.trim(),
+        MessageBody: formData.messageBody.trim(),
+        Author: formData.author.trim()
       });
 
       // Refresh the list after creating
       const year = 2025; // Use fixed year per user context
-      const data = await api.getConversations(year);
+      const data = await ApiService.fetchConversations(year);
       setConversations(data);
 
       // Reset form and hide it
