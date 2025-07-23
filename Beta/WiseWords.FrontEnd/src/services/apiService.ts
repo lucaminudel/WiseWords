@@ -76,8 +76,11 @@ export class ApiService {
     /**
      * Fetch conversations for a specific year
      */
-    static async fetchConversations(year: number): Promise<ApiConversation[]> {
-        return apiFetch<ApiConversation[]>(`/conversations?year=${year}`);
+    static async fetchConversations(year?: number): Promise<ApiConversation[]> {
+        const url = year
+            ? `/conversations?updatedAtYear=${year}`
+            : `/conversations`;
+        return apiFetch<ApiConversation[]>(url);
     }
 
     /**
@@ -85,7 +88,10 @@ export class ApiService {
      */
     static async fetchConversationPosts(conversationId: string): Promise<Post[]> {
         // Ensure the conversation ID is properly encoded for URL
-        const encodedId = encodeURIComponent(conversationId);
+        const fullConversationId = conversationId?.startsWith('CONVO#')
+            ? conversationId
+            : `CONVO#${conversationId}`;
+        const encodedId = encodeURIComponent(fullConversationId);
         return apiFetch<Post[]>(`/conversations/${encodedId}/posts`);
     }
 

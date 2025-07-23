@@ -6,6 +6,34 @@
 export type ConversationType = 'QUESTION' | 'PROBLEM' | 'DILEMMA';
 export type ButtonAction = 'sub-action' | 'propose-solution';
 
+interface ButtonLabels {
+  drillDown: string;
+  conclusion: string;
+  buttonAdd: string;
+  buttonPropose: string;
+}
+
+const TYPE_LABELS: Record<ConversationType, ButtonLabels> = {
+  QUESTION: {
+    drillDown: 'Sub-question',
+    conclusion: 'Proposed Answer',
+    buttonAdd: 'Add Sub-question',
+    buttonPropose: 'Propose Answer'
+  },
+  PROBLEM: {
+    drillDown: 'Sub-problem',
+    conclusion: 'Proposed Solution',
+    buttonAdd: 'Add Sub-problem',
+    buttonPropose: 'Suggest Solution'
+  },
+  DILEMMA: {
+    drillDown: 'Sub-dilemma',
+    conclusion: 'Proposed Choice',
+    buttonAdd: 'Add Sub-dilemma',
+    buttonPropose: 'Propose Choice'
+  }
+};
+
 /**
  * Gets the contextual text for sub-action buttons (drill-down actions).
  * 
@@ -13,12 +41,8 @@ export type ButtonAction = 'sub-action' | 'propose-solution';
  * @returns Contextual button text for sub-actions
  */
 export const getSubActionButtonText = (convoType?: string): string => {
-  switch (convoType) {
-    case 'QUESTION': return 'Sub-question';
-    case 'PROBLEM': return 'Sub-problem';
-    case 'DILEMMA': return 'Sub-dilemma';
-    default: return 'Sub-question'; // Default fallback
-  }
+  const labels = TYPE_LABELS[convoType as ConversationType];
+  return labels?.drillDown || 'Drill-down';
 };
 
 /**
@@ -28,12 +52,8 @@ export const getSubActionButtonText = (convoType?: string): string => {
  * @returns Contextual button text for proposing solutions
  */
 export const getProposeSolutionButtonText = (convoType?: string): string => {
-  switch (convoType) {
-    case 'QUESTION': return 'Propose Answer';
-    case 'PROBLEM': return 'Suggest Solution';
-    case 'DILEMMA': return 'Propose Choice';
-    default: return 'Propose Answer'; // Default fallback
-  }
+  const labels = TYPE_LABELS[convoType as ConversationType];
+  return labels?.buttonPropose || 'Propose';
 };
 
 /**
@@ -43,5 +63,6 @@ export const getProposeSolutionButtonText = (convoType?: string): string => {
  * @returns Full button text with "Add" prefix
  */
 export const getAddSubActionButtonText = (convoType?: string): string => {
-  return `Add ${getSubActionButtonText(convoType)}`;
+  const labels = TYPE_LABELS[convoType as ConversationType];
+  return labels?.buttonAdd || 'Add Sub-item';
 };
