@@ -6,19 +6,6 @@
 import { ConversationType } from '../types/conversation';
 import { CONVERSATION_BUTTON_LABELS } from './conversationLabelsConstants';
 
-export type ButtonAction = 'sub-action' | 'propose-solution';
-
-/**
- * Gets the contextual text for sub-action buttons (drill-down actions).
- * 
- * @param convoType - The conversation type
- * @returns Contextual button text for sub-actions
- */
-export const getSubActionButtonText = (convoType?: string): string => {
-  const labels = CONVERSATION_BUTTON_LABELS[convoType as ConversationType];
-  return labels?.drillDown || 'Drill-down';
-};
-
 /**
  * Gets the contextual text for solution/answer buttons.
  * 

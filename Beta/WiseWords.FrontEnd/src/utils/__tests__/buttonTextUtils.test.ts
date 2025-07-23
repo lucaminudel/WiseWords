@@ -1,34 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { 
-  getSubActionButtonText, 
   getProposeSolutionButtonText, 
   getAddSubActionButtonText 
 } from '../buttonTextUtils';
 
 describe('buttonTextUtils', () => {
-  describe('getSubActionButtonText', () => {
-    it('should return correct text for QUESTION type', () => {
-      expect(getSubActionButtonText('QUESTION')).toBe('Sub-question');
-    });
-
-    it('should return correct text for PROBLEM type', () => {
-      expect(getSubActionButtonText('PROBLEM')).toBe('Sub-problem');
-    });
-
-    it('should return correct text for DILEMMA type', () => {
-      expect(getSubActionButtonText('DILEMMA')).toBe('Sub-dilemma');
-    });
-
-    it('should return default text for unknown type', () => {
-      expect(getSubActionButtonText('UNKNOWN')).toBe('Drill-down');
-      expect(getSubActionButtonText('')).toBe('Drill-down');
-    });
-
-    it('should return default text for undefined type', () => {
-      expect(getSubActionButtonText()).toBe('Drill-down');
-      expect(getSubActionButtonText(undefined)).toBe('Drill-down');
-    });
-  });
 
   describe('getProposeSolutionButtonText', () => {
     it('should return correct text for QUESTION type', () => {
@@ -80,19 +56,15 @@ describe('buttonTextUtils', () => {
 
   describe('edge cases', () => {
     it('should handle null values gracefully', () => {
-      expect(getSubActionButtonText(null as any)).toBe('Drill-down');
       expect(getProposeSolutionButtonText(null as any)).toBe('Propose');
       expect(getAddSubActionButtonText(null as any)).toBe('Add Sub-item');
     });
 
     it('should handle case sensitivity', () => {
-      expect(getSubActionButtonText('question')).toBe('Drill-down'); // lowercase
-      expect(getSubActionButtonText('Question')).toBe('Drill-down'); // mixed case
       expect(getProposeSolutionButtonText('problem')).toBe('Propose'); // lowercase
     });
 
     it('should handle whitespace', () => {
-      expect(getSubActionButtonText(' QUESTION ')).toBe('Drill-down');
       expect(getProposeSolutionButtonText(' PROBLEM ')).toBe('Propose');
     });
   });
