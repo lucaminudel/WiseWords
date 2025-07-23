@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Logo } from './Logo';
+import { Logo } from './common/Logo';
 import { sortPosts } from '../utils/postSorter';
-import { ApiService } from '../services/apiService';
+import { ConversationService } from '../services/conversationService';
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { getConversationTypeColor } from '../utils/conversationUtils';
-import { postTypeService } from '../services/postType';
+import { postTypeService } from '../utils/postType';
 import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
 import { Post } from '../types/conversation';
 
@@ -25,7 +25,7 @@ const ConversationThread: React.FC = () => {
       try {
         if (!conversationId) return;
 
-        const data = await ApiService.fetchConversationPosts(conversationId);
+        const data = await ConversationService.fetchConversationPosts(conversationId);
         
         // The last item is the conversation metadata
         const conversationData = data.find((item: Post) => item.SK === 'METADATA');

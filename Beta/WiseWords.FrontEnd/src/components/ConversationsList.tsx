@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/LandingPage.css';
-import { Logo } from './Logo';
+import { Logo } from './common/Logo';
 import { getConversationTypeColor, getConversationTypeLabel } from '../utils/conversationUtils';
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { ApiConversation } from '../types/conversation';
-import { ApiService } from '../services/apiService';
+import { ConversationService } from '../services/conversationService';
 
 // Duplicated logic moved to utils/conversationUtils.ts and types/conversation.ts
 
@@ -32,7 +32,7 @@ const ConversationsList: React.FC = () => {
       setError(null);
       try {
         const year = 2025; // Use fixed year per user context
-        const data = await ApiService.fetchConversations(year);
+        const data = await ConversationService.fetchConversations(year);
         setConversations(data);
       } catch (err: any) {
         setError(err.message || 'Failed to load conversations');
@@ -87,7 +87,7 @@ const ConversationsList: React.FC = () => {
     setFormError(null);
 
     try {
-      await ApiService.createConversation({
+      await ConversationService.createConversation({
         ConvoType: formData.type,
         Title: formData.title.trim(),
         MessageBody: formData.messageBody.trim(),
@@ -96,7 +96,7 @@ const ConversationsList: React.FC = () => {
 
       // Refresh the list after creating
       const year = 2025; // Use fixed year per user context
-      const data = await ApiService.fetchConversations(year);
+      const data = await ConversationService.fetchConversations(year);
       setConversations(data);
 
       // Reset form and hide it

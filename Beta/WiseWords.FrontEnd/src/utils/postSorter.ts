@@ -1,5 +1,5 @@
 import { Post } from '../types/conversation';
-import { postTypeService } from '../services/postType';
+import { postTypeService } from './postType';
 
 // Function to check if a post is a solution
 // Now uses the correct last-marker logic
