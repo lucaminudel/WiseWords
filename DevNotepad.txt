@@ -1,0 +1,508 @@
+
+
+
+5 verificare 
+- logica bottoni, 
+=> tree path and 
+DONE - identaiton depth, 
+=> post type
+
+components, utils and pages function duplicaiton?
+
+dead code?
+
+
+6 risistemare ordinamento
+
+7 chache delle lista conversazio e load async col back
+
+│                                                                                                                      │
+
+--------------------
+
+│                                                                                                                      │
+│  1 API Integration Logic - Complex business rules, error handling                                                    │
+│  2 Data Processing Logic - Validation, transformation, separation                                                    │                        │
+│  3 Conversation Type Color Logic - Simple but reusable                                                               │
+│  4 Post Indentation Logic - Mathematical calculation                                                                 │
+│  5 Post Sorting Integration - Business logic integration                                                             │
+│  6 Error Message Generation - Simple string operations                                                               │
+│  7 Loading State Logic - Simple boolean state                                                                        │
+│  8 Empty State Logic - Simple conditional rendering                                                                  │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                              🎯 Recommended Next Steps:                                              │
+│                                                                                                                      │
+│ Phase 4: Extract API & Data Logic (High Priority)                                                                    │
+│                                                                                                                      │
+│  • Create src/utils/apiUtils.ts for conversation ID normalization                                                    │
+│  • Create src/utils/dataProcessingUtils.ts for response validation                                                   │
+│  • Create comprehensive unit tests for all data processing scenarios                                                 │
+│                                                                                                                      │
+│ Phase 5: Extract Remaining UI Logic (Medium Priority)                                                                │
+│                                                                                                                      │
+│  • Move getConversationTypeColor to src/utils/conversationUtils.ts                                                   │
+│  • Create src/utils/layoutUtils.ts for indentation calculations                                                      │
+
+---------------------
+
+
+
+
+----------------------
+ Based on our previous conversation, here are the button display rules for each post type:
+
+Comment posts (#CM#):
+
+Should only have "Reply with quote" button
+Sub-problem/question/dilemma posts (#DD#):
+
+Should have all three buttons:
+"Comment"
+"Add Sub-question/Sub-problem/Sub-dilemma" (text varies based on conversation type)
+"Propose Answer/Suggest Solution/Propose Choice" (text varies based on conversation type)
+Proposed solution posts (#CC#):
+
+Should only have "Comment" button
+Root post (METADATA):
+
+Should have same buttons as drill-down posts (#DD#):
+"Comment"
+"Add Sub-question/Sub-problem/Sub-dilemma"
+"Propose Answer/Suggest Solution/Propose Choice"
+Looking at the current code, we have a few inconsistencies that need to be fixed:
+
+The root conversation post buttons are correct
+For Comment posts (#CM#) the buttons are correct
+For Drill-down posts (#DD#) the buttons are correct but still using the old buttonStyle instead of buttonStyles.base
+For Conclusion posts (#CC#) the buttons are correct but missing the wrapper div and using the old buttonStyle
+--------------------
+
+
+  The existing tests (conversation-thread-rendering and conversation-thread-buttons) are excellent at verifying the static display of the page. They
+  confirm that given a specific API response, the page renders correctly, buttons appear where they should, and the styling is right.
+
+
+  However, there are no E2E tests for any user actions or interactions that change the state of the conversation.
+
+
+  The most critical missing tests are for the core functionalities of the application:
+   1. Adding a Comment: The tests verify the "Comment" button exists, but not what happens when a user clicks it, types a message, and submits it.
+   2. Adding a Sub-question/Sub-problem: This is another fundamental, untested user action.
+   3. Proposing an Answer/Solution: This is the primary goal of a "Question" or "Problem" thread, and the entire workflow is untested.
+   4. Replying with a Quote: The "Reply with quote" button's functionality is also not covered.
+
+
+  Essentially, the current tests check that the page is "read-only" correct, but they don't test any of the "write" actions that make the application
+  interactive.
+
+
+  I propose we start by adding a test for the most fundamental action: adding a comment.
+
+
+  Here is my plan:
+   1. Create a new test file to house tests for user actions on the thread page: cypress/e2e/conversation-thread-actions.cy.ts.
+   2. Write a test case in this file that simulates a user adding a comment. This will involve mocking a POST request to the API.
+
+
+  Here are the details of the change:
+
+
+  File to be created: cypress/ee2e/conversation-thread-actions.cy.ts
+
+
+  Content to be added:
+
+
+    1 describe('Conversation Thread User Actions', () => {
+    2   beforeEach(() => {
+    3     // Mock the initial GET request for the conversation thread
+    4     cy.mockConversationAPI('success'); // Using the existing custom command
+    5     cy.visitConversation('CONVO#123');
+    6     cy.wait('@getConversationPosts');
+    7   });
+    8 
+    9   it('should allow a user to add a comment to the main conversation', () => {
+   10     // For this test, we need to simulate the comment form appearing.
+   11     // Since the form logic isn't implemented yet, we'll assume clicking the button
+   12     // would normally reveal a form. For now, we'll focus on the API interaction
+   13     // that would happen upon submission.
+   14 
+   15     // Mock the POST request for adding a new comment
+   16     cy.intercept('POST', '**/conversations/CONVO%23123/posts', {
+   17       statusCode: 201,
+   18       body: {
+   19         PK: 'CONVO#123',
+   20         SK: '#CM#6', // A new, unique SK for the new comment
+   21         MessageBody: 'This is a brand new comment!',
+   22         Author: 'CypressTest',
+   23         UpdatedAt: Date.now().().slice(0, 10), // Unix timestamp
+   24       }                       t
+   25     }).as('postComment');     o
+   26                               S
+   27     // --- This part of the test is conceptual until the UI form exists ---
+   28     // cy.get('[data-testid="post-container"]').first().contains('button', 'Comment').click();
+   29     // cy.get('textarea[name="comment"]').type('This is a brand new comment!');
+   30     // cy.get('button[type="submit"]').click();
+   31     // --- End conceptual part ---
+   32 
+   33     // For now, we can't trigger the POST via UI, so we can't wait on it.
+   34     // This test structure is ready for when the comment form is built.
+   35     // To make this test runnable now, we can confirm the button exists.
+   36     cy.get('[data-testid="post-container"]')
+   37       .first()
+   38       .contains('button', 'Comment')
+   39       .should('be.visible');
+   40 
+   41     // The key takeaway is that a test like this, which mocks a POST
+   42     // and waits for the UI to update, is what's missing.
+   43   });
+   44 });
+
+
+
+  Important Note: As I wrote the test, I realized a key piece of UI is missing: there is no form that appears when you click "Comment". The test I've
+  written above is structured for when that UI is built. It sets up the API mock correctly, but the lines that would interact with the form are commented
+  out because those elements don't exist yet.
+
+
+  This highlights that the next development step for this page would be to implement the comment submission form.
+
+
+
+--------------------
+CONVO#0d3468cc-86af-4f9f-9a3b-b3265f7d3977 
+
+ONVO%230d3468cc-86af-4f9f-9a3b-b3265f7d3977 
+
+
+
+I want to change the sortPost algorigh to a even simpler version adding Vitest unit tests for it first
+Do you need to create a new sibling folder/project for that?
+Do you need to import or install something?
+
+
+curl -i -X GET http://localhost:3000/conversations/CONVO%230d3468cc-86af-4f9f-9a3b-b3265f7d3977/posts 
+
+
+        "SK": "METADATA",
+
+        "SK": "#CC#b461ab72-eb57-4524-a823-ee7a57ed1671",
+
+        "SK": "#CM#e27978ef-f6e7-4807-85c0-f7a04001b4aa",
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f",
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CC#7cd46f4d-2814-44a9-bf49-b5734d02bbb6",
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CM#7309458b-af5c-4aa7-9245-f5ccc372d0f0",
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#DD#16147f0d-0b80-42ae-9c0a-f12ac15b2285",
+
+
+---------
+
+        "SK": "METADATA",
+
+        "SK": "#CM#e27978ef-f6e7-4807-85c0-f7a04001b4aa",
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f",
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CM#7309458b-af5c-4aa7-9245-f5ccc372d0f0",
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#DD#16147f0d-0b80-42ae-9c0a-f12ac15b2285",
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CC#7cd46f4d-2814-44a9-bf49-b5734d02bbb6",
+
+        "SK": "#CC#b461ab72-eb57-4524-a823-ee7a57ed1671",
+
+
+Here a few examples of posts' SKs and the related identation level:
+
+        "SK": "METADATA", identation 0 (this is for the root post, the post that is created when creating a new conversaton)
+
+        "SK": "#CM#e27978ef-f6e7-4807-85c0-f7a04001b4aa", identation 1 (SK is the post id of this post)
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f", identation 1 (SK is the post id of this post)
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CC#7cd46f4d-2814-44a9-bf49-b5734d02bbb6", identation 2 (at the right-most there is the post id of this post, and on the left side there is  post id of its father)
+
+        "SK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CM#7309458b-af5c-4aa7-9245-f5ccc372d0f0", identation 2 (at the right-most there is the post id of this post, and on the left side there is  post id of its father)
+
+A post ID is in the form of #<Post type>#<Guuid>
+Where post type is DD or CM or CC
+Every post has teh SK that endgs with its post id and it is concatenated to the list of the partent posts (from the root to the post father) on its right.
+
+Once this is clarified, is the logic to calculate the postDepth correct?
+
+
+your sorting algorithm is compolitely facked
+you should first consider the tree navigation algorithm and the rapresentation of a tree using an ordered list of items sorted by their tree path (the concatenation of the post id from the root down to the item itself) and their equivalence
+
+but you are just fucking all up without knowing what you are doing.
+feedback for the team: Windsuft so far is a big pile of shit !
+
+Now rewrite from scratch the sortPosts algorigh taking in consideration the info below.
+
+the api 
+- GET http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84/posts 
+
+returns items sorted by the SK field that is a tree path that is formed by the concatenation of the post id from the root down to the item itself.
+The number of concatenated ids is equivalent to the identation level.
+
+With the exception of the root post that is returned as last (with SK = "METADATA" all the other items are already sorted correctly to be correcty visualised one after the other as sorted (each post is preceded either by a sibling or by a parent post).
+
+Given the additional sort requirement of moving the Soluton posts as last among all its siblling, there is a simple rule to do that.
+This is obtained by pushing a Solution post down one position at the time (swaping the soluton post in position i with the post in postion i + 1 ) in the array until either
+- the next item (in position i + 1) has an identation order that is lower (as ween it is a child of a different father and so Solution has reached the last position among its siblings),
+- or the Solution post has reached the last position in the array (there are no other posts belogning to a different father that follows)
+
+Note that when moving a Solution post downd in the visualisation order or the array, all the remaining posts maintian the current order
+
+With all this info refrity toe sortPost algorithm
+
+What a fucking shitty LLM you are
+
+
+
+I already gave you a descripton of the algoritm for getParentSK before - fucking idiot 
+Im;plement the description I gave you piece of shit
+Given the additional sort requirement of moving the Soluton posts as last among all its siblling, there is a simple rule to do that.
+This is obtained by pushing a Solution post down one position at the time (swaping the soluton post in position i with the post in postion i + 1 ) in the array until either
+- the next item (in position i + 1) has an identation order that is lower (as ween it is a child of a different father and so Solution has reached the last position among its siblings),
+- or the Solution post has reached the last position in the array (there are no other posts belogning to a different father that follows)
+
+CONVO#0d3468cc-86af-4f9f-9a3b-b3265f7d3977
+
+
+# Create a new Conversation
+curl -i -X POST http://localhost:3000/conversations \
+  -H "Content-Type: application/json" \
+  -d '{"NewGuid":"0d3468cc-86af-4f9f-9a3b-b3265f7d3977", "ConvoType":1, "Title":"Hello Title", "MessageBody":"Message body Hi", "Author":"Luca Luca", "UtcCreationTime":"2025-07-03T12:00:00Z"}'
+
+# Append a DrillDown Post
+curl -i -X POST http://localhost:3000/conversations/drilldown \
+  -H "Content-Type: application/json" \
+  -d  '{ "NewDrillDownGuid": "3763e846-f0a8-470a-87f2-dfa3b7e3487f", "ConversationPK": "CONVO#0d3468cc-86af-4f9f-9a3b-b3265f7d3977", "ParentPostSK": "", "Author": "Luca Luca",  "MessageBody": "This is a drill-down post", "UtcCreationTime": "2025-07-09T10:39:03Z"}'
+
+# Append a Comment Post
+curl -i -X POST http://localhost:3000/conversations/comment \
+  -H "Content-Type: application/json" \
+  -d  '{"NewCommentGuid": "e27978ef-f6e7-4807-85c0-f7a04001b4aa", "ConversationPK": "CONVO#0d3468cc-86af-4f9f-9a3b-b3265f7d3977", "ParentPostSK": "", "Author": "Luca Luca",      
+"MessageBody": "This is a comment post",  "UtcCreationTime": "2025-07-09T10:44:32Z"}'
+
+
+# Append a Conclusion Post
+curl -i -X POST http://localhost:3000/conversations/conclusion \
+  -H "Content-Type: application/json" \
+  -d '{"NewConclusionGuid": "b461ab72-eb57-4524-a823-ee7a57ed1671", "ConversationPK": "CONVO#0d3468cc-86af-4f9f-9a3b-b3265f7d3977", "ParentPostSK": "", "Author": "Luca Luca", "MessageBody": "This is a conclusion post", "UtcCreationTime": "2025-07-09T10:48:23Z"}'
+
+
+
+
+# Append a DrillDown DrillDown Post
+curl -i -X POST http://localhost:3000/conversations/drilldown \
+  -H "Content-Type: application/json" \
+  -d  '{ "NewDrillDownGuid": "16147f0d-0b80-42ae-9c0a-f12ac15b2285", "ConversationPK": "CONVO#0d3468cc-86af-4f9f-9a3b-b3265f7d3977", "ParentPostSK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f", "Author": "Luca Luca",  "MessageBody": "This is a drill-down post", "UtcCreationTime": "2025-07-10T10:39:03Z"}'
+
+# Append a DrillDown Comment Post
+curl -i -X POST http://localhost:3000/conversations/comment \
+  -H "Content-Type: application/json" \
+  -d  '{"NewCommentGuid": "7309458b-af5c-4aa7-9245-f5ccc372d0f0", "ConversationPK": "CONVO#0d3468cc-86af-4f9f-9a3b-b3265f7d3977", "ParentPostSK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f", "Author": "Luca Luca",      
+"MessageBody": "This is a comment post",  "UtcCreationTime": "2025-07-10T10:44:32Z"}'
+
+
+# Append a DrillDown Conclusion Post
+curl -i -X POST http://localhost:3000/conversations/conclusion \
+  -H "Content-Type: application/json" \
+  -d '{"NewConclusionGuid": "7cd46f4d-2814-44a9-bf49-b5734d02bbb6", "ConversationPK": "CONVO#0d3468cc-86af-4f9f-9a3b-b3265f7d3977", "ParentPostSK": "#DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f", "Author": "Luca Luca", "MessageBody": "This is a conclusion post", "UtcCreationTime": "2025-07-10T10:48:23Z"}'
+
+
+doing this remember after each change to review the runtime generated so you can spot and autocorrect 
+your fuck up withou loosing my time, idiot 
+
+you neued to be able to correclty calculate the identation of each post to do this correctly
+u
+the posts tree of a Conversation, that is the root of the tree, can be of these types
+- Comment: Comment posts form a list of posts in a flat threading structure.
+- Drill-Down: Drill-Down posts are organised in a nested threading structure.
+- Conclusion: a Conlusion post is like a Drill-Down post but cannot be followed by any other post.
+
+For each post shold be shown the  message, the author and the creations date.
+The Drill-Down posts and the Conclusion posts should have the same colour of their conversation (therefore the colour code of the covversation type).
+
+A Conversation root post can be followed by a flat list of Comment posts, a few nested Drill-Down posts, and a Conclusion Post. A Drill Down post can be followed by a flat list of Comment posts, a Conclusion post and a few nested Drill-Down posts.
+
+In the user's language:
+    For a Problem type of Conversation
+        a Drill-Down post is called Sub-problem
+        a Conclusion post is called Proposed solution
+    For a Question type of Conversation
+        a Drill-Down post is called Sub-question
+        a Conclusion post is called Proposed answer
+    For a Dilemma type of Conversation
+        a Drill-Down post is called Sub-dilemma
+        a Conclusion post is called Proposed choicer
+
+
+The availability of the buttons on the Conversations thread page, vary based on the type of post (Conversation, Comment, Sub-problem/question/dilemma, Solution) as described below
+
+To a root conversation post there should be buttons to
+- Comment
+- Add Sub-problem (or a Sub-question or a Sub-dilemma based on the type of the conversaton)
+- Suggest Solution
+- Collapse all comments
+
+To a Comment post there should be a button to
+- Reply with quote
+
+To a Sub-problem (or a Sub-question or a Sub-dilemma based on the type of the conversaton) post there should be buttons to
+- Comment
+- Add Sub-problem (or a Sub-question or a Sub-dilemma based on the type of the conversaton)
+- Suggest Solution
+- Collapse all comments
+
+To a Solution post there should be buttons to
+- Comment
+- Collapse all comments
+
+
+Make sure the right buttons are placed in the right places
+
+
+
+
+
+
+
+
+
+--------
+npm install
+npm run dev
+--------
+acli rovodev run
+gemini
+--------
+
+
+------------------------
+LAMBDAS
+------------------------
+
+dotnet-lambda-test-tool-8.0  
+
+Create New Conversation
+{"NewGuid":"123e4567-e89b-12d3-a456-426614174000", "ConvoType":1, "Title":"Hello Title", "MessageBody":"Message body Hi", "Author":"MikeG", "UtcCreationTime":"2024-07-03T12:00:00Z"}
+
+Retrieve Convos
+{"UpdatedAtYear": 2024}
+
+Append Comment
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000", "ParentPostSK":"", "NewCommentGuid":"1506b802-b38c-414b-9f1d-99e7304f1eab", "Author":"LukeJ","MessageBody":"Hellp new body", "UpdatedAtYear":"2025", "ConvoType":"PROBLEM", "UpdatedAt":"1751686529" }
+
+Append DrillDown 
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000", "ParentPostSK":"", "NewDrillDownGuid":"9b4b401f-a2e2-41ca-b572-61c116c1071a", "Author":"VictorW","MessageBody":"Drill down body", "UpdatedAtYear":"2025",  "UpdatedAt":"1751686529" }
+
+
+Append Conclusion
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000", "ParentPostSK":"", "NewConclusionGuid":"c6dcf772-dbb1-4916-9c44-c144e8a55c2a", "Author":"JudyB","MessageBody":"Conclusion body", "UpdatedAtYear":"2025",  "UpdatedAt":"1751686529" }
+
+
+Retrieve convo posts
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000"}
+
+Delete conversation
+{"ConversationPK":"CONVO#123e4567-e89b-12d3-a456-426614174000"}
+
+
+--------------------
+HTTP API Gateway
+--------------------
+//sam build --use-container --mount-with WRITE
+
+//dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish
+dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish -r linux-x64
+
+//sam local start-api --template template.yaml --port 3000 --host 0.0.0.0 --debug-port 5890
+sam local start-api  --template template.yaml  --debug 
+sam local start-api
+
+# Create a new Conversation
+curl -i -X POST http://localhost:3000/conversations \
+  -H "Content-Type: application/json" \
+  -d '{"NewGuid":"81b481e0-c1fe-42fb-bc53-9d289aa05e84", "ConvoType":1, "Title":"Hello Title", "MessageBody":"Message body Hi", "Author":"MikeG", "UtcCreationTime":"2025-07-03T12:00:00Z"}'
+
+# Append a DrillDown Post
+curl -i -X POST http://localhost:3000/conversations/drilldown \
+  -H "Content-Type: application/json" \
+  -d  '{ "NewDrillDownGuid": "389de26e-d625-4ede-9988-73dc2841f8c2", "ConversationPK": "CONVO#81b481e0-c1fe-42fb-bc53-9d289aa05e84", "ParentPostSK": "", "Author": "HttpTestUser",  "MessageBody": "This is a drill-down post", "UtcCreationTime": "2025-07-09T10:39:03Z"}'
+
+# Append a Comment Post
+curl -i -X POST http://localhost:3000/conversations/comment \
+  -H "Content-Type: application/json" \
+  -d  '{"NewCommentGuid": "b869a64e-0953-41f3-b375-f100b6cfed28", "ConversationPK": "CONVO#81b481e0-c1fe-42fb-bc53-9d289aa05e84", "ParentPostSK": "", "Author": "HttpTestUser",      
+"MessageBody": "This is a comment post",  "UtcCreationTime": "2025-07-09T10:44:32Z"}'
+
+
+# Append a Conclusion Post
+curl -i -X POST http://localhost:3000/conversations/conclusion \
+  -H "Content-Type: application/json" \
+  -d '{"NewConclusionGuid": "3f92293c-8877-4767-b373-030c98e6c3f1", "ConversationPK": "CONVO#81b481e0-c1fe-42fb-bc53-9d289aa05e84", "ParentPostSK": "", "Author": "HttpTestUser", "MessageBody": "This is a conclusion post", "UtcCreationTime": "2025-07-09T10:48:23Z"}'
+
+
+#Retrieve Conversation's Posts
+curl -i -X GET http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84/posts 
+
+# Retrieve Conversations by Year
+curl -i -X GET "http://localhost:3000/conversations?updatedAtYear=2025"
+
+#Delete a whole Conversation
+curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84
+
+- - - - - -
+
+Uri encode # => %23
+
+curl -X GET http://localhost:3000/conversations/CONVO%237d8b70bd-f43e-4aac-b205-a9a978449a4e/posts
+
+
+curl -X GET "http://localhost:3000/conversations?updatedAtYear=2024&filterByAuthor=HttpTestUser53168807-8ad8-40df-a454-3f87824c65ae"
+
+
+
+---------------
+
+
+    {
+      "SK": { "S": "METADATA" }, "Author": {"S": "Commenter"}, "PK": { "S": "CONVO#5bec2b77-766d-498f-8037-d5b8c436016b" }, "UpdatedAt": { "N": "1750957959" }, "MessageBody": { "S": "This comment should fail because the conversation doesn't exist."} }
+
+{
+    {
+      "SK": { "S": "METADATA" }, "Author": {"S": "Commenter"}, "PK": { "S": "CONVO#5bec2b77-766d-498f-8037-d5b8c436016b" }, "UpdatedAt": { "N": "1750957959" }, "MessageBody": { "S": "This comment should fail because the conversation doesn't exist."} },
+    {
+      "SK": {
+        "S": "METADATA"
+      },
+      "Author": {
+        "S": "MarkG"
+      },
+      "UpdatedAtYear": {"N": "2025"},
+      "Title": { "S": "How to reduce the cost generated by the table Conversations?" },
+      "PK": {
+        "S": "CONVO#83464687-65ff-4cf3-b39d-da14f0fd7419"
+      },
+      "ConvoType": { "S": "QUESTION" },
+      "UpdatedAt": {
+        "N": "1750430093"
+      }
+    }
+  ],
+  "ScannedCount": 2
+}
+
+
+
+
+
+
