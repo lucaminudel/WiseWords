@@ -1,9 +1,9 @@
 import { ConversationType } from '../types/conversation';
 import { CONVERSATION_POST_LABELS } from '../utils/conversationLabelsConstants';
 
-export type PostMarkerType = 'CC' | 'DD' | 'CM' | 'NONE';
+type PostMarkerType = 'CC' | 'DD' | 'CM' | 'NONE';
 
-export interface PostTypeInfo {
+interface PostTypeInfo {
   isDrillDown: boolean;
   isConclusion: boolean;
   isComment: boolean;

@@ -17,7 +17,7 @@ const API_CONFIG = {
 /**
  * Generic API error class
  */
-export class ConversationApiError extends Error {
+class ConversationApiError extends Error {
     constructor(
         message: string,
         public status?: number,
