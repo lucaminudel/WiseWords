@@ -43,10 +43,36 @@ describe('sortPosts', () => {
                 UpdatedAt: '125'
             }
         ];
-        expect(sortPosts(posts)).toEqual(posts);
+        
+        // Expected: Comments first, then METADATA (due to priority sorting)
+        const expected = [
+            {
+                PK: '1',
+                SK: '#CM#1',
+                MessageBody: 'comment1',
+                Author: 'test',
+                UpdatedAt: '124'
+            },
+            {
+                PK: '1',
+                SK: '#CM#2',
+                MessageBody: 'comment2',
+                Author: 'test',
+                UpdatedAt: '125'
+            },
+            {
+                PK: '1',
+                SK: 'METADATA',
+                MessageBody: 'root',
+                Author: 'test',
+                UpdatedAt: '123'
+            }
+        ];
+        
+        expect(sortPosts(posts)).toEqual(expected);
     });
 
-    it('should move solution posts to end of sibling group', () => {
+    it('should order Comments before Solutions (legacy compatibility)', () => {
         const posts: Post[] = [
             {
                 PK: '1',
@@ -81,13 +107,6 @@ describe('sortPosts', () => {
         const expected = [
             {
                 PK: '1',
-                SK: 'METADATA',
-                MessageBody: 'root',
-                Author: 'test',
-                UpdatedAt: '123'
-            },
-            {
-                PK: '1',
                 SK: '#CM#2',
                 MessageBody: 'comment2',
                 Author: 'test',
@@ -106,6 +125,13 @@ describe('sortPosts', () => {
                 MessageBody: 'solution1',
                 Author: 'test',
                 UpdatedAt: '124'
+            },
+            {
+                PK: '1',
+                SK: 'METADATA',
+                MessageBody: 'root',
+                Author: 'test',
+                UpdatedAt: '123'
             }
         ];
 
@@ -147,20 +173,6 @@ describe('sortPosts', () => {
         const expected = [
             {
                 PK: '1',
-                SK: 'METADATA',
-                MessageBody: 'root',
-                Author: 'test',
-                UpdatedAt: '123'
-            },
-            {
-                PK: '1',
-                SK: '#CM#2#CM#1',
-                MessageBody: 'nested comment',
-                Author: 'test',
-                UpdatedAt: '125'
-            },
-            {
-                PK: '1',
                 SK: '#CM#3',
                 MessageBody: 'comment3',
                 Author: 'test',
@@ -172,6 +184,100 @@ describe('sortPosts', () => {
                 MessageBody: 'solution1',
                 Author: 'test',
                 UpdatedAt: '124'
+            },
+            {
+                PK: '1',
+                SK: 'METADATA',
+                MessageBody: 'root',
+                Author: 'test',
+                UpdatedAt: '123'
+            },
+            {
+                PK: '1',
+                SK: '#CM#2#CM#1',
+                MessageBody: 'nested comment',
+                Author: 'test',
+                UpdatedAt: '125'
+            }
+        ];
+
+        expect(sortPosts(posts)).toEqual(expected);
+    });
+
+    it('should order posts as Comments then Solutions then Drill-downs', () => {
+        const posts: Post[] = [
+            {
+                PK: '1',
+                SK: 'METADATA',
+                MessageBody: 'root',
+                Author: 'test',
+                UpdatedAt: '123'
+            },
+            {
+                PK: '1',
+                SK: '#CC#1',
+                MessageBody: 'solution1',
+                Author: 'test',
+                UpdatedAt: '124'
+            },
+            {
+                PK: '1',
+                SK: '#CM#2',
+                MessageBody: 'comment2',
+                Author: 'test',
+                UpdatedAt: '125'
+            },
+            {
+                PK: '1',
+                SK: '#DD#3',
+                MessageBody: 'drilldown3',
+                Author: 'test',
+                UpdatedAt: '126'
+            },
+            {
+                PK: '1',
+                SK: '#CM#4',
+                MessageBody: 'comment4',
+                Author: 'test',
+                UpdatedAt: '127'
+            }
+        ];
+
+        const expected = [
+            {
+                PK: '1',
+                SK: '#CM#2',
+                MessageBody: 'comment2',
+                Author: 'test',
+                UpdatedAt: '125'
+            },
+            {
+                PK: '1',
+                SK: '#CM#4',
+                MessageBody: 'comment4',
+                Author: 'test',
+                UpdatedAt: '127'
+            },
+            {
+                PK: '1',
+                SK: '#CC#1',
+                MessageBody: 'solution1',
+                Author: 'test',
+                UpdatedAt: '124'
+            },
+            {
+                PK: '1',
+                SK: '#DD#3',
+                MessageBody: 'drilldown3',
+                Author: 'test',
+                UpdatedAt: '126'
+            },
+            {
+                PK: '1',
+                SK: 'METADATA',
+                MessageBody: 'root',
+                Author: 'test',
+                UpdatedAt: '123'
             }
         ];
 

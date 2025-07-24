@@ -253,9 +253,7 @@ const ConversationThread: React.FC = () => {
         </div>
       ) : (
         <div>
-          {sortPosts([conversation, ...posts])
-            .filter(post => post.SK !== 'METADATA') // Skip the root conversation post since it's already rendered
-            .map((post) => {
+          {sortPosts(posts).map((post) => {
             // Use utility functions for post type detection
             const postTypeInfo = postTypeService.getPostType(post.SK);
             const { isDrillDown, isConclusion, isComment } = postTypeInfo;
