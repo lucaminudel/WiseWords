@@ -8,15 +8,24 @@ const isSolution = (sk: string): boolean => {
 };
 
 /**
- * Sort posts to move solutions to the end of their sibling groups.
+ * Adjusts post order to move solutions to the end of their sibling groups.
+ * 
+ * PREREQUISITE: Posts must be lexicographically sorted by SK (Sort Key).
+ * The API provides this ordering, which naturally creates correct tree traversal:
+ * - "#CM#1", "#CM#2", "#DD#1", "#DD#1#CM#1", "#DD#1#CC#1"
+ * - Parent nodes appear before children automatically
+ * - Siblings are ordered by their numeric suffixes
  * 
  * Uses tree-path equivalence principle:
  * - Each SK represents a path in the tree from root to node
  * - Sibling nodes share the same parent path
  * - Tree order = depth-first traversal with custom sibling sorting
+ * 
+ * This function only modifies the API's ordering to move solutions (#CC#) 
+ * to the end of each sibling group while preserving the tree structure.
  */
-export const sortPosts = (postsToSort: Post[]): Post[] => {
-  if (!Array.isArray(postsToSort) || postsToSort.length === 0) {
+export const sortPosts = (apiSortedPosts: Post[]): Post[] => {
+  if (!Array.isArray(apiSortedPosts) || apiSortedPosts.length === 0) {
     return [];
   }
 
@@ -35,7 +44,8 @@ export const sortPosts = (postsToSort: Post[]): Post[] => {
   };
 
   // Create a copy to avoid mutation
-  const posts = [...postsToSort];
+  // Note: Input is assumed to be lexicographically sorted by SK from API
+  const posts = [...apiSortedPosts];
   
   // Build a map of parent -> children for easy lookup
   const childrenMap = new Map<string, Post[]>();
@@ -48,7 +58,7 @@ export const sortPosts = (postsToSort: Post[]): Post[] => {
     childrenMap.get(parentPath)!.push(post);
   });
   
-  // Sort each sibling group (solutions go to end)
+  // Within each sibling group, move solutions to end (preserving API's SK order for same types)
   childrenMap.forEach((siblings) => {
     siblings.sort((a, b) => {
       const aIsSolution = isSolution(a.SK);

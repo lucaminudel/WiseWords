@@ -83,6 +83,12 @@ export const conversationApi = {
 
     /**
      * Fetch conversation posts by conversation ID
+     * 
+     * @returns Posts sorted by SK (Sort Key) in lexicographic order.
+     *          This ordering provides natural tree traversal where:
+     *          - Parent nodes appear before their children
+     *          - Siblings are ordered by numeric suffixes
+     *          - Example: "#CM#1", "#CM#2", "#DD#1", "#DD#1#CM#1"
      */
     async fetchConversationPosts(conversationId: string): Promise<Post[]> {
         // Ensure the conversation ID is properly formatted
