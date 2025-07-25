@@ -7,6 +7,34 @@ In short, *Wise Words* is a basic forum for finding answers to difficult questio
 **Wise Words** encourages having **one collaborative conversation at a time** by supporting simple linear comments - as opposed to nested comments that equate to multiple overlapping conversations and talking over each other.
 As the conversation unfolds, and the common understanding of the matter at hand grows, the forum allows consolidating the newfound understanding into **sub-questions, sub-problems, sub-dilemmas, and proposed conclusions** from which the conversation can proceed toward its destination. 
 
+### The anatomy of a Wise Words conversation
+
+Here the main conversation elements:
+- **Conversation**: Conversation post is the root of a conversation tree
+- **Comment**: Comment posts form a list of posts in a flat threading structure.
+- **Drill-Down**: Drill-Down posts are organised in a nested threading structure.
+- **Conclusion**: a Conlusion post is like a Drill-Down post but cannot be followed by any other post.
+
+A **Conversation** root post can be followed by a flat list of Comment posts, a few nested Drill-Down posts, and a Conclusion Post. A **Drill Down** post can be followed by a flat list of Comment posts, a Conclusion post and a few nested Drill-Down posts.
+
+
+A **Conversation** post can be one of these types:
+- *Problem*: a problem in search of a solution
+- *Question*: a question looking for an answer
+- *Dilemma*: a choice among multiple available options
+
+In the user's language,
+- For a *Problem* type of Conversation 
+  - a Drill-Down post is called *Sub-problem*
+  - a Conclusion post is called *Proposed solution*
+- For a *Question* type of Conversation
+  - a Drill-Down post is called *Sub-question*
+  - a Conclusion post is called *Proposed answer*
+- For a *Dilemma* type of Conversation
+  - a Drill-Down post is called *Sub-dilemma*
+  - a Conclusion post is called *Proposed choice*
+
+
 ## The Spikes
 - Here are the spikes: follow the [(link)](Spikes/Readme.md) for the related details
 

@@ -13,31 +13,7 @@ I also used a tool like NoSQL Workbench for DynamoDB to visually inspect the con
 
 Here in the SpikeA.DynamoDbAccessCode folder [(link)](SpikeA.DynamoDbAccessCode) is the code I have created and tested to perform programmatically the basic operations on the db.
 
-I have designed the single-table **WiseWordTable** to host these types of items:
-- **Conversation**: Conversation post is the root of a conversation tree
-- **Comment**: Comment posts form a list of posts in a flat threading structure.
-- **Drill-Down**: Drill-Down posts are organised in a nested threading structure.
-- **Conclusion**: a Conlusion post is like a Drill-Down post but cannot be followed by any other post.
-
-A **Conversation** root post can be followed by a flat list of Comment posts, a few nested Drill-Down posts, and a Conclusion Post. A **Drill Down** post can be followed by a flat list of Comment posts, a Conclusion post and a few nested Drill-Down posts.
-
-
-A **Conversation** post can be one of these types:
-- *Problem*: a problem in search of a solution
-- *Question*: a question looking for an answer
-- *Dilemma*: a choice with multiple options
-
-In the user's language,
-- For a *Problem* type of Conversation 
-  - a Drill-Down post is called *Sub-problem*
-  - a Conclusion post is called *Proposed solution*
-- For a *Question* type of Conversation
-  - a Drill-Down post is called *Sub-question*
-  - a Conclusion post is called *Proposed answer*
-- For a *Dilemma* type of Conversation
-  - a Drill-Down post is called *Sub-dilemma*
-  - a Conclusion post is called *Proposed choicer*
-
+I have designed the single-table **WiseWordTable** to store the conversations threads. These are the details of the table design:
 
 A **Conversation** post item has:
 - **Partition Key**: CONVO#&lt;Conversation Guid&gt;
