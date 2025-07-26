@@ -37,9 +37,10 @@ const ConversationsList: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const year = 2025; // Use fixed year per user context
+        const year = new Date().getFullYear();
         const data = await ConversationService.fetchConversations(year, forceRefresh);
-        setConversations(data);
+        // Reverse the array to show newest conversations first
+        setConversations(data.reverse());
       } catch (err: any) {
         setError(err.message || 'Failed to load conversations');
       } finally {

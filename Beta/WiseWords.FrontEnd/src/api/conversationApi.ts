@@ -75,6 +75,7 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export const conversationApi = {
     /**
      * Fetch conversations for a specific year
+     * @returns Conversations sorted by UpdatedAt in ascending order (oldest first).
      */
     fetchConversations: (year?: number): Promise<ConversationResponse[]> => {
         const endpoint = year ? `/conversations?updatedAtYear=${year}` : '/conversations';
