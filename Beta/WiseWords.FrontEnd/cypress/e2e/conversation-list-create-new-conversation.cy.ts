@@ -31,19 +31,8 @@ describe('New Conversation Form - Complete Integration', () => {
       }
     }).as('createQuestionConversation');
 
-    // Mock updated conversations list after creation
-    cy.intercept('GET', '**/conversations?updatedAtYear=2025', {
-      statusCode: 200,
-      body: [{
-        PK: "CONVO#12345678-1234-1234-1234-123456789abc",
-        SK: "METADATA",
-        Title: "How to fix TypeScript errors?",
-        MessageBody: "I'm getting strange TypeScript compilation errors in my React project.",
-        Author: "DevUser",
-        ConvoType: "QUESTION",
-        UpdatedAt: "1640995200"
-      }]
-    }).as('getUpdatedConversations');
+    // Note: With caching enabled, no second API call is made after creation
+    // The conversation is added directly to the cache and local state
 
     // Open the new conversation form
     cy.contains('button', 'New Conversation').click();
@@ -86,8 +75,7 @@ describe('New Conversation Form - Complete Integration', () => {
       expect(requestBody.Author).to.equal('DevUser');
     });
 
-    // Verify the conversation appears in the list after creation
-    cy.wait('@getUpdatedConversations');
+    // Verify the conversation appears in the list after creation (from cache/local state)
     cy.contains('How to fix TypeScript errors?').should('be.visible');
     cy.contains('DevUser').should('be.visible');
 

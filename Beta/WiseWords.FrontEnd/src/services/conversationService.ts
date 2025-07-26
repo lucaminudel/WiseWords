@@ -4,6 +4,7 @@
  */
 
 import { conversationApi } from '../api/conversationApi';
+import { conversationCache } from './conversationCache';
 // Note: normalizeConversationId is handled in the API layer
 import { CreateConversationRequest, ConversationResponse, Post } from '../types/conversation';
 
@@ -13,9 +14,22 @@ import { CreateConversationRequest, ConversationResponse, Post } from '../types/
 export class ConversationService {
     /**
      * Fetch conversations for a specific year with business logic
+     * @param year - Optional year filter
+     * @param forceRefresh - When true, bypasses cache and fetches from API
      */
-    static async fetchConversations(year?: number): Promise<ConversationResponse[]> {
-        return conversationApi.fetchConversations(year);
+    static async fetchConversations(year?: number, forceRefresh: boolean = false): Promise<ConversationResponse[]> {
+        // If forceRefresh is false, try to get from cache first
+        if (!forceRefresh) {
+            const cachedConversations = conversationCache.get();
+            if (cachedConversations) {
+                return cachedConversations;
+            }
+        }
+
+        // Fetch from API and update cache
+        const conversations = await conversationApi.fetchConversations(year);
+        conversationCache.set(conversations);
+        return conversations;
     }
 
     /**
@@ -28,10 +42,24 @@ export class ConversationService {
 
     /**
      * Create a new conversation with validation
+     * After successful creation, updates the cache with the new conversation
      */
     static async createConversation(conversation: CreateConversationRequest): Promise<ConversationResponse> {
         // Add any business validation here
-        return conversationApi.createConversation(conversation);
+        const newConversation = await conversationApi.createConversation(conversation);
+        
+        // Update cache with the new conversation
+        const cachedConversations = conversationCache.get();
+        if (cachedConversations) {
+            // Add the new conversation to the existing cache
+            const updatedConversations = [newConversation, ...cachedConversations];
+            conversationCache.set(updatedConversations);
+        } else {
+            // If no cache exists, create one with just the new conversation
+            conversationCache.set([newConversation]);
+        }
+        
+        return newConversation;
     }
 
     /**

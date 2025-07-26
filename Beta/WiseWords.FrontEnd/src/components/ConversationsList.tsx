@@ -6,6 +6,12 @@ import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToN
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { ConversationResponse } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
+import { conversationCache } from '../services/conversationCache';
+
+// TypeScript interface for PageShowEvent
+interface PageShowEvent extends Event {
+  persisted: boolean;
+}
 
 // Duplicated logic moved to utils/conversationUtils.ts and types/conversation.ts
 
@@ -27,12 +33,12 @@ const ConversationsList: React.FC = () => {
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (forceRefresh: boolean = false) => {
       setLoading(true);
       setError(null);
       try {
         const year = 2025; // Use fixed year per user context
-        const data = await ConversationService.fetchConversations(year);
+        const data = await ConversationService.fetchConversations(year, forceRefresh);
         setConversations(data);
       } catch (err: any) {
         setError(err.message || 'Failed to load conversations');
@@ -40,7 +46,47 @@ const ConversationsList: React.FC = () => {
         setLoading(false);
       }
     };
-    fetchData();
+
+    const handlePageShow = (event: PageShowEvent) => {
+      const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+      const navType = navEntries.length > 0 ? navEntries[0].type : 'unknown';
+      
+      let shouldUseCache = false;
+      
+      if (event.persisted) {
+        // Page restored from bfcache (back/forward button)
+        shouldUseCache = true;
+      } else {
+        // Page loaded from server
+        switch (navType) {
+          case 'back_forward':
+            // Back/forward but not from cache
+            shouldUseCache = true;
+            break;
+          case 'reload':
+            // User refreshed - force fresh data
+            shouldUseCache = false;
+            break;
+          case 'navigate':
+          default:
+            // Standard navigation - use cache if available
+            shouldUseCache = conversationCache.get() !== null;
+            break;
+        }
+      }
+      
+      fetchData(!shouldUseCache); // forceRefresh = !shouldUseCache
+    };
+
+    // Add pageshow event listener for reliable navigation detection
+    window.addEventListener('pageshow', handlePageShow);
+    
+    // Initial load - treat as navigate
+    fetchData(conversationCache.get() === null);
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, []);
 
   const handleNewConversation = () => {
@@ -90,7 +136,7 @@ const ConversationsList: React.FC = () => {
       // Convert string type to number using the utility function
       const convoTypeNumber = convertConvoTypeToNumber(formData.type);
       
-      await ConversationService.createConversation({
+      const newConversation = await ConversationService.createConversation({
         NewGuid: crypto.randomUUID(),
         ConvoType: convoTypeNumber,
         Title: formData.title.trim(),
@@ -99,10 +145,8 @@ const ConversationsList: React.FC = () => {
         UtcCreationTime: new Date().toISOString()
       });
 
-      // Refresh the list after creating
-      const year = 2025; // Use fixed year per user context
-      const data = await ConversationService.fetchConversations(year);
-      setConversations(data);
+      // Update the local state with the new conversation (cache is already updated by the service)
+      setConversations(prevConversations => [newConversation, ...prevConversations]);
 
       // Reset form and hide it
       handleCancel();
