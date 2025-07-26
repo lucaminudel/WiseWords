@@ -56,30 +56,12 @@ const ConversationThread: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '200px',
-        color: 'var(--color-text-secondary)'
-      }}>
-        <div style={{
-          textAlign: 'center',
-          padding: '2rem',
-          backgroundColor: 'var(--color-background-secondary)',
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid var(--color-border)',
-            borderTopColor: 'var(--color-accent)',
-            borderRadius: '50%',
-            margin: '0 auto 1rem',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <p>Loading conversation...</p>
+      <div className="landing-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+        <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
+          <Logo />
+        </header>
+        <div className="landing-content" style={{ maxWidth: '90%', width: '90%', alignSelf: 'center' }}>
+          <div style={{ textAlign: 'center', color: 'var(--text-color)' }}>Loading Conversation...</div>
         </div>
       </div>
     );

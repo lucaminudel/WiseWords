@@ -57,7 +57,7 @@ describe('ConversationThread Component Rendering', () => {
     cy.visitConversation('CONVO#123')
     
     // Should show loading initially (though it might be brief)
-    cy.get('body').should('contain', 'Loading conversation')
+    cy.get('body').should('contain', 'Loading Conversation...')
   })
 
   it('should show error state when API fails', () => {
