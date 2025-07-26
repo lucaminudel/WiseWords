@@ -192,9 +192,10 @@ const ConversationsList: React.FC = () => {
                 return (
                   <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{getConversationTypeLabel(typeof conv.ConvoType === 'string' ? conv.ConvoType : undefined)}</td>
-                    <td style={{ padding: '4px 8px' }}>
-                      <Link 
+                    <td style={{ padding: '4px 8px' }} title={conv.Title.length > 85 ? conv.Title : undefined}>
+                      <Link
                         to={`/conversations/${encodeURIComponent(conv.PK.replace('CONVO#', ''))}`}
+                        state={{ title: conv.Title, type: conv.ConvoType }}
                         className="conversation-title-link"
                         style={{
                           color: 'var(--primary-color)',
@@ -204,7 +205,7 @@ const ConversationsList: React.FC = () => {
                           cursor: 'pointer'
                         }}
                       >
-                        {conv.Title}
+                      {conv.Title.length > 85 ? conv.Title.substring(0, 84) + '…' : conv.Title}
                       </Link>
                     </td>
                     <td style={{ padding: '4px 8px' }} title={conv.Author.length > 13 ? conv.Author : undefined}>
