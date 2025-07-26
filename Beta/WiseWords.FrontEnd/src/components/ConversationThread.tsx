@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { Logo } from './common/Logo';
 import { sortPosts } from '../utils/postSorter';
 import { ConversationService } from '../services/conversationService';
@@ -13,6 +13,9 @@ import { Post } from '../types/conversation';
 
 const ConversationThread: React.FC = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
+  const location = useLocation();
+  const { title, type } = location.state || {};
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [conversation, setConversation] = useState<Post | null>(null);
@@ -60,8 +63,90 @@ const ConversationThread: React.FC = () => {
         <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
           <Logo />
         </header>
-        <div className="landing-content" style={{ maxWidth: '90%', width: '90%', alignSelf: 'center' }}>
-          <div style={{ textAlign: 'center', color: 'var(--text-color)' }}>Loading Conversation...</div>
+        <div style={{ 
+          width: '90%',
+          margin: '0 auto',
+          padding: '24px',
+          color: 'var(--color-text-primary)',
+          fontFamily: 'Inter, sans-serif'
+        }}>
+          {title && type ? (
+            <div style={{ 
+              backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+              padding: '24px',
+              borderRadius: '8px',
+              marginBottom: '24px'
+            }}>
+              <div style={{ 
+                color: getConversationTypeColor(type),
+                fontWeight: 600,
+                marginBottom: '8px',
+                fontSize: '0.9rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                {type.toLowerCase()}
+              </div>
+              <h1 style={{ 
+                margin: '0 0 16px 0',
+                fontSize: '1.8rem',
+                fontWeight: 600
+              }}>
+                {title}
+              </h1>
+              
+              <div style={{ 
+                marginBottom: '16px',
+                whiteSpace: 'pre-line',
+                lineHeight: '1.6',
+                color: 'var(--color-text-primary)'
+              }}>
+                Loading Conversation...
+              </div>
+              
+              <div style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                color: 'var(--color-text-secondary, #bbbbbb)',
+                fontSize: '0.9rem',
+                marginTop: '16px',
+                paddingTop: '12px',
+                borderTop: '1px solid var(--color-border, #444)'
+              }}>
+                <span style={{ 
+                  color: 'var(--color-text-secondary, #bbbbbb)',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '0.9rem',
+                  fontWeight: 'normal',
+                  fontStyle: 'normal'
+                }}>Loading...</span>
+                <div style={{ marginLeft: 'auto' }}>
+                  <button type="button" style={{ ...buttonStyle, opacity: 0.5, cursor: 'not-allowed' }} disabled>Comment</button>
+                  <button type="button" style={{ ...buttonStyle, marginLeft: '8px', opacity: 0.5, cursor: 'not-allowed' }} disabled>
+                    Add Sub-Action
+                  </button>
+                  <button type="button" style={{ ...buttonStyle, marginLeft: '8px', opacity: 0.5, cursor: 'not-allowed' }} disabled>
+                    Propose Solution
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ 
+              backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+              padding: '24px',
+              borderRadius: '8px',
+              marginBottom: '24px',
+              textAlign: 'center',
+              color: 'var(--text-color)',
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              fontWeight: 'normal',
+              fontStyle: 'normal'
+            }}>
+              Loading Conversation...
+            </div>
+          )}
         </div>
       </div>
     );

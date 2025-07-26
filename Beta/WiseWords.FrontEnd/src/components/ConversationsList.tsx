@@ -193,8 +193,9 @@ const ConversationsList: React.FC = () => {
                   <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{getConversationTypeLabel(typeof conv.ConvoType === 'string' ? conv.ConvoType : undefined)}</td>
                     <td style={{ padding: '4px 8px' }}>
-                      <Link 
+                      <Link
                         to={`/conversations/${encodeURIComponent(conv.PK.replace('CONVO#', ''))}`}
+                        state={{ title: conv.Title, type: conv.ConvoType }}
                         className="conversation-title-link"
                         style={{
                           color: 'var(--primary-color)',
