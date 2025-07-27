@@ -6,7 +6,7 @@
 import { conversationApi } from '../api/conversationApi';
 import { conversationCache } from './conversationCache';
 // Note: normalizeConversationId is handled in the API layer
-import { CreateConversationRequest, ConversationResponse, Post } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, AppendCommentRequest } from '../types/conversation';
 
 /**
  * High-level business service for conversation operations
@@ -80,9 +80,23 @@ export class ConversationService {
     }
 
     /**
-     * Add a post to a conversation
+     * Append a comment to a conversation
      */
-    static async addPost(conversationId: string, post: Partial<Post>): Promise<Post> {
-        return conversationApi.addPost(conversationId, post);
+    static async appendComment(
+        conversationPK: string,
+        parentPostSK: string,
+        author: string,
+        messageBody: string
+    ): Promise<Post> {
+        const commentRequest: AppendCommentRequest = {
+            ConversationPK: conversationPK,
+            ParentPostSK: parentPostSK,
+            NewCommentGuid: crypto.randomUUID(),
+            Author: author,
+            MessageBody: messageBody,
+            UtcCreationTime: new Date().toISOString()
+        };
+        
+        return conversationApi.appendComment(commentRequest);
     }
 }

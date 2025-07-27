@@ -2,7 +2,7 @@
  * Pure API communication layer for conversation-related endpoints
  */
 
-import { CreateConversationRequest, ConversationResponse, Post, ApiError } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, ApiError, AppendCommentRequest } from '../types/conversation';
 
 /**
  * Base API configuration
@@ -134,13 +134,12 @@ export const conversationApi = {
     },
 
     /**
-     * Add a post to a conversation
+     * Append a comment to a conversation
      */
-    async addPost(conversationId: string, post: Partial<Post>): Promise<Post> {
-        const encodedId = encodeURIComponent(conversationId);
-        return apiFetch<Post>(`/conversations/${encodedId}/posts`, {
+    async appendComment(commentRequest: AppendCommentRequest): Promise<Post> {
+        return apiFetch<Post>('/conversations/comment', {
             method: 'POST',
-            body: JSON.stringify(post),
+            body: JSON.stringify(commentRequest),
         });
     }
 };

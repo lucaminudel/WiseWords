@@ -18,7 +18,7 @@ const mockConversationApi = conversationApi as {
   fetchConversationPosts: Mock;
   updateConversation: Mock;
   deleteConversation: Mock;
-  addPost: Mock;
+  appendComment: Mock;
 };
 
 const mockConversationCache = conversationCache as {
@@ -260,20 +260,38 @@ describe('ConversationService', () => {
       expect(mockConversationCache.set).not.toHaveBeenCalled();
     });
 
-    it('should call API directly for addPost', async () => {
+    it('should call API directly for appendComment', async () => {
       // Arrange
-      const mockPost = { MessageBody: 'New post', Author: 'Author' };
-      const mockCreatedPost = { PK: 'CONVO#1', SK: 'POST#1', MessageBody: 'New post', Author: 'Author', UpdatedAt: '123', ConvoType: 'QUESTION' };
-      mockConversationApi.addPost.mockResolvedValue(mockCreatedPost);
+      const mockCreatedPost = { PK: 'CONVO#1', SK: '#CM#1', MessageBody: 'New comment', Author: 'Author', UpdatedAt: '123', ConvoType: 'QUESTION' };
+      mockConversationApi.appendComment.mockResolvedValue(mockCreatedPost);
+      
+      // Mock crypto.randomUUID to return a predictable value
+      const mockUUID = '12345678-1234-1234-1234-123456789abc';
+      vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue(mockUUID) });
+      
+      // Mock Date to return a predictable ISO string
+      const mockDate = new Date('2024-01-01T00:00:00.000Z');
+      vi.setSystemTime(mockDate);
 
       // Act
-      const result = await ConversationService.addPost('CONVO#1', mockPost);
+      const result = await ConversationService.appendComment('CONVO#1', '', 'Author', 'New comment');
 
       // Assert
       expect(result).toEqual(mockCreatedPost);
-      expect(mockConversationApi.addPost).toHaveBeenCalledWith('CONVO#1', mockPost);
+      expect(mockConversationApi.appendComment).toHaveBeenCalledWith({
+        ConversationPK: 'CONVO#1',
+        ParentPostSK: '',
+        NewCommentGuid: mockUUID,
+        Author: 'Author',
+        MessageBody: 'New comment',
+        UtcCreationTime: '2024-01-01T00:00:00.000Z'
+      });
       expect(mockConversationCache.get).not.toHaveBeenCalled();
       expect(mockConversationCache.set).not.toHaveBeenCalled();
+      
+      // Cleanup
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
     });
   });
 });

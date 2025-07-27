@@ -58,6 +58,18 @@ export type ConversationType = 'QUESTION' | 'PROBLEM' | 'DILEMMA';
 
 
 /**
+ * Interface for appending a comment to a conversation
+ */
+export interface AppendCommentRequest {
+  ConversationPK: string;
+  ParentPostSK: string;
+  NewCommentGuid: string;
+  Author: string;
+  MessageBody: string;
+  UtcCreationTime: string;
+}
+
+/**
  * API error response interface
  */
 export interface ApiError {
