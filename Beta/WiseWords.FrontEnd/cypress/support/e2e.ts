@@ -18,3 +18,14 @@ import './commands'
 
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
+
+import 'cyclope'; // Import the main cyclope module for type definitions and commands
+import { savePageIfTestFailed } from 'cyclope';
+
+// This hook will run after each test
+afterEach(() => {
+    // By default, it saves the page only in non-interactive (cypress run) mode.
+    // You can add { saveInteractive: true } if you want it to save in cypress open mode too,
+    // but it's usually less critical there as you can inspect the DOM live.
+    savePageIfTestFailed();
+  });

@@ -1,6 +1,7 @@
 {
   "devDependencies": {
     "@types/jest": "^30.0.0",
+    "cyclope": "^2.7.1",
     "cypress": "^14.5.2"
   }
 }

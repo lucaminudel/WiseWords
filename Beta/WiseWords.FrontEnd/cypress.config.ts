@@ -1,4 +1,6 @@
 import { defineConfig } from 'cypress'
+import cyclopePlugin from 'cyclope/plugin';
+
 
 export default defineConfig({
   e2e: {
@@ -9,6 +11,12 @@ export default defineConfig({
     screenshotOnRunFailure: true,
     setupNodeEvents(on, config) {
       // implement node event listeners here
+      // This line registers the Cyclope plugin
+      cyclopePlugin(on, config);
+
+      // IMPORTANT: Return the config object
+      // with any changed environment variables or other configurations
+      return config;      
     },
     specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
     supportFile: 'cypress/support/e2e.ts',

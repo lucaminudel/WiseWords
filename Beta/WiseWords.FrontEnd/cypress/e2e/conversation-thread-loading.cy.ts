@@ -56,6 +56,16 @@ describe('Conversation Thread Loading Behavior', () => {
       cy.get('h1').should('have.text', mockConversation.Title);
       cy.contains(mockConversation.ConvoType.toLowerCase()).should('have.text', mockConversation.ConvoType.toLowerCase());
 
+
+      // Example on how to save the page html before the assertion failure 
+      // in case that the html changes while waiting for the assertion to pass or fail
+      // Keywords (for finding again this example in the future): save html, save page, html snapshot, cyclope
+      /* cy.get('html').then(($html) => {
+        const htmlBeforeAssertion = $html.html(); // This should now work without error
+        cy.savePage('cypress/snapshots/pages/loading-state-before-assertion');
+      });
+      */
+
       // A loading message should also be present
       cy.contains('Loading Conversation...').should('be.visible');
 
