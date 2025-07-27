@@ -8,8 +8,12 @@ import { getConversationTypeColor } from '../utils/conversationUtils';
 import { postTypeService } from '../utils/postType';
 import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
 import { Post } from '../types/conversation';
+import { conversationThreadCache } from '../services/conversationThreadCache';
 
 // Post interface moved to types/conversation.ts
+interface PageShowEvent extends Event {
+  persisted: boolean;
+}
 
 const ConversationThread: React.FC = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -21,16 +25,36 @@ const ConversationThread: React.FC = () => {
   const [conversation, setConversation] = useState<Post | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   
-
-
   useEffect(() => {
-    const fetchConversation = async () => {
-      try {
-        if (!conversationId) return;
+    const fetchConversation = async (forceRefresh: boolean = false) => {
+      if (!conversationId) return;
 
+      setLoading(true);
+      setError(null);
+
+      // 1. Check cache first
+      if (!forceRefresh) {
+        const cachedData = conversationThreadCache.get(conversationId);
+        if (cachedData) {
+          const conversationData = cachedData.find((item: Post) => item.SK === 'METADATA');
+          const postsData = cachedData.filter((item: Post) => item.SK !== 'METADATA');
+          
+          if (conversationData) {
+            setConversation(conversationData);
+            setPosts(postsData);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // 2. Fetch from API if cache is empty or refresh is forced
+      try {
         const data = await ConversationService.fetchConversationPosts(conversationId);
         
-        // The last item is the conversation metadata
+        // 3. Store in cache
+        conversationThreadCache.set(conversationId, data);
+
         const conversationData = data.find((item: Post) => item.SK === 'METADATA');
         const postsData = data.filter((item: Post) => item.SK !== 'METADATA');
         
@@ -48,9 +72,46 @@ const ConversationThread: React.FC = () => {
       }
     };
 
+    const handlePageShow = (event: PageShowEvent) => {
+      if (!conversationId) return;
+      const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+      const navType = navEntries.length > 0 ? navEntries[0].type : 'unknown';
+      
+      let shouldUseCache = false;
+      
+      if (event.persisted) {
+        // Page restored from bfcache (back/forward button)
+        shouldUseCache = true;
+      } else {
+        // Page loaded from server
+        switch (navType) {
+          case 'back_forward':
+            shouldUseCache = true;
+            break;
+          case 'reload':
+            shouldUseCache = false;
+            break;
+          case 'navigate':
+          default:
+            shouldUseCache = conversationThreadCache.get(conversationId) !== null;
+            break;
+        }
+      }
+      
+      fetchConversation(!shouldUseCache); // forceRefresh = !shouldUseCache
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    
+    // Initial load
     if (conversationId) {
-      fetchConversation();
+      const cachedData = conversationThreadCache.get(conversationId);
+      fetchConversation(cachedData === null);
     }
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, [conversationId]);
 
   // Get conversation type color
