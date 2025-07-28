@@ -124,7 +124,7 @@ const ConversationThread: React.FC = () => {
     };
   }, [conversationId]);
 
-  // Scroll to comment form when it becomes visible
+  // Scroll to comment form when it becomes visible and set focus
   useEffect(() => {
     if (showCommentForm && commentFormContext) {
       setTimeout(() => {
@@ -137,16 +137,43 @@ const ConversationThread: React.FC = () => {
             behavior: 'smooth', 
             block: 'end'
           });
+          
+          // Focus on the message textarea and position cursor
+          const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.focus();
+            
+            // If there's pre-filled content (quoted text), position cursor at the end
+            if (commentFormData.messageBody) {
+              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+          }
         }
       }, 200);
     }
-  }, [showCommentForm, commentFormContext]);
+  }, [showCommentForm, commentFormContext, commentFormData.messageBody]);
 
   const handleCommentClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
     setCommentFormContext({
       conversationPK,
       parentPostSK,
       insertAfterSK
+    });
+    setShowCommentForm(true);
+  };
+
+  const handleReplyWithQuoteClick = (conversationPK: string, parentPostSK: string, insertAfterSK: string, originalPost: Post) => {
+    // Format the quoted message
+    const quotedMessage = `> Original post by ${originalPost.Author}:\n> ${originalPost.MessageBody.replace(/\n/g, '\n> ')}\n\n`;
+    
+    setCommentFormContext({
+      conversationPK,
+      parentPostSK,
+      insertAfterSK
+    });
+    setCommentFormData({
+      author: '',
+      messageBody: quotedMessage
     });
     setShowCommentForm(true);
   };
@@ -636,7 +663,14 @@ const ConversationThread: React.FC = () => {
                     
                     {/* Comment post */}
                     {isComment && post.SK !== 'METADATA' && (
-                      <button type="button" data-testid="reply-quote-button" style={buttonStyle}>Reply with quote</button>
+                      <button 
+                        type="button" 
+                        data-testid="reply-quote-button" 
+                        style={buttonStyle}
+                        onClick={() => handleReplyWithQuoteClick(conversation.PK, post.SK, post.SK, post)}
+                      >
+                        Reply with quote
+                      </button>
                     )}
                     
                     {/* Drill-down post */}
