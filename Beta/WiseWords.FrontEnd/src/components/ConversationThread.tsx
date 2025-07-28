@@ -24,6 +24,16 @@ const ConversationThread: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [conversation, setConversation] = useState<Post | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [showCommentForm, setShowCommentForm] = useState(false);
+  const [commentFormContext, setCommentFormContext] = useState<{
+    conversationPK: string;
+    parentPostSK: string;
+    insertAfterSK?: string;
+  } | null>(null);
+  const [commentFormData, setCommentFormData] = useState({
+    author: '',
+    messageBody: ''
+  });
   
   useEffect(() => {
     const fetchConversation = async (forceRefresh: boolean = false) => {
@@ -113,6 +123,53 @@ const ConversationThread: React.FC = () => {
       window.removeEventListener('pageshow', handlePageShow);
     };
   }, [conversationId]);
+
+  // Scroll to comment form when it becomes visible
+  useEffect(() => {
+    if (showCommentForm && commentFormContext) {
+      setTimeout(() => {
+        const formId = `comment-form-${commentFormContext.insertAfterSK || 'main'}`;
+        const formElement = document.getElementById(formId);
+        
+        if (formElement) {
+          // Scroll so bottom of form aligns with bottom of viewport
+          formElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'end'
+          });
+        }
+      }, 200);
+    }
+  }, [showCommentForm, commentFormContext]);
+
+  const handleCommentClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
+    setCommentFormContext({
+      conversationPK,
+      parentPostSK,
+      insertAfterSK
+    });
+    setShowCommentForm(true);
+  };
+
+  const handleCommentCancel = () => {
+    setShowCommentForm(false);
+    setCommentFormContext(null);
+    setCommentFormData({
+      author: '',
+      messageBody: ''
+    });
+  };
+
+  const handleCommentPost = async () => {
+    // TODO: Implement API call and cache update
+    console.log('Comment post clicked:', {
+      context: commentFormContext,
+      data: commentFormData
+    });
+    
+    // Hide the form
+    handleCommentCancel();
+  };
 
   // Get conversation type color
   // getConversationTypeColor moved to utils/conversationUtils.ts
@@ -354,7 +411,14 @@ const ConversationThread: React.FC = () => {
         }}>
           <span>by <strong>{conversation.Author}</strong> • {formatUnixTimestamp(conversation.UpdatedAt)}</span>
           <div style={{ marginLeft: 'auto' }}>
-            <button data-testid="comment-button" type="button" style={buttonStyle}>Comment</button>
+            <button 
+              data-testid="comment-button" 
+              type="button" 
+              style={buttonStyle}
+              onClick={() => handleCommentClick(conversation.PK, '', conversation.SK)}
+            >
+              Comment
+            </button>
             <button data-testid="sub-question-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
               {getAddSubActionButtonText(conversation.ConvoType)}
             </button>
@@ -384,6 +448,119 @@ const ConversationThread: React.FC = () => {
         </div>
       ) : (
         <div>
+          {/* Comment Form for Main Conversation */}
+          {showCommentForm && commentFormContext?.insertAfterSK === conversation?.SK && (
+            <div 
+              id={`comment-form-${conversation?.SK || 'main'}`}
+              style={{ 
+              marginTop: '16px',
+              padding: '16px',
+              backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+              borderRadius: '8px',
+              border: '2px solid var(--color-accent)',
+              color: 'var(--color-text-primary)',
+              fontFamily: 'Inter, sans-serif'
+            }}>
+              <div style={{ 
+                color: 'var(--color-accent)',
+                fontWeight: 600,
+                marginBottom: '16px',
+                fontSize: '0.9rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Add Comment
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                    Message
+                  </label>
+                  <textarea 
+                    value={commentFormData.messageBody}
+                    onChange={(e) => setCommentFormData({ ...commentFormData, messageBody: e.target.value })}
+                    placeholder="Enter your comment..."
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--color-background)',
+                      color: 'var(--color-text-primary)',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '1rem',
+                      resize: 'vertical',
+                      minHeight: '80px'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                    Author
+                  </label>
+                  <input 
+                    type="text"
+                    value={commentFormData.author}
+                    onChange={(e) => setCommentFormData({ ...commentFormData, author: e.target.value })}
+                    placeholder="Enter your name"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--color-background)',
+                      color: 'var(--color-text-primary)',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <button 
+                    onClick={handleCommentCancel}
+                    style={{
+                      backgroundColor: 'var(--color-text-secondary)',
+                      color: 'var(--color-background)',
+                      border: 'none',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '1rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleCommentPost}
+                    disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim()}
+                    style={{
+                      backgroundColor: 'var(--color-accent)',
+                      color: 'var(--color-text-primary)',
+                      border: 'none',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim()) ? 'not-allowed' : 'pointer',
+                      fontWeight: 700,
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '1rem',
+                      opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim()) ? 0.6 : 1,
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {sortPosts(posts).map((post) => {
             // Use utility functions for post type detection
             const postTypeInfo = postTypeService.getPostType(post.SK);
@@ -393,17 +570,18 @@ const ConversationThread: React.FC = () => {
             const depth = postTypeService.getPostDepth(post.SK);
             
             return (
-              <div 
-                key={post.SK}
-                data-testid="post-container"
-                style={{ 
-                  marginLeft: `${Math.min(depth, 3) * 48}px`,
-                  marginTop: '16px',
-                  padding: '16px',
-                  backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-                  borderRadius: '8px'
-                }}
-              >
+              <>
+                <div 
+                  key={post.SK}
+                  data-testid="post-container"
+                  style={{ 
+                    marginLeft: `${Math.min(depth, 3) * 48}px`,
+                    marginTop: '16px',
+                    padding: '16px',
+                    backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+                    borderRadius: '8px'
+                  }}
+                >
                 {postType && (
                   <div style={{ 
                     color: postType === 'Comment'
@@ -441,7 +619,13 @@ const ConversationThread: React.FC = () => {
                     {/* Root conversation post */}
                     {post.SK === 'METADATA' && (
                       <>
-                        <button data-testid="comment-button" style={buttonStyle}>Comment</button>
+                        <button 
+                          data-testid="comment-button" 
+                          style={buttonStyle}
+                          onClick={() => handleCommentClick(conversation.PK, '', post.SK)}
+                        >
+                          Comment
+                        </button>
                         <button data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
@@ -459,7 +643,14 @@ const ConversationThread: React.FC = () => {
                     {/* Drill-down post */}
                     {isDrillDown && !isConclusion && (
                       <>
-                        <button type="button" data-testid="comment-button" style={buttonStyle}>Comment</button>
+                        <button 
+                          type="button" 
+                          data-testid="comment-button" 
+                          style={buttonStyle}
+                          onClick={() => handleCommentClick(conversation.PK, post.SK, post.SK)}
+                        >
+                          Comment
+                        </button>
                         <button type="button" data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
@@ -471,11 +662,133 @@ const ConversationThread: React.FC = () => {
                     
                     {/* Conclusion post */}
                     {isConclusion && (
-                      <button type="button" data-testid="comment-button" style={buttonStyle}>Comment</button>
+                      <button 
+                        type="button" 
+                        data-testid="comment-button" 
+                        style={buttonStyle}
+                        onClick={() => handleCommentClick(conversation.PK, post.SK, post.SK)}
+                      >
+                        Comment
+                      </button>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* Comment Form for this specific post */}
+              {showCommentForm && commentFormContext?.insertAfterSK === post.SK && (
+                <div 
+                  id={`comment-form-${post.SK}`}
+                  style={{ 
+                  marginLeft: `${Math.min(depth, 3) * 48}px`,
+                  marginTop: '16px',
+                  padding: '16px',
+                  backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+                  borderRadius: '8px',
+                  border: '2px solid var(--color-accent)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Inter, sans-serif'
+                }}>
+                  <div style={{ 
+                    color: 'var(--color-accent)',
+                    fontWeight: 600,
+                    marginBottom: '16px',
+                    fontSize: '0.9rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Add Comment
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                        Message
+                      </label>
+                      <textarea 
+                        value={commentFormData.messageBody}
+                        onChange={(e) => setCommentFormData({ ...commentFormData, messageBody: e.target.value })}
+                        placeholder="Enter your comment..."
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--color-background)',
+                          color: 'var(--color-text-primary)',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '1rem',
+                          resize: 'vertical',
+                          minHeight: '80px'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                        Author
+                      </label>
+                      <input 
+                        type="text"
+                        value={commentFormData.author}
+                        onChange={(e) => setCommentFormData({ ...commentFormData, author: e.target.value })}
+                        placeholder="Enter your name"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--color-background)',
+                          color: 'var(--color-text-primary)',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '1rem'
+                        }}
+                      />
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                      <button 
+                        onClick={handleCommentCancel}
+                        style={{
+                          backgroundColor: 'var(--color-text-secondary)',
+                          color: 'var(--color-background)',
+                          border: 'none',
+                          padding: '0.75rem 1.5rem',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '1rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleCommentPost}
+                        disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim()}
+                        style={{
+                          backgroundColor: 'var(--color-accent)',
+                          color: 'var(--color-text-primary)',
+                          border: 'none',
+                          padding: '0.75rem 1.5rem',
+                          borderRadius: '8px',
+                          cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim()) ? 'not-allowed' : 'pointer',
+                          fontWeight: 700,
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '1rem',
+                          opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim()) ? 0.6 : 1,
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        Post
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              </>
             );
           })}
         </div>
