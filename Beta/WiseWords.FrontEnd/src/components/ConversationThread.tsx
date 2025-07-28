@@ -570,9 +570,8 @@ const ConversationThread: React.FC = () => {
             const depth = postTypeService.getPostDepth(post.SK);
             
             return (
-              <>
+              <React.Fragment key={post.SK}>
                 <div 
-                  key={post.SK}
                   data-testid="post-container"
                   style={{ 
                     marginLeft: `${Math.min(depth, 3) * 48}px`,
@@ -788,7 +787,7 @@ const ConversationThread: React.FC = () => {
                   </div>
                 </div>
               )}
-              </>
+              </React.Fragment>
             );
           })}
         </div>
