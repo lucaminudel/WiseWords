@@ -34,6 +34,8 @@ const ConversationThread: React.FC = () => {
     author: '',
     messageBody: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchConversation = async (forceRefresh: boolean = false) => {
@@ -151,7 +153,7 @@ const ConversationThread: React.FC = () => {
         }
       }, 200);
     }
-  }, [showCommentForm, commentFormContext, commentFormData.messageBody]);
+  }, [showCommentForm, commentFormContext]);
 
   const handleCommentClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
     setCommentFormContext({
@@ -162,13 +164,18 @@ const ConversationThread: React.FC = () => {
     setShowCommentForm(true);
   };
 
-  const handleReplyWithQuoteClick = (conversationPK: string, parentPostSK: string, insertAfterSK: string, originalPost: Post) => {
+  const handleReplyWithQuoteClick = (conversationPK: string, postSK: string, insertAfterSK: string, originalPost: Post) => {
+    // For a reply, the parent is the parent of the post being replied to.
+    const skParts = postSK.split('#');
+    const parentSKParts = skParts.slice(0, -2);
+    const correctParentSK = parentSKParts.join('#');
+
     // Format the quoted message
     const quotedMessage = `> Original post by ${originalPost.Author}:\n> ${originalPost.MessageBody.replace(/\n/g, '\n> ')}\n\n`;
     
     setCommentFormContext({
       conversationPK,
-      parentPostSK,
+      parentPostSK: correctParentSK,
       insertAfterSK
     });
     setCommentFormData({
@@ -185,17 +192,41 @@ const ConversationThread: React.FC = () => {
       author: '',
       messageBody: ''
     });
+    setFormError(null);
   };
 
   const handleCommentPost = async () => {
-    // TODO: Implement API call and cache update
-    console.log('Comment post clicked:', {
-      context: commentFormContext,
-      data: commentFormData
-    });
-    
-    // Hide the form
-    handleCommentCancel();
+    if (!commentFormContext || !conversationId) return;
+
+    setIsSubmitting(true);
+    setFormError(null);
+
+    try {
+      const newPost = await ConversationService.appendComment(
+        commentFormContext.conversationPK,
+        commentFormContext.parentPostSK,
+        commentFormData.author.trim(),
+        commentFormData.messageBody.trim()
+      );
+
+      // Update local UI state immediately
+      const updatedPosts = [...posts, newPost];
+      setPosts(updatedPosts);
+
+      // Update the cache with the new post
+      if (conversation) {
+        const updatedCacheData = [conversation, ...updatedPosts];
+        conversationThreadCache.set(conversationId, updatedCacheData);
+      }
+
+      // Reset and hide the form
+      handleCommentCancel();
+
+    } catch (err: any) {
+      setFormError(`Failed to post comment. Please try again. (Error: ${err.message})`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Get conversation type color
@@ -499,6 +530,19 @@ const ConversationThread: React.FC = () => {
                 Add Comment
               </div>
               
+              {formError && (
+                <div style={{ 
+                  color: 'var(--color-danger)', 
+                  backgroundColor: 'rgba(255, 79, 90, 0.1)',
+                  padding: '0.75rem',
+                  borderRadius: '6px',
+                  marginBottom: '1rem',
+                  border: '1px solid var(--color-danger)'
+                }}>
+                  {formError}
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
@@ -509,6 +553,7 @@ const ConversationThread: React.FC = () => {
                     onChange={(e) => setCommentFormData({ ...commentFormData, messageBody: e.target.value })}
                     placeholder="Enter your comment..."
                     rows={3}
+                    disabled={isSubmitting}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -533,6 +578,7 @@ const ConversationThread: React.FC = () => {
                     value={commentFormData.author}
                     onChange={(e) => setCommentFormData({ ...commentFormData, author: e.target.value })}
                     placeholder="Enter your name"
+                    disabled={isSubmitting}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -549,13 +595,14 @@ const ConversationThread: React.FC = () => {
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                   <button 
                     onClick={handleCommentCancel}
+                    disabled={isSubmitting}
                     style={{
                       backgroundColor: 'var(--color-text-secondary)',
                       color: 'var(--color-background)',
                       border: 'none',
                       padding: '0.75rem 1.5rem',
                       borderRadius: '8px',
-                      cursor: 'pointer',
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
                       fontWeight: 700,
                       fontFamily: 'Inter, sans-serif',
                       fontSize: '1rem',
@@ -566,22 +613,22 @@ const ConversationThread: React.FC = () => {
                   </button>
                   <button 
                     onClick={handleCommentPost}
-                    disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim()}
+                    disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting}
                     style={{
                       backgroundColor: 'var(--color-accent)',
                       color: 'var(--color-text-primary)',
                       border: 'none',
                       padding: '0.75rem 1.5rem',
                       borderRadius: '8px',
-                      cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim()) ? 'not-allowed' : 'pointer',
+                      cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
                       fontWeight: 700,
                       fontFamily: 'Inter, sans-serif',
                       fontSize: '1rem',
-                      opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim()) ? 0.6 : 1,
+                      opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
                       transition: 'all 0.2s ease'
                     }}
                   >
-                    Post
+                    {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
                   </button>
                 </div>
               </div>
@@ -733,6 +780,19 @@ const ConversationThread: React.FC = () => {
                     Add Comment
                   </div>
                   
+                  {formError && (
+                    <div style={{ 
+                      color: 'var(--color-danger)', 
+                      backgroundColor: 'rgba(255, 79, 90, 0.1)',
+                      padding: '0.75rem',
+                      borderRadius: '6px',
+                      marginBottom: '1rem',
+                      border: '1px solid var(--color-danger)'
+                    }}>
+                      {formError}
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
@@ -743,6 +803,7 @@ const ConversationThread: React.FC = () => {
                         onChange={(e) => setCommentFormData({ ...commentFormData, messageBody: e.target.value })}
                         placeholder="Enter your comment..."
                         rows={3}
+                        disabled={isSubmitting}
                         style={{
                           width: '100%',
                           padding: '0.75rem',
@@ -767,6 +828,7 @@ const ConversationThread: React.FC = () => {
                         value={commentFormData.author}
                         onChange={(e) => setCommentFormData({ ...commentFormData, author: e.target.value })}
                         placeholder="Enter your name"
+                        disabled={isSubmitting}
                         style={{
                           width: '100%',
                           padding: '0.75rem',
@@ -783,13 +845,14 @@ const ConversationThread: React.FC = () => {
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                       <button 
                         onClick={handleCommentCancel}
+                        disabled={isSubmitting}
                         style={{
                           backgroundColor: 'var(--color-text-secondary)',
                           color: 'var(--color-background)',
                           border: 'none',
                           padding: '0.75rem 1.5rem',
                           borderRadius: '8px',
-                          cursor: 'pointer',
+                          cursor: isSubmitting ? 'not-allowed' : 'pointer',
                           fontWeight: 700,
                           fontFamily: 'Inter, sans-serif',
                           fontSize: '1rem',
@@ -800,22 +863,22 @@ const ConversationThread: React.FC = () => {
                       </button>
                       <button 
                         onClick={handleCommentPost}
-                        disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim()}
+                        disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting}
                         style={{
                           backgroundColor: 'var(--color-accent)',
                           color: 'var(--color-text-primary)',
                           border: 'none',
                           padding: '0.75rem 1.5rem',
                           borderRadius: '8px',
-                          cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim()) ? 'not-allowed' : 'pointer',
+                          cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
                           fontWeight: 700,
                           fontFamily: 'Inter, sans-serif',
                           fontSize: '1rem',
-                          opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim()) ? 0.6 : 1,
+                          opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
                           transition: 'all 0.2s ease'
                         }}
                       >
-                        Post
+                        {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
                       </button>
                     </div>
                   </div>
