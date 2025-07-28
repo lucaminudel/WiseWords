@@ -511,6 +511,7 @@ const ConversationThread: React.FC = () => {
             <div 
               id={`comment-form-${conversation?.SK || 'main'}`}
               style={{ 
+              marginLeft: `${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`,
               marginTop: '16px',
               padding: '16px',
               backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
@@ -643,12 +644,16 @@ const ConversationThread: React.FC = () => {
             const postType = postTypeService.getPostTypeDisplay(post.SK, conversation.ConvoType);
             const depth = postTypeService.getPostDepth(post.SK);
             
+            // Determine the correct depth for the new comment form
+            const isReplyingToComment = postTypeInfo.isComment;
+            const newCommentDepth = isReplyingToComment ? depth : depth + 1;
+
             return (
               <React.Fragment key={post.SK}>
                 <div 
                   data-testid="post-container"
                   style={{ 
-                    marginLeft: `${Math.min(depth, 3) * 48}px`,
+                    marginLeft: `${depth * 48}px`,
                     marginTop: '16px',
                     padding: '16px',
                     backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
@@ -760,7 +765,7 @@ const ConversationThread: React.FC = () => {
                 <div 
                   id={`comment-form-${post.SK}`}
                   style={{ 
-                  marginLeft: `${Math.min(depth, 3) * 48}px`,
+                  marginLeft: `${newCommentDepth * 48}px`,
                   marginTop: '16px',
                   padding: '16px',
                   backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
