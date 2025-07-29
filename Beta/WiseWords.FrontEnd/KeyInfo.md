@@ -64,18 +64,31 @@ This is an exmaple of a conversaton tree retrieved by the API in the form or a l
 And this is the order of posts as presented by the UI:
 
 METADATA, 1, Conversation root, Data 03/07/2025, 13:00:00
+
 Comment , 1,  #CM#e27978ef-f6e7-4807-85c0-f7a04001b4aa, Comment 4,  09/07/2025, 11:44:32
+
 Comment , 1,  #CM#a95222e9-702f-4c77-8424-68a81e4a6151, Comment 2, 28/07/2025, 12:15:17
+
 Comment , 1,  #CM#c6338dbf-34e6-45ba-8569-ca4131b2a71f, Comment 3, 28/07/2025, 13:05:37
+
 Comment , 1,  #CM#7128ee33-82f7-4691-aaba-135686418a6c, Comment 1, 28/07/2025, 16:14:20  
+
 Proposed Solution, 1, #CC#b461ab72-eb57-4524-a823-ee7a57ed1671, Proposed Solution 5, 09/07/2025, 11:48:23
+
 Sub-problem, 1, #DD#4c74fd07-371d-45f0-8ea2-42e9b3164e2d, Sub-problem 8, 08/07/2025, 11:39:03
+
 Sub-problem, 1, #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f, Sub-problem 6, 10/07/2025, 11:39:03
+
 Comment , 2,  #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CM#7309458b-af5c-4aa7-9245-f5ccc372d0f0, Comment 6.1, 10/07/2025, 11:44:32
+
 Comment , 2,  #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CM#bb1a8399-858a-4ff7-9dc8-81ba9c173b09, Comment 6.3, 28/07/2025, 13:30:46
+
 Comment , 2,  #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CM#9f61030b-983f-4c3a-98fb-93cf0c9804b6, Comment 6.2, 28/07/2025, 16:15:03
+
 Proposed Solution, 2, #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CC#7cd46f4d-2814-44a9-bf49-b5734d02bbb6, Proposed Solution 6.4, 10/07/2025, 11:48:23
+
 Sub-problem, 2, #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#DD#16147f0d-0b80-42ae-9c0a-f12ac15b2285, Sub-problem 7, 09/07/2025, 11:39:03
+
 
 
 ## Posting in a conversation
