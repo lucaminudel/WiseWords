@@ -1,0 +1,224 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "dotnet",
+			"task": "build",
+			"group": "build",
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"label": "Build: solution",
+			"detail": "Build the WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.sln solution using dotnet build",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "dotnet",
+			"args": ["build"],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"label": "Build: solution (shell fallback)",
+			"detail": "Build the WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.sln solution using shell command",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "dotnet",
+			"args": ["build", "WiseWords.ConversationsAndPosts.AWS.Lambdas.sln"],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"label": "Build: AWS Lambdas solution",
+			"detail": "Build the AWS Lambdas solution",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "dotnet",
+			"args": ["build", "WiseWords.ConversationsAndPosts.DataStore.sln"],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"label": "Build: DataStore solution",
+			"detail": "Build the DataStore solution",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.DataStore"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "dotnet",
+			"args": ["test"],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"label": "Test: All projects",
+			"detail": "Run tests for all test projects"
+		},
+		{
+			"type": "shell",
+			"command": "dotnet",
+			"args": ["test", "WiseWords.ConversationsAndPosts.DataStore.Tests.csproj"],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"label": "Test: DataStore Tests",
+			"detail": "Run DataStore tests",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.DataStore.Tests"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "dotnet",
+			"args": ["test", "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests.csproj"],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"label": "Test: API Gateway Tests",
+			"detail": "Run API Gateway integration tests",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "npm",
+			"args": ["test"],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"label": "Test: Frontend Unit Tests (Vitest)",
+			"detail": "Run frontend unit tests using Vitest",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.FrontEnd"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "npm",
+			"args": ["run", "test:e2e"],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"label": "Test: Frontend E2E Tests (Cypress)",
+			"detail": "Run frontend E2E tests using Cypress",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.FrontEnd"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "npm",
+			"args": ["run", "cypress:open"],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"label": "Test: Open Cypress Test Runner",
+			"detail": "Open Cypress interactive test runner",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.FrontEnd"
+			}
+		},
+		{
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"label": "Build: Frontend (Vite)",
+			"detail": "Build the frontend application using Vite",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.FrontEnd"
+			}
+		},
+		{
+			"label": "npm: build_and_test",
+			"dependsOn": [
+				"Build: Frontend (Vite)",
+				"Test: Frontend Unit Tests (Vitest)",
+				"Test: Frontend E2E Tests (Cypress)"
+			],
+			"dependsOrder": "sequence",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		}
+	]
+}
