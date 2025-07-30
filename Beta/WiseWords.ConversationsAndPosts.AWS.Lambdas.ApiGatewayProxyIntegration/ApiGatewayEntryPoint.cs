@@ -296,7 +296,7 @@ public class ApiGatewayEntryPoint
             // to the API from web pages from trusted domains
             { "Access-Control-Allow-Origin", "*" },
             { "Access-Control-Allow-Headers", "Content-Type" },
-            { "Access-Control-Allow-Methods", "OPTIONS,POST,GET" }
+            { "Access-Control-Allow-Methods", "OPTIONS,POST,GET, DELETE" }
         };
 
         foreach (var keyVal in additionalHeaders)
@@ -347,7 +347,7 @@ public class ApiGatewayEntryPoint
     {
         string? yearStr;
 
-        if (false == request.QueryStringParameters?.ContainsKey("updatedAtYear"))
+        if (request.QueryStringParameters is null || ! request.QueryStringParameters.ContainsKey("updatedAtYear"))
         {
             return (false, 0, HttpStatusCode.BadRequest, "Missing updatedAtYear. It must be included in the query string.");
 

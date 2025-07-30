@@ -41,3 +41,4 @@ DynamoDbLocalDockerImage/Volume
 DevNotepad.txt
 .gitignore
 Beta/WiseWords.FrontEnd/cypress/failed
+publish.zip

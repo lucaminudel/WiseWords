@@ -1,46 +1,7 @@
 # Shell commands
 
-## Commands for the AI-assistent to generate feedback
+## Commands for the developer to run the system in the local development environment 
 
-Bild WiseWords.FrontEnd, and spot build errors
-```bash
-npm: build
-```
-
-Run WiseWords.FrontEnd unit tests, and find test failures
-```bash
-npm: test
-```
-
-Run WiseWords.FrontEnd e2e tests, and find e2e tests failures
-```bash
-npm: e2etest
-```
-With screenshots of the failed e2e tests to be found here: WiseWords.FrontEnd/cypress/screenshots
-With htlm of the failed e2e tests to be found here: WiseWords.FrontEnd/cypress/failed
-When needed to get a snapshot of the html just before an assert fails (as it could change while waiting for the assertion to pass or fail), this code can be added before the failing assertion
-```TypeScript
-// Example on how to save the page html before the assertion failure 
-// in case that the html changes while waiting for the assertion to pass or fail
-       cy.get('html').then(($html) => {
-        const htmlBeforeAssertion = $html.html(); 
-        cy.savePage('cypress/failed/pages/<title>>');
-      });
-```
-
-Build and run WiseWords.FrontEnd unit and e2e tests, to do all the above until the first error
-```bash
-npm: build_test
-```
-
-## Commands for the developer to run the system in the local development environment
-
-This is the command line to run and test the *AWS Lambda .NET Mock Lambda Test Tool* to test locally Lambda functions, from the WiseWords.ConversationsAndPosts.AWS.Lambdas folder
-
-```bash
-export DYNAMODB_SERVICE_URL=http://localhost:8000 
-dotnet-lambda-test-tool-8.0  
-```
 
 These are the commands to build the code and deploy it into the *AWS SAM (Serverless Application Model)* for local development and testing of AWS API Gateway routing and Lambda events:
 
@@ -56,10 +17,95 @@ cd ..
 sam local start-api  --template template.yaml  --debug 
 ```
 
-This is the command to serve the CSR static pages of the frontend websit, from the WiseWords.Frontend folder
+This is the command to serve the CSR static pages of the frontend websit, from the WiseWords.FrontEnd folder (requires the back-end to be running in the AWS SAM environment):
 
 ```bash
 npm run dev
+```
+
+
+## Commands for the AI-assistent to generate feedback for the Front-end
+
+Build WiseWords.FrontEnd, and spot build errors:
+```bash
+
+# VS Code Task
+npm: build
+
+# Equivalent command
+npm run build 
+```
+
+Run WiseWords.FrontEnd unit tests, and find test failures:
+```bash
+# VS Code Task
+npm: test
+
+# Equivalent command
+ npm test
+```
+
+Run WiseWords.FrontEnd e2e tests, and find e2e tests failures (requires the back-end to be running in the AWS SAM environment):
+```bash
+# VS Code Task
+npm: e2etest
+
+# Equivalent command
+npm run test:e2e
+```
+
+With screenshots of the failed e2e tests to be found here: WiseWords.FrontEnd/cypress/screenshots
+With html of the failed e2e tests to be found here: WiseWords.FrontEnd/cypress/failed
+When needed to get a snapshot of the html just before an assert fails (as it could change while waiting for the assertion to pass or fail), this code can be added before the failing assertion
+```TypeScript
+// Example on how to save the page html before the assertion failure 
+// in case that the html changes while waiting for the assertion to pass or fail
+       cy.get('html').then(($html) => {
+        const htmlBeforeAssertion = $html.html(); 
+        cy.savePage('cypress/failed/pages/<title>');
+      });
+```
+
+Build and run WiseWords.FrontEnd unit and e2e tests, to do all the above until the first error.
+```bash
+# VS Code Task
+npm: build_and_test
+
+# Equivalent command
+# All the three related commands above
+```
+
+## Commands for the AI-assistent to generate feedback for the Backend-end
+
+Build DataStore from its folder:
+```bash
+dotnet build WiseWords.ConversationsAndPosts.DataStore.sln
+```
+
+Run DataStore Tests from their folder (requires the local Docker image of AWS DynamoDb to be running):
+```bash
+dotnet test WiseWords.ConversationsAndPosts.DataStore.Tests.csproj
+```
+
+Requires the back-end to be running in the AWS SAM environment
+```bash
+dotnet build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.sln
+```
+
+Run API Gateway Integration Tests from their folder (requires the back-end to be running in the AWS SAM environment):
+```bash
+dotnet test WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests.csproj 
+```
+
+
+
+## Commands for the developer for manual testing in the local development environment
+
+This is the command line to run and test the *AWS Lambda .NET Mock Lambda Test Tool* to test locally Lambda functions, from the WiseWords.ConversationsAndPosts.AWS.Lambdas folder
+
+```bash
+export DYNAMODB_SERVICE_URL=http://localhost:8000 
+dotnet-lambda-test-tool-8.0  
 ```
 
 These are examples of curl commands to call the API via command line

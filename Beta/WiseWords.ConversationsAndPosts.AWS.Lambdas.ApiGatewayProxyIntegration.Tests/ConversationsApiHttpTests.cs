@@ -363,7 +363,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorMessage = await response.Content.ReadAsStringAsync();
-        errorMessage.Should().Contain("Empty updatedAtYear");
+        errorMessage.Should().Contain("Missing updatedAtYear");
     }
 
     [Fact]

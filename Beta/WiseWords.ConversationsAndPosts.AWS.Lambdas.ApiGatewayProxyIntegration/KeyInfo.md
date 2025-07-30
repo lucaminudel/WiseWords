@@ -111,7 +111,9 @@ This below is an example of the SKs of posts as returned by the API, followed by
 
 #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#DD#16147f0d-0b80-42ae-9c0a-f12ac15b2285, Drill down, 2
 
-#DD#4c74fd07-371d-45f0-8ea2-42e9b3164e2d, Drill down, 1METADATA, Conversation root, 0
+#DD#4c74fd07-371d-45f0-8ea2-42e9b3164e2d, Drill down, 1 
+
+METADATA, Conversation root, 0
 
 - All the posts with the same depth, optionally separated by sub-posts with higher depth but not by parents with lower depth, are siblings, 
 - All the sub-posts follow, immediately after their parent post
@@ -129,6 +131,6 @@ In particular Comments and Conclusions do not admit sub-posts.
 
 The referential integrity of posts and sub-posts is currently implicitly ensured by
 - the front-end appending new posts only to existing posts
-- not physical posts deletion other than for tests cleanup.
+- no physical posts deletion other than for tests cleanup.
 
-Given this, the explicit enforcement of referencial integrity, that encures in additional costs, is not currently, is not currently implemented.
+Given this, the explicit enforcement of referencial integrity that incurs in additional costs is not needed, and is not currently implemented.
