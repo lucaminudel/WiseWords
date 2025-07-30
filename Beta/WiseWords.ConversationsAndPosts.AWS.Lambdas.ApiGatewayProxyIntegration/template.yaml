@@ -7,7 +7,7 @@ Resources:
     Properties:
       Handler: WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration::WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.ApiGatewayEntryPoint::RouteHttpRequestToLambda
       Runtime: dotnet8
-      CodeUri: publish
+      CodeUri: publish.zip
       MemorySize: 256
       Timeout: 30
       Environment:

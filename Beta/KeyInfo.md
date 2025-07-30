@@ -48,6 +48,10 @@ These are the commands to build the code and deploy it into the *AWS SAM (Server
 # Build the Lambda and API Gateway code for deployment into the ./publish folder  
 dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish -r linux-x64
 
+cd publish
+zip -r ../publish.zip .
+cd ..
+
 # Run the code in the local container
 sam local start-api  --template template.yaml  --debug 
 ```
