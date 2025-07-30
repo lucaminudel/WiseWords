@@ -2,7 +2,6 @@
 
 ## Commands for the developer to run the system in the local development environment 
 
-
 These are the commands to build the code and deploy it into the *AWS SAM (Serverless Application Model)* for local development and testing of AWS API Gateway routing and Lambda events:
 
 ```bash
@@ -111,7 +110,6 @@ dotnet-lambda-test-tool-8.0
 These are examples of curl commands to call the API via command line
 
 ```bash
-
 # Create a new Conversation
 curl -i -X POST http://localhost:3000/conversations \
   -H "Content-Type: application/json" \
@@ -141,5 +139,4 @@ curl -i -X GET "http://localhost:3000/conversations?updatedAtYear=2025"
 
 #Delete a whole Conversation, requires Uri encoding of the character # as %23
 curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84
-
 ```
