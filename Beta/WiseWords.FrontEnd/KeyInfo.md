@@ -39,13 +39,13 @@ And this is how those types are presented by the frontend:
 
 ### Secondary Post order criteria among siblings
 
-Among the sibling posts of the same type, they should be further ordered by descending order by UpdatedAt (older posts first).
+Among the sibling posts of the same type, they should be further ordered by ascending order by UpdatedAt (older posts first).
 This means that
 - #CC# siblings are in ascending order by UpdateAt
 - #CM# siblings are in ascending order by UpdateAt
 - #DD# siblings are in ascending order by UpdateAt
 
-This is an exmaple of a conversaton tree retrieved by the API in the form or a list of posts (for each you see Post type, depth, SK, Message body, UpdatedAt):
+This is an example of a conversaton tree retrieved by the API in the form or a list of posts (for each you see Post type, depth, SK, Message body, UpdatedAt):
 
 - Proposed Solution, 1, #CC#b461ab72-eb57-4524-a823-ee7a57ed1671, Proposed Solution 5, 09/07/2025, 11:48:23
 - Comment , 1,  #CM#7128ee33-82f7-4691-aaba-135686418a6c, Comment 1, 28/07/2025, 16:14:20  
@@ -59,13 +59,13 @@ This is an exmaple of a conversaton tree retrieved by the API in the form or a l
 - Comment , 2,  #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#CM#bb1a8399-858a-4ff7-9dc8-81ba9c173b09, Comment 6.3, 28/07/2025, 13:30:46
 - Sub-problem, 2, #DD#3763e846-f0a8-470a-87f2-dfa3b7e3487f#DD#16147f0d-0b80-42ae-9c0a-f12ac15b2285, Sub-problem 7, 09/07/2025, 11:39:03
 - Sub-problem, 1,  #DD#4c74fd07-371d-45f0-8ea2-42e9b3164e2d, Sub-problem 8, 08/07/2025, 11:39:03
-- METADATA, 1, Conversation root, Data 03/07/2025, 13:00:00
+- METADATA, 0, Conversation root, Data 03/07/2025, 13:00:00
 
-And this is the order of posts as presented by the UI:
+And this is the order of posts as presented by the UI after additonal sorting applied to the data from the API:
 
-METADATA, 1, Conversation root, Data 03/07/2025, 13:00:00
+METADATA, 0, Conversation root, Data 03/07/2025, 13:00:00
 
-Comment , 1,  #CM#e27978ef-f6e7-4807-85c0-f7a04001b4aa, Comment 4,  09/07/2025, 11:44:32
+Comment , 1,  #CM#e27978ef-f6e7-4807-85c0-f7a04001b4aa, Comment 4, 09/07/2025, 11:44:32
 
 Comment , 1,  #CM#a95222e9-702f-4c77-8424-68a81e4a6151, Comment 2, 28/07/2025, 12:15:17
 
@@ -99,7 +99,7 @@ On a root conversation post, the user should be able to:
 - Append a Comment
 - Add a Drill down post (a Sub-problem or Sub-question or Sub-dilemma, based on the type of the conversation)
 - Suggest a Conclusion (a solution, answer or choise, based on the type of the conversation)
-- Collapse all comments (directly following the conversation root post)
+- Collapse all comments (directly following the conversation root post, not implemented)
 
 On a Comment post, the user should be able to:
 - Reply with quote
@@ -108,7 +108,7 @@ On a Drill down post (a Sub-problem or Sub-question or Sub-dilemma, based on the
 - Append a Comment
 - Add a Drill down post (a Sub-problem or Sub-question or Sub-dilemma, based on the type of the conversation)
 - Suggest a Conclusion (a solution, answer or choice, based on the type of the conversation)
-- Collapse all the child posts 
+- Collapse all the child posts (not implemented)
 
 On a Conclusion post (a Sub-problem or Sub-question or Sub-dilemma, based on the type of the conversation), the user should be able to:
 - Nothing

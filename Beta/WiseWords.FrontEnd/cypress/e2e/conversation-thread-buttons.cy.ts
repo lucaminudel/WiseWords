@@ -42,9 +42,9 @@ describe('ConversationThread Button Display Rules', () => {
       })
     })
 
-    // Solution/conclusion posts should only have Comment button
+    // Solution/conclusion posts should have no action buttons
     cy.contains('Proposed solution').closest('[data-testid="post-container"]').within(() => {
-      cy.get('[data-testid="comment-button"]').should('be.visible')
+      cy.get('[data-testid="comment-button"]').should('not.exist')
       cy.get('[data-testid="sub-question-button"]').should('not.exist')
       cy.get('[data-testid="propose-answer-button"]').should('not.exist')
       cy.get('[data-testid="reply-quote-button"]').should('not.exist')

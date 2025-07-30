@@ -745,17 +745,7 @@ const ConversationThread: React.FC = () => {
                       </>
                     )}
                     
-                    {/* Conclusion post */}
-                    {isConclusion && (
-                      <button 
-                        type="button" 
-                        data-testid="comment-button" 
-                        style={buttonStyle}
-                        onClick={() => handleCommentClick(conversation.PK, post.SK, post.SK)}
-                      >
-                        Comment
-                      </button>
-                    )}
+                    
                   </div>
                 </div>
               </div>

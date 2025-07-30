@@ -70,13 +70,10 @@ describe('postTypeService', () => {
       expect(result.markerType).toBe('CC');
     });
 
-    it('should handle posts with no markers as comments', () => {
-      const result = postTypeService.getPostType('#1');
-      expect(result.isComment).toBe(true);
-      expect(result.isDrillDown).toBe(false);
-      expect(result.isConclusion).toBe(false);
-      expect(result.markerType).toBe('NONE');
-      expect(result.lastMarker).toBe(-1);
+    it('should throw an error for posts with no markers', () => {
+      expect(() => postTypeService.getPostType('#1')).toThrow(
+        'Could not determine post type for SK: "#1". No valid markers found.'
+      );
     });
   });
 
@@ -86,8 +83,8 @@ describe('postTypeService', () => {
       expect(postTypeService.getPostTypeDisplay('METADATA', 'QUESTION')).toBe('');
     });
 
-    it('should return Comment for unmarked posts', () => {
-      expect(postTypeService.getPostTypeDisplay('#1', 'QUESTION')).toBe('Comment');
+    it('should throw an error for unmarked posts', () => {
+      expect(() => postTypeService.getPostTypeDisplay('#1', 'QUESTION')).toThrow();
     });
 
     describe('Solution/Conclusion posts (#CC#)', () => {
@@ -189,9 +186,9 @@ describe('postTypeService', () => {
       expect(postTypeService.getPostTypeDisplay('#CC#1', 'UNKNOWN')).toBe('Conclusion');
     });
 
-    it('should return Comment for posts with no markers', () => {
-      expect(postTypeService.getPostTypeDisplay('#1')).toBe('Comment');
-      expect(postTypeService.getPostTypeDisplay('')).toBe('Comment');
+    it('should throw an error for posts with no markers', () => {
+      expect(() => postTypeService.getPostTypeDisplay('#1')).toThrow();
+      expect(() => postTypeService.getPostTypeDisplay('')).toThrow();
     });
   });
 
@@ -227,16 +224,16 @@ describe('postTypeService', () => {
   describe('convenience functions', () => {
     describe('isSolutionPost', () => {
       it('should return true for conclusion posts', () => {
-        expect(postTypeService.isSolutionPost('#CC#1')).toBe(true);
-        expect(postTypeService.isSolutionPost('#DD#1#CC#1')).toBe(true);
-        expect(postTypeService.isSolutionPost('#CM#1#DD#1#CC#1')).toBe(true);
+        expect(postTypeService.getPostType('#CC#1').isConclusion).toBe(true);
+        expect(postTypeService.getPostType('#DD#1#CC#1').isConclusion).toBe(true);
+        expect(postTypeService.getPostType('#CM#1#DD#1#CC#1').isConclusion).toBe(true);
       });
 
       it('should return false for non-conclusion posts', () => {
-        expect(postTypeService.isSolutionPost('#CM#1')).toBe(false);
-        expect(postTypeService.isSolutionPost('#DD#1')).toBe(false);
-        expect(postTypeService.isSolutionPost('#DD#1#CM#1')).toBe(false);
-        expect(postTypeService.isSolutionPost('METADATA')).toBe(false);
+        expect(postTypeService.getPostType('#CM#1').isConclusion).toBe(false);
+        expect(postTypeService.getPostType('#DD#1').isConclusion).toBe(false);
+        expect(postTypeService.getPostType('#DD#1#CM#1').isConclusion).toBe(false);
+        expect(postTypeService.getPostType('METADATA').isConclusion).toBe(false);
       });
     });
 
@@ -262,11 +259,6 @@ describe('postTypeService', () => {
         expect(postTypeService.getPostType('#CC#1#CM#1').isComment).toBe(true);
       });
 
-      it('should return true for posts with no markers', () => {
-        expect(postTypeService.getPostType('#1').isComment).toBe(true);
-        expect(postTypeService.getPostType('').isComment).toBe(true);
-      });
-
       it('should return false for non-comment posts', () => {
         expect(postTypeService.getPostType('#DD#1').isComment).toBe(false);
         expect(postTypeService.getPostType('#CC#1').isComment).toBe(false);
@@ -277,28 +269,23 @@ describe('postTypeService', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle empty strings', () => {
-      const result = postTypeService.getPostType('');
-      expect(result.isComment).toBe(true);
-      expect(result.lastMarker).toBe(-1);
+    it('should throw an error for empty strings', () => {
+      expect(() => postTypeService.getPostType('')).toThrow('Invalid SK value: it cannot be an empty string.');
     });
 
-    it('should handle malformed SKs', () => {
-      expect(postTypeService.getPostType('###')).toEqual(expect.objectContaining({
-        isComment: true,
-        lastMarker: -1
-      }));
+    it('should throw an error for malformed SKs', () => {
+      expect(() => postTypeService.getPostType('###')).toThrow(
+        'Could not determine post type for SK: "###". No valid markers found.'
+      );
     });
 
-    it('should handle SKs with partial markers', () => {
-      expect(postTypeService.getPostType('#CM')).toEqual(expect.objectContaining({
-        isComment: true,
-        lastMarker: -1
-      }));
-      expect(postTypeService.getPostType('CM#1')).toEqual(expect.objectContaining({
-        isComment: true,
-        lastMarker: -1
-      }));
+    it('should throw an error for SKs with partial markers', () => {
+      expect(() => postTypeService.getPostType('#CM')).toThrow(
+        'Could not determine post type for SK: "#CM". No valid markers found.'
+      );
+      expect(() => postTypeService.getPostType('CM#1')).toThrow(
+        'Could not determine post type for SK: "CM#1". No valid markers found.'
+      );
     });
   });
 });

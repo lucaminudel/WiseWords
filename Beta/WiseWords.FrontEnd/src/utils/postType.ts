@@ -16,6 +16,10 @@ export const postTypeService = {
    * Determines the post type by analyzing the last occurrence of type markers in the SK.
    */
   getPostType(sk: string): PostTypeInfo {
+    if (!sk) {
+      throw new Error('Invalid SK value: it cannot be an empty string.');
+    }
+
     if (sk === 'METADATA') {
       return {
         isDrillDown: false,
@@ -30,20 +34,26 @@ export const postTypeService = {
     const lastDD = sk.lastIndexOf('#DD#');
     const lastCM = sk.lastIndexOf('#CM#');
     const lastMarker = Math.max(lastCC, lastDD, lastCM);
+
+    if (lastMarker === -1) {
+      throw new Error(`Could not determine post type for SK: "${sk}". No valid markers found.`);
+    }
     
-    const isDrillDown = lastMarker !== -1 && lastMarker === lastDD;
-    const isConclusion = lastMarker !== -1 && lastMarker === lastCC;
-    const isComment = lastMarker === lastCM || lastMarker === -1;
+    const isDrillDown = lastMarker === lastDD;
+    const isConclusion = lastMarker === lastCC;
+    const isComment = lastMarker === lastCM;
     
     let markerType: PostMarkerType;
-    if (lastMarker !== -1 && lastMarker === lastCC) {
+    if (isConclusion) {
       markerType = 'CC';
-    } else if (lastMarker !== -1 && lastMarker === lastDD) {
+    } else if (isDrillDown) {
       markerType = 'DD';
-    } else if (lastMarker !== -1 && lastMarker === lastCM) {
+    } else if (isComment) {
       markerType = 'CM';
     } else {
-      markerType = 'NONE';
+      // This case should be unreachable due to the error thrown above when lastMarker is -1.
+      // If it were reached, it would indicate a logic error in the marker detection.
+      throw new Error(`Logic error: Could not assign a marker type for SK: "${sk}"`);
     }
     
     return { isDrillDown, isConclusion, isComment, lastMarker, markerType };
@@ -64,7 +74,9 @@ export const postTypeService = {
     if (isComment) return 'Comment';
     if (isConclusion) return labels.conclusion;
     if (isDrillDown) return labels.drillDown;
-    return 'Comment';
+
+    // This line should be unreachable because getPostType would have thrown an error.
+    return '';
   },
 
 
@@ -74,12 +86,5 @@ export const postTypeService = {
   getPostDepth(sk: string): number {
     if (sk === 'METADATA') return 0;
     return (sk.match(/#/g) || []).length / 2;
-  },
-
-  /**
-   * Checks if a post is a solution/conclusion post.
-   */
-  isSolutionPost(sk: string): boolean {
-    return this.getPostType(sk).isConclusion;
   }
 };
