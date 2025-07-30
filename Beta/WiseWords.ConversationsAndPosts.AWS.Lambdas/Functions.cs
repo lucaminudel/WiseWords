@@ -10,7 +10,9 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
         private readonly DataStore.WiseWordsTable _service;
         private readonly ILoggerObserver _observer;
 
-
+#pragma warning disable CS8604 // Possible null reference argument.
+        public Functions() : this(new Uri(Environment.GetEnvironmentVariable("DYNAMODB_SERVICE_URL")) ) { }
+#pragma warning restore CS8604 // Possible null reference argument.
         public Functions(Uri dynamoDbServiceUrl) : this(dynamoDbServiceUrl, new LoggerObserver("Lambda"))
         {
         }
