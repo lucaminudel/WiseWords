@@ -10,7 +10,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
         private readonly DataStore.WiseWordsTable _service;
         private readonly ILoggerObserver _observer;
 
-
+        public Functions() : this(new Uri(Environment.GetEnvironmentVariable("DYNAMODB_SERVICE_URL")) ) { }
         public Functions(Uri dynamoDbServiceUrl) : this(dynamoDbServiceUrl, new LoggerObserver("Lambda"))
         {
         }

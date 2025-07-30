@@ -38,6 +38,7 @@ npm: build_test
 This is the command line to run and test the *AWS Lambda .NET Mock Lambda Test Tool* to test locally Lambda functions, from the WiseWords.ConversationsAndPosts.AWS.Lambdas folder
 
 ```bash
+export DYNAMODB_SERVICE_URL=http://localhost:8000 
 dotnet-lambda-test-tool-8.0  
 ```
 
