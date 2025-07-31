@@ -9,7 +9,7 @@
 # When working on and writing test code or workign on a test failure
 - First present me with a description of what the test is trying to do, and also ask me if I want you to analyse the code under test to identify potential bugs
 - When trying to fix a unit or e2e tests that is failing, ask me if the code under test is currently working correctly, and if the anwer is yes then: do NOT try to change the code under test to make the test pass
-- Whne fixing some new or recenthly changed code that is making an pre-existing test fail, ask me if the code under test is currently working correctly, and if the anwer is yes then: do NOT try to delete asserts or the test to resolve the failure.
+- When fixing some new or recenthly changed code that is making an pre-existing test fail, ask me if the code under test is currently working correctly, and if the anwer is yes then: do NOT try to delete asserts or the test to resolve the failure.
 
 # WiseWords.FrontEnds Web applicaton in React and TypeScript
 - When working on WiseWords.FrontEnds read from this file ~/Code/WiseWords/Beta/WiseWords.FrontEnd/KeyInfo.md this info:
