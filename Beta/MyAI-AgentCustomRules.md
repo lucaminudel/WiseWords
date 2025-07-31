@@ -6,7 +6,7 @@
 # Commands for collecting feedback in agentic mode whenever you write or change code
 - When you change the applicaiton code or the tests code use the build and test commands to verify that they succeed without error or to collect the error info so thare you can fix them; when you run Cypress end to end (e2e) tests and a test fails then use the commands to inspect the HTML of the page that failed and the screeshot of the page in order to find-out what needs fixing. Read all these commands from this file: ~/Code/WiseWords/Beta/KeyInfo.md
 
-# When working on and writing test code or workign on a test failure
+# When working on and writing test code or working on a test failure
 - First present me with a description of what the test is trying to do, and also ask me if I want you to analyse the code under test to identify potential bugs
 - When trying to fix a unit or e2e tests that is failing, ask me if the code under test is currently working correctly, and if the anwer is yes then: do NOT try to change the code under test to make the test pass
 - When fixing some new or recently changed code that is making an pre-existing test fail, ask me if the code under test is currently working correctly, and if the answer is yes then: do NOT try to delete asserts or the test to resolve the failure.
