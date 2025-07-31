@@ -1,4 +1,3 @@
-# Workspace notes
 - Read the instructions from the file: /Users/lucaminudel/Code/WiseWords/Beta/MyAI-AgentCustomRules.md
 - Notify me whenever you read a file of instructions
 - Let me know if you have already read it

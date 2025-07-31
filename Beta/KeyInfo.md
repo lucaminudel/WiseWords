@@ -1,26 +1,5 @@
-# Shell commands
+# Essential Shell commands recap for the AI Agent and for the developer
 
-## Commands for the developer to run the system in the local development environment 
-
-These are the commands to build the code and deploy it into the *AWS SAM (Serverless Application Model)* for local development and testing of AWS API Gateway routing and Lambda events:
-
-```bash
-# Build the Lambda and API Gateway code for deployment into the ./publish folder  
-dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish -r linux-x64
-
-cd publish
-zip -r ../publish.zip .
-cd ..
-
-# Run the code in the local container
-sam local start-api  --template template.yaml  --debug 
-```
-
-This is the command to serve the CSR static pages of the frontend websit, from the WiseWords.FrontEnd folder (requires the back-end to be running in the AWS SAM environment):
-
-```bash
-npm run dev
-```
 
 ## Commands for the AI-assistent to generate feedback for the Backend-end
 
@@ -130,7 +109,27 @@ cd ./cypress/screenshots/conversation-thread-commenting.cy.ts 10-54-28-170.ts/
 ls "Conversation Thread Commenting Workflow -- Replying to the Root Conversation Post -- should display an error message and keep form content on API error (failed).png"
 ```
 
+## Commands for the developer to run the system in the local development environment 
 
+These are the commands to build the code and deploy it into the *AWS SAM (Serverless Application Model)* for local development and testing of AWS API Gateway routing and Lambda events:
+
+```bash
+# Build the Lambda and API Gateway code for deployment into the ./publish folder  
+dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish -r linux-x64
+
+cd publish
+zip -r ../publish.zip .
+cd ..
+
+# Run the code in the local container
+sam local start-api  --template template.yaml  --debug 
+```
+
+This is the command to serve the CSR static pages of the frontend websit, from the WiseWords.FrontEnd folder (requires the back-end to be running in the AWS SAM environment):
+
+```bash
+npm run dev
+```
 
 ## Commands for the developer for manual testing in the local development environment
 
@@ -174,3 +173,8 @@ curl -i -X GET "http://localhost:3000/conversations?updatedAtYear=2025"
 #Delete a whole Conversation, requires Uri encoding of the character # as %23
 curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84
 ```
+## Memo, all AI assitents command files
+- ~/.gemini/GEMINI.md
+- ~/Code/WiseWords/Beta/.agent.md
+- ~/Code/WiseWords/Beta/.github/copilot-instructions.md
+- ~/.codeium/windsurf/memories/global_rules.md
