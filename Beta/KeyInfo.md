@@ -22,10 +22,33 @@ This is the command to serve the CSR static pages of the frontend websit, from t
 npm run dev
 ```
 
+## Commands for the AI-assistent to generate feedback for the Backend-end
+
+Build DataStore from its folder whenever the related code or tests after any change to the DataStore code:
+```bash
+dotnet build WiseWords.ConversationsAndPosts.DataStore.sln
+```
+
+Run DataStore.Tests from their folder (requires the local Docker image of AWS DynamoDb to be running)  after any change to the DataStore code or DataStore.Tests tests:
+```bash
+dotnet test WiseWords.ConversationsAndPosts.DataStore.Tests.csproj
+```
+
+Build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration after any changes to the ApiGatewayProxyIntegration code:
+```bash
+dotnet build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.sln
+```
+
+Run API Gateway Integration Tests from their folder (requires the back-end to be running in the AWS SAM environment) after any changes to the ApiGatewayProxyIntegration code or the tests:
+```bash
+dotnet test WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests.csproj 
+```
+
+
 
 ## Commands for the AI-assistent to generate feedback for the Front-end
 
-Build WiseWords.FrontEnd, and spot build errors:
+Build WiseWords.FrontEnd, and spot build errors after every change in WiseWords.FrontEnd code:
 ```bash
 
 # VS Code Task
@@ -35,7 +58,7 @@ npm: build
 npm run build 
 ```
 
-Run WiseWords.FrontEnd unit tests, and find test failures:
+Run WiseWords.FrontEnd unit tests, and find test failures after every change in WiseWords.FrontEnd code or unit tests:
 ```bash
 # VS Code Task
 npm: test
@@ -44,25 +67,13 @@ npm: test
  npm test
 ```
 
-Run WiseWords.FrontEnd e2e tests, and find e2e tests failures (requires the back-end to be running in the AWS SAM environment):
+Run WiseWords.FrontEnd e2e tests, and find e2e tests failures (requires the back-end to be running in the AWS SAM environment) every change in WiseWords.FrontEnd code or e2e tests:
 ```bash
 # VS Code Task
 npm: e2etest
 
 # Equivalent command
 npm run test:e2e
-```
-
-With screenshots of the failed e2e tests to be found here: WiseWords.FrontEnd/cypress/screenshots
-With html of the failed e2e tests to be found here: WiseWords.FrontEnd/cypress/failed
-When needed to get a snapshot of the html just before an assert fails (as it could change while waiting for the assertion to pass or fail), this code can be added before the failing assertion
-```TypeScript
-// Example on how to save the page html before the assertion failure 
-// in case that the html changes while waiting for the assertion to pass or fail
-       cy.get('html').then(($html) => {
-        const htmlBeforeAssertion = $html.html(); 
-        cy.savePage('cypress/failed/pages/<title>');
-      });
 ```
 
 Build and run WiseWords.FrontEnd unit and e2e tests, to do all the above until the first error.
@@ -74,26 +85,49 @@ npm: build_and_test
 # All the three related commands above
 ```
 
-## Commands for the AI-assistent to generate feedback for the Backend-end
 
-Build DataStore from its folder:
+
+## Commands for the AI-assistent to generate feedback for the Front-end when fixing a failing e2e test
+
+When fixing a failing e2e test or the code under test, always run the single failing e2e test and only after it fails run all the other tests:
 ```bash
-dotnet build WiseWords.ConversationsAndPosts.DataStore.sln
+# Here is an example for the test file conversation-thread-commenting.cy.ts run from the /WiseWords/Beta/WiseWords.FrontEnd folder
+npm run test:e2e -- --spec "cypress/e2e/conversation-thread-commenting.cy.ts" 
 ```
 
-Run DataStore Tests from their folder (requires the local Docker image of AWS DynamoDb to be running):
+
+After an 2e2 test fails, always inspect the HTML with which the assert failed:
 ```bash
-dotnet test WiseWords.ConversationsAndPosts.DataStore.Tests.csproj
+# Here is as exammple for a failed assert: should display an error message and keep form content on API error
+# in the test page: conversation-thread-commenting.cy.ts
+# Fronm /WiseWords/Beta/WiseWords.FrontEnd go to 
+# the folder with the 
+cd ./cypress/failed/conversation-thread-commenting.cy.ts/should display an error message and keep form content on API error/
+
+# The HTML is in the file named like the page, index.html
+cat index.html
 ```
 
-Requires the back-end to be running in the AWS SAM environment
-```bash
-dotnet build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.sln
+If the HTML changed while the asser was wainging for a timeout, add this to capture the HTML before the assert and then inspect that HTML:
+```TypeScript
+       // Example on how to save the page html before the assertion failure 
+       // in case that the html changes while waiting for the assertion to pass or fail
+       cy.get('html').then(($html) => {
+        const htmlBeforeAssertion = $html.html(); 
+        cy.savePage('cypress/failed/pages/<title>');
+      });
 ```
 
-Run API Gateway Integration Tests from their folder (requires the back-end to be running in the AWS SAM environment):
+After an 2e2 test fails, if needed look at the screenshot of the page the moment after the failure:
 ```bash
-dotnet test WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests.csproj 
+# Here is as exammple for a failed assert: should display an error message and keep form content on API error
+# in the test page: conversation-thread-commenting.cy.ts
+# Fronm /WiseWords/Beta/WiseWords.FrontEnd go to 
+# the folder with the 
+cd ./cypress/screenshots/conversation-thread-commenting.cy.ts 10-54-28-170.ts/
+
+# The image is in the file named like the page, index.html
+ls "Conversation Thread Commenting Workflow -- Replying to the Root Conversation Post -- should display an error message and keep form content on API error (failed).png"
 ```
 
 
