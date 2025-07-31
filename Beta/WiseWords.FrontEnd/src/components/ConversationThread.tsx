@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Logo } from './common/Logo';
 import { sortPosts } from '../utils/postSorter';
@@ -36,6 +36,7 @@ const ConversationThread: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const hasInitiallyLoaded = useRef(false);
   
   useEffect(() => {
     const fetchConversation = async (forceRefresh: boolean = false) => {
@@ -85,7 +86,9 @@ const ConversationThread: React.FC = () => {
     };
 
     const handlePageShow = (event: PageShowEvent) => {
-      if (!conversationId) return;
+      // Only handle pageshow after initial load is complete
+      if (!conversationId || !hasInitiallyLoaded.current) return;
+      
       const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
       const navType = navEntries.length > 0 ? navEntries[0].type : 'unknown';
       
@@ -113,10 +116,12 @@ const ConversationThread: React.FC = () => {
       fetchConversation(!shouldUseCache); // forceRefresh = !shouldUseCache
     };
 
+    // Set up pageshow listener
     window.addEventListener('pageshow', handlePageShow);
     
-    // Initial load
-    if (conversationId) {
+    // Initial load - only if we haven't loaded yet and conversationId exists
+    if (conversationId && !hasInitiallyLoaded.current) {
+      hasInitiallyLoaded.current = true; // Set flag BEFORE making the call
       const cachedData = conversationThreadCache.get(conversationId);
       fetchConversation(cachedData === null);
     }

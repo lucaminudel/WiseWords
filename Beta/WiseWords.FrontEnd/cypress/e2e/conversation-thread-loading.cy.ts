@@ -111,5 +111,16 @@ describe('Conversation Thread Loading Behavior', () => {
       cy.contains(mockConversation.MessageBody).should('be.visible');
       cy.contains(`by ${mockConversation.Author}`).should('be.visible');
     });
+
+    it('should make only one API call on initial load', () => {
+      // Visit the conversation thread page directly
+      cy.visit(conversationUrl);
+
+      // Wait for the API call to finish
+      cy.wait('@getConversationPosts');
+
+      // Assert that the API was called exactly once
+      cy.get('@getConversationPosts.all').should('have.length', 1);
+    });
   });
 });
