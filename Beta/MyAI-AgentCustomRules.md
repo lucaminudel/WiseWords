@@ -10,7 +10,7 @@
 - When working on WiseWords.FrontEnds read from this file /Users/lucaminudel/Code/WiseWords/Beta/WiseWords.FrontEnd/KeyInfo.md this info:
  - the info about the sorting of the posts received by the API and presented in the page 
  - the buttons and related functions available on the posts of the conversation thread
-
+- When select an element with an ID in Cypress, especially one that contains special characters like #, use an Attribute Selector like this cy.get('[id="comment-form-#DD#1#DD#1"]').should('be.visible'); 
 
 # WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration RESTful API
 - When using or working on the ApiGatewayProxyIntegration RESTful API read from this file /Users/lucaminudel/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/KeyInfo.md this info
