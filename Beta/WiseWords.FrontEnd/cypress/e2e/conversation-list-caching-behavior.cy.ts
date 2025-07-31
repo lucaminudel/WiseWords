@@ -78,6 +78,21 @@ describe('Conversation List - Caching Behavior', () => {
       cy.wait('@getFallback');
       cy.contains('Existing Conversation 1').should('be.visible');
     });
+
+    it('should make only one API call on initial load', () => {
+      cy.intercept('GET', '**/conversations?updatedAtYear=2025', { 
+        statusCode: 200, 
+        body: mockConversations 
+      }).as('getConversations');
+      
+      cy.visit('/conversations');
+      cy.wait('@getConversations');
+      
+      // Verify only one API call was made
+      cy.get('@getConversations.all').should('have.length', 1);
+      
+      cy.contains('Existing Conversation 1').should('be.visible');
+    });
   });
 
   context('Navigation and Refresh Scenarios', () => {

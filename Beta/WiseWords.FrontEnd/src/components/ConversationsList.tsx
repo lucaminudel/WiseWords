@@ -31,6 +31,7 @@ const ConversationsList: React.FC = () => {
     messageBody: ''
   });
   const formRef = useRef<HTMLDivElement>(null);
+  const hasInitiallyLoaded = useRef(false);
 
   useEffect(() => {
     const fetchData = async (forceRefresh: boolean = false) => {
@@ -49,6 +50,9 @@ const ConversationsList: React.FC = () => {
     };
 
     const handlePageShow = (event: PageShowEvent) => {
+      // Only handle pageshow after initial load is complete
+      if (!hasInitiallyLoaded.current) return;
+      
       const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
       const navType = navEntries.length > 0 ? navEntries[0].type : 'unknown';
       
@@ -79,11 +83,14 @@ const ConversationsList: React.FC = () => {
       fetchData(!shouldUseCache); // forceRefresh = !shouldUseCache
     };
 
-    // Add pageshow event listener for reliable navigation detection
+    // Set up pageshow listener
     window.addEventListener('pageshow', handlePageShow);
     
-    // Initial load - treat as navigate
-    fetchData(conversationCache.get() === null);
+    // Initial load - only if we haven't loaded yet
+    if (!hasInitiallyLoaded.current) {
+      hasInitiallyLoaded.current = true; // Set flag BEFORE making the call
+      fetchData(conversationCache.get() === null);
+    }
 
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
