@@ -1,9 +1,9 @@
 # Essential Shell commands recap for the AI Agent and for the developer
 
 
-## Commands for the AI-assistent to generate feedback for the Backend-end
+## Commands for the AI-assistant to generate feedback for the Backend-end
 
-Build DataStore from its folder whenever the related code or tests after any change to the DataStore code:
+Build DataStore from its folder whenever the related code or tests are made after any change to the DataStore code:
 ```bash
 dotnet build WiseWords.ConversationsAndPosts.DataStore.sln
 ```
@@ -25,7 +25,7 @@ dotnet test WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegrati
 
 
 
-## Commands for the AI-assistent to generate feedback for the Front-end
+## Commands for the AI-assistant to generate feedback for the Front-end
 
 Build WiseWords.FrontEnd, and spot build errors after every change in WiseWords.FrontEnd code:
 ```bash
@@ -46,7 +46,7 @@ npm: test
  npm test
 ```
 
-Run WiseWords.FrontEnd e2e tests, and find e2e tests failures (requires the back-end to be running in the AWS SAM environment) every change in WiseWords.FrontEnd code or e2e tests:
+Run WiseWords.FrontEnd e2e tests, and find e2e tests failures (requires the back-end to be running in the AWS SAM environment) for every change in WiseWords.FrontEnd code or e2e tests:
 ```bash
 # VS Code Task
 npm: e2etest
@@ -66,9 +66,9 @@ npm: build_and_test
 
 
 
-## Commands for the AI-assistent to generate feedback for the Front-end when fixing a failing e2e test
+## Commands for the AI-assistant to generate feedback for the Front-end when fixing a failing e2e test
 
-When fixing a failing e2e test or the code under test, always run the single failing e2e test and only after it fails run all the other tests:
+When fixing a failing e2e test or the code under test, always run the single failing e2e test, and only after it fails, run all the other tests:
 ```bash
 # Here is an example for the test file conversation-thread-commenting.cy.ts run from the /WiseWords/Beta/WiseWords.FrontEnd folder
 npm run test:e2e -- --spec "cypress/e2e/conversation-thread-commenting.cy.ts" 
@@ -77,7 +77,7 @@ npm run test:e2e -- --spec "cypress/e2e/conversation-thread-commenting.cy.ts"
 
 After an 2e2 test fails, always inspect the HTML with which the assert failed:
 ```bash
-# Here is as exammple for a failed assert: should display an error message and keep form content on API error
+# Here is an example for a failed assert: should display an error message and keep form content on API error
 # in the test page: conversation-thread-commenting.cy.ts
 # Fronm /WiseWords/Beta/WiseWords.FrontEnd go to 
 # the folder with the 
@@ -87,19 +87,19 @@ cd ./cypress/failed/conversation-thread-commenting.cy.ts/should display an error
 cat index.html
 ```
 
-If the HTML changed while the asser was wainging for a timeout, add this to capture the HTML before the assert and then inspect that HTML:
+If the HTML changed while the assert was waiting for a timeout, add this to capture the HTML before the assert and then inspect that HTML:
 ```TypeScript
        // Example on how to save the page html before the assertion failure 
-       // in case that the html changes while waiting for the assertion to pass or fail
+       // in case the html changes while waiting for the assertion to pass or fail
        cy.get('html').then(($html) => {
         const htmlBeforeAssertion = $html.html(); 
         cy.savePage('cypress/failed/pages/<title>');
       });
 ```
 
-After an 2e2 test fails, if needed look at the screenshot of the page the moment after the failure:
+After an e2e test fails, if needed, look at the screenshot of the page the moment after the failure:
 ```bash
-# Here is as exammple for a failed assert: should display an error message and keep form content on API error
+# Here is an example for a failed assert: should display an error message and keep form content on API error
 # in the test page: conversation-thread-commenting.cy.ts
 # Fronm /WiseWords/Beta/WiseWords.FrontEnd go to 
 # the folder with the 
@@ -114,6 +114,8 @@ ls "Conversation Thread Commenting Workflow -- Replying to the Root Conversation
 These are the commands to build the code and deploy it into the *AWS SAM (Serverless Application Model)* for local development and testing of AWS API Gateway routing and Lambda events:
 
 ```bash
+cd WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration
+
 # Build the Lambda and API Gateway code for deployment into the ./publish folder  
 dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish -r linux-x64
 
@@ -125,7 +127,7 @@ cd ..
 sam local start-api  --template template.yaml  --debug 
 ```
 
-This is the command to serve the CSR static pages of the frontend websit, from the WiseWords.FrontEnd folder (requires the back-end to be running in the AWS SAM environment):
+This is the command to serve the CSR static pages of the frontend website, from the WiseWords.FrontEnd folder (requires the back-end to be running in the AWS SAM environment):
 
 ```bash
 npm run dev
@@ -133,14 +135,14 @@ npm run dev
 
 ## Commands for the developer for manual testing in the local development environment
 
-This is the command line to run and test the *AWS Lambda .NET Mock Lambda Test Tool* to test locally Lambda functions, from the WiseWords.ConversationsAndPosts.AWS.Lambdas folder
+This is the command line to run and test the *AWS Lambda .NET Mock Lambda Test Tool* to locally test Lambda functions, from the WiseWords.ConversationsAndPosts.AWS.Lambdas folder
 
 ```bash
 export DYNAMODB_SERVICE_URL=http://localhost:8000 
 dotnet-lambda-test-tool-8.0  
 ```
 
-These are examples of curl commands to call the API via command line
+These are examples of curl commands to call the API via the command line
 
 ```bash
 # Create a new Conversation
@@ -173,7 +175,7 @@ curl -i -X GET "http://localhost:3000/conversations?updatedAtYear=2025"
 #Delete a whole Conversation, requires Uri encoding of the character # as %23
 curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84
 ```
-## Memo, all AI assitents command files
+## Memo, all AI assistants' default command files
 - ~/.gemini/GEMINI.md
 - ~/Code/WiseWords/Beta/.agent.md
 - ~/Code/WiseWords/Beta/.github/copilot-instructions.md
