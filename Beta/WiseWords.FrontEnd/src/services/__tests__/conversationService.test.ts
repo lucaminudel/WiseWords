@@ -79,7 +79,7 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(mockConversations);
 
       // Act
-      const result = await ConversationService.fetchConversations(2025, false);
+      const result = await ConversationService.fetchConversationsViaCachedAPI(2025, false);
 
       // Assert
       expect(result).toEqual(mockConversations);
@@ -93,7 +93,7 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(mockConversations);
 
       // Act
-      const result = await ConversationService.fetchConversations(2025);
+      const result = await ConversationService.fetchConversationsViaCachedAPI(2025);
 
       // Assert
       expect(result).toEqual(mockConversations);
@@ -108,7 +108,7 @@ describe('ConversationService', () => {
       mockConversationApi.fetchConversations.mockResolvedValue(mockConversations);
 
       // Act
-      const result = await ConversationService.fetchConversations(2025, false);
+      const result = await ConversationService.fetchConversationsViaCachedAPI(2025, false);
 
       // Assert
       expect(result).toEqual(mockConversations);
@@ -123,7 +123,7 @@ describe('ConversationService', () => {
       mockConversationApi.fetchConversations.mockResolvedValue(mockConversations);
 
       // Act
-      const result = await ConversationService.fetchConversations(2025, true);
+      const result = await ConversationService.fetchConversationsViaCachedAPI(2025, true);
 
       // Assert
       expect(result).toEqual(mockConversations);
@@ -138,7 +138,7 @@ describe('ConversationService', () => {
       mockConversationApi.fetchConversations.mockResolvedValue(mockConversations);
 
       // Act
-      await ConversationService.fetchConversations(2024);
+      await ConversationService.fetchConversationsViaCachedAPI(2024);
 
       // Assert
       expect(mockConversationApi.fetchConversations).toHaveBeenCalledWith(2024);
@@ -151,7 +151,7 @@ describe('ConversationService', () => {
       mockConversationApi.fetchConversations.mockRejectedValue(apiError);
 
       // Act & Assert
-      await expect(ConversationService.fetchConversations(2025)).rejects.toThrow('API Error');
+      await expect(ConversationService.fetchConversationsViaCachedAPI(2025)).rejects.toThrow('API Error');
       expect(mockConversationCache.set).not.toHaveBeenCalled();
     });
   });
@@ -163,7 +163,7 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(mockConversations);
 
       // Act
-      const result = await ConversationService.createConversation(mockCreateRequest);
+      const result = await ConversationService.createConversationAndUpdateCache(mockCreateRequest);
 
       // Assert
       expect(result).toEqual(mockNewConversation);
@@ -178,7 +178,7 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(null);
 
       // Act
-      const result = await ConversationService.createConversation(mockCreateRequest);
+      const result = await ConversationService.createConversationAndUpdateCache(mockCreateRequest);
 
       // Assert
       expect(result).toEqual(mockNewConversation);
@@ -194,7 +194,7 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(mockConversations);
 
       // Act & Assert
-      await expect(ConversationService.createConversation(mockCreateRequest)).rejects.toThrow('Create API Error');
+      await expect(ConversationService.createConversationAndUpdateCache(mockCreateRequest)).rejects.toThrow('Create API Error');
       expect(mockConversationCache.set).not.toHaveBeenCalled();
     });
 
@@ -204,7 +204,7 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(mockConversations);
 
       // Act
-      await ConversationService.createConversation(mockCreateRequest);
+      await ConversationService.createConversationAndUpdateCache(mockCreateRequest);
 
       // Assert
       const expectedUpdatedCache = [mockNewConversation, ...mockConversations];

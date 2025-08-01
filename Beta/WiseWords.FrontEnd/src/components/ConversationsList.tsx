@@ -6,7 +6,6 @@ import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToN
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { ConversationResponse } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
-import { conversationCache } from '../services/conversationCache';
 
 // TypeScript interface for PageShowEvent
 interface PageShowEvent extends Event {
@@ -31,7 +30,11 @@ const ConversationsList: React.FC = () => {
     messageBody: ''
   });
   const formRef = useRef<HTMLDivElement>(null);
-  const hasInitiallyLoaded = useRef(false);
+
+  // Binary Semaphors to prevent double calls to fetchData (API - cache). 
+  // In the future review the suggestion to use data fetching library like React Query or SWR instead.
+  const isInitialLoadStarted = useRef(false);
+  const isInitialLoadCompleted = useRef(false);
 
   useEffect(() => {
     const fetchData = async (forceRefresh: boolean = false) => {
@@ -39,7 +42,7 @@ const ConversationsList: React.FC = () => {
       setError(null);
       try {
         const year = new Date().getFullYear();
-        const data = await ConversationService.fetchConversations(year, forceRefresh);
+        const data = await ConversationService.fetchConversationsViaCachedAPI(year, forceRefresh);
         // Reverse the array to show newest conversations first
         setConversations(data.reverse());
       } catch (err: any) {
@@ -51,45 +54,46 @@ const ConversationsList: React.FC = () => {
 
     const handlePageShow = (event: PageShowEvent) => {
       // Only handle pageshow after initial load is complete
-      if (!hasInitiallyLoaded.current) return;
+      if (!isInitialLoadCompleted.current) return;
       
       const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
       const navType = navEntries.length > 0 ? navEntries[0].type : 'unknown';
-      
-      let shouldUseCache = false;
-      
+
+      let forceRefresh;
       if (event.persisted) {
         // Page restored from bfcache (back/forward button)
-        shouldUseCache = true;
+        forceRefresh = false;
       } else {
         // Page loaded from server
         switch (navType) {
           case 'back_forward':
             // Back/forward but not from cache
-            shouldUseCache = true;
+            forceRefresh = false;
             break;
           case 'reload':
             // User refreshed - force fresh data
-            shouldUseCache = false;
+            forceRefresh = true;
             break;
           case 'navigate':
           default:
             // Standard navigation - use cache if available
-            shouldUseCache = conversationCache.get() !== null;
+            forceRefresh =  false
             break;
         }
-      }
-      
-      fetchData(!shouldUseCache); // forceRefresh = !shouldUseCache
+      }      
+
+      fetchData(forceRefresh);
     };
 
     // Set up pageshow listener
     window.addEventListener('pageshow', handlePageShow);
     
     // Initial load - only if we haven't loaded yet
-    if (!hasInitiallyLoaded.current) {
-      hasInitiallyLoaded.current = true; // Set flag BEFORE making the call
-      fetchData(conversationCache.get() === null);
+    if (!isInitialLoadStarted.current) {
+      isInitialLoadStarted.current = true; // Avoid multiple initial loads due to re-renders by Double Mounting or Fast Refresh (or Hot Module Replacement
+      fetchData(false).finally(() => {
+        isInitialLoadCompleted.current = true; // Enable pageshow to handle future loads
+      });
     }
 
     return () => {
@@ -144,7 +148,7 @@ const ConversationsList: React.FC = () => {
       // Convert string type to number using the utility function
       const convoTypeNumber = convertConvoTypeToNumber(formData.type);
       
-      const newConversation = await ConversationService.createConversation({
+      const newConversation = await ConversationService.createConversationAndUpdateCache({
         NewGuid: crypto.randomUUID(),
         ConvoType: convoTypeNumber,
         Title: formData.title.trim(),

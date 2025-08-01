@@ -17,7 +17,7 @@ export class ConversationService {
      * @param year - Optional year filter
      * @param forceRefresh - When true, bypasses cache and fetches from API
      */
-    static async fetchConversations(year?: number, forceRefresh: boolean = false): Promise<ConversationResponse[]> {
+    static async fetchConversationsViaCachedAPI(year?: number, forceRefresh: boolean = false): Promise<ConversationResponse[]> {
         // If forceRefresh is false, try to get from cache first
         if (!forceRefresh) {
             const cachedConversations = conversationCache.get();
@@ -33,18 +33,10 @@ export class ConversationService {
     }
 
     /**
-     * Fetch conversation posts with ID normalization
-     */
-    static async fetchConversationPosts(conversationId: string): Promise<Post[]> {
-        // ID normalization is handled in the API layer
-        return conversationApi.fetchConversationPosts(conversationId);
-    }
-
-    /**
      * Create a new conversation with validation
      * After successful creation, updates the cache with the new conversation
      */
-    static async createConversation(conversation: CreateConversationRequest): Promise<ConversationResponse> {
+    static async createConversationAndUpdateCache(conversation: CreateConversationRequest): Promise<ConversationResponse> {
         // Add any business validation here
         const newConversation = await conversationApi.createConversation(conversation);
         
@@ -66,6 +58,14 @@ export class ConversationService {
         }
         
         return newConversation;
+    }
+
+    /**
+     * Fetch conversation posts with ID normalization
+     */
+    static async fetchConversationPosts(conversationId: string): Promise<Post[]> {
+        // ID normalization is handled in the API layer
+        return conversationApi.fetchConversationPosts(conversationId);
     }
 
     /**
