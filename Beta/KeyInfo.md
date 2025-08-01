@@ -130,6 +130,8 @@ sam local start-api  --template template.yaml  --debug
 This is the command to serve the CSR static pages of the frontend website, from the WiseWords.FrontEnd folder (requires the back-end to be running in the AWS SAM environment):
 
 ```bash
+cd WiseWords.FrontEnd
+
 npm run dev
 ```
 
