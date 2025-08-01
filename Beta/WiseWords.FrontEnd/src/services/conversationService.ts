@@ -53,7 +53,13 @@ export class ConversationService {
         if (cachedConversations) {
             // Add the new conversation to the existing cache
             const updatedConversations = [newConversation, ...cachedConversations];
-            conversationCache.set(updatedConversations);
+            try {
+                conversationCache.set(updatedConversations);
+            } catch (err) {
+                console.error('Failed to update conversation cache after creating new conversation:', err);
+                // Clear cache to ensure fresh data on next load
+                conversationCache.clear();
+            }
         } else {
             // If no cache exists, create one with just the new conversation
             conversationCache.set([newConversation]);

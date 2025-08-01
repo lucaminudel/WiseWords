@@ -220,8 +220,14 @@ const ConversationThread: React.FC = () => {
 
       // Update the cache with the new post
       if (conversation) {
-        const updatedCacheData = [conversation, ...updatedPosts];
-        conversationThreadCache.set(conversationId, updatedCacheData);
+        try {
+          const updatedCacheData = [conversation, ...updatedPosts];
+          conversationThreadCache.set(conversationId, updatedCacheData);
+        } catch (err) {
+          console.error('Failed to update cache after posting comment:', err);
+          // Clear entire cache to ensure fresh data on next load
+          conversationThreadCache.clear();
+        }
       }
 
       // Reset and hide the form
