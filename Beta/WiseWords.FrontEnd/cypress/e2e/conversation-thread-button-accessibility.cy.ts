@@ -19,7 +19,7 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
       expect($btn).to.not.be.disabled
     })
 
-    cy.get('[data-testid="sub-question-button"]').first().should(($btn) => {
+    cy.get('[data-testid="drill-down-button"]').first().should(($btn) => {
       expect($btn).to.have.prop('tagName', 'BUTTON')
       expect($btn).to.have.attr('type', 'button')
       expect($btn).to.not.be.disabled
@@ -38,7 +38,7 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
 
     // For QUESTION type conversation, verify button text is contextual
     cy.get('[data-testid="propose-answer-button"]').first().should('contain.text', 'Propose Answer')
-    cy.get('[data-testid="sub-question-button"]').first().should('contain.text', 'Sub-question')
+    cy.get('[data-testid="drill-down-button"]').first().should('contain.text', 'Sub-question')
   })
 
   it('should handle button interactions correctly', () => {
@@ -55,11 +55,11 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
     
     // Test that multiple buttons are focusable (simplified tab testing)
     cy.get('[data-testid="comment-button"]').first().focus()
-    cy.get('[data-testid="sub-question-button"]').first().should('be.visible').focus()
-    cy.focused().should('have.attr', 'data-testid', 'sub-question-button')
+    cy.get('[data-testid="drill-down-button"]').first().should('be.visible').focus()
+    cy.focused().should('have.attr', 'data-testid', 'drill-down-button')
     
     // Test Enter key activation
-    cy.get('[data-testid="sub-question-button"]').first().focus().type('{enter}')
+    cy.get('[data-testid="drill-down-button"]').first().focus().type('{enter}')
   })
 
   it('should have consistent button styling across all post types', () => {

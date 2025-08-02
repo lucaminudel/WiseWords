@@ -2,7 +2,7 @@
  * Pure API communication layer for conversation-related endpoints
  */
 
-import { CreateConversationRequest, ConversationResponse, Post, ApiError, AppendCommentRequest } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, ApiError, AppendCommentRequest, AppendDrillDownRequest, AppendConclusionRequest } from '../types/conversation';
 
 /**
  * Base API configuration
@@ -92,11 +92,7 @@ export const conversationApi = {
      *          - Example: "#CM#1", "#CM#2", "#DD#1", "#DD#1#CM#1"
      */
     async fetchConversationPosts(conversationId: string): Promise<Post[]> {
-        // Ensure the conversation ID is properly formatted
-        const fullConversationId = conversationId?.startsWith('CONVO#')
-            ? conversationId
-            : `CONVO#${conversationId}`;
-        const encodedId = encodeURIComponent(fullConversationId);
+        const encodedId = encodeURIComponent(conversationId);
         return apiFetch<Post[]>(`/conversations/${encodedId}/posts`);
     },
 
@@ -140,6 +136,26 @@ export const conversationApi = {
         return apiFetch<Post>('/conversations/comment', {
             method: 'POST',
             body: JSON.stringify(commentRequest),
+        });
+    },
+
+    /**
+     * Append a drill-down to a conversation
+     */
+    async appendDrillDown(drillDownRequest: AppendDrillDownRequest): Promise<Post> {
+        return apiFetch<Post>('/conversations/drilldown', {
+            method: 'POST',
+            body: JSON.stringify(drillDownRequest),
+        });
+    },
+
+    /**
+     * Append a conclusion to a conversation
+     */
+    async appendConclusion(conclusionRequest: AppendConclusionRequest): Promise<Post> {
+        return apiFetch<Post>('/conversations/conclusion', {
+            method: 'POST',
+            body: JSON.stringify(conclusionRequest),
         });
     }
 };

@@ -5,7 +5,7 @@
 
 import { conversationApi } from '../api/conversationApi';
 // Note: normalizeConversationId is handled in the API layer
-import { CreateConversationRequest, ConversationResponse, Post, AppendCommentRequest } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, AppendCommentRequest, AppendDrillDownRequest, AppendConclusionRequest } from '../types/conversation';
 
 import { conversationCache as conversationsCache } from './conversationCache';
 import { conversationThreadCache } from '../services/conversationThreadCache';
@@ -143,23 +143,120 @@ export class ConversationService {
 
         // Update cache with the new comment
         const cachedPosts = conversationThreadCache.get(conversationId);
-        const conversationData = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
-        let postsData = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA');        
-        if (!postsData) { postsData = []; }
 
-        if (conversationData) {
-            const updatedPosts = [...postsData, newComment];
-            const updatedCacheData = [conversationData, ...updatedPosts];
+        const conversationRootCacheItem = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
+        if (!conversationRootCacheItem) {
+            throw new Error(`Conversation metadata not found in the cache for conversation id: ${conversationId}`);
+        }            
 
-            try {
-                conversationThreadCache.set(conversationId, updatedCacheData);
-            } catch (err) {
-                console.error('Failed to update conversation posts cache after appending a comment:', err);
-                // Clear cache to ensure fresh data on next load
-                conversationThreadCache.clear();
-            }
+        let postsCachedItems = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA');        
+        if (!postsCachedItems) { postsCachedItems = []; }
+
+        const updatedPosts = [...postsCachedItems, newComment];
+        const updatedCacheData = [conversationRootCacheItem, ...updatedPosts];
+
+        try {
+            conversationThreadCache.set(conversationId, updatedCacheData);
+        } catch (err) {
+            console.error('Failed to update conversation posts cache after appending a comment:', err);
+            // Clear cache to ensure fresh data on next load
+            conversationThreadCache.clear();
         }
         
         return newComment;
+    }
+
+    /**
+     * Append a drill-down to a conversation and update the cache
+     */
+    static async appendDrillDownAndUpdateCache(
+        conversationPK: string,
+        parentPostSK: string,
+        author: string,
+        messageBody: string
+    ): Promise<Post> {
+        const drillDownRequest: AppendDrillDownRequest = {
+            ConversationPK: conversationPK,
+            ParentPostSK: parentPostSK,
+            NewDrillDownGuid: crypto.randomUUID(),
+            Author: author,
+            MessageBody: messageBody,
+            UtcCreationTime: new Date().toISOString()
+        };
+
+        const newDrillDown = await conversationApi.appendDrillDown(drillDownRequest);
+
+        const conversationId: string = drillDownRequest.ConversationPK;
+
+        // Update cache with the new drill-down
+        const cachedPosts = conversationThreadCache.get(conversationId);
+
+        const conversationRootCacheItem = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
+        if (!conversationRootCacheItem)  {
+            throw new Error(`Conversation metadata not found in the cache for conversation id: ${conversationId}`);
+        }            
+
+        let postsCachedItems = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA');        
+        if (!postsCachedItems) { postsCachedItems = []; }
+
+        const updatedPosts = [...postsCachedItems, newDrillDown];
+        const updatedCacheData = [conversationRootCacheItem, ...updatedPosts];
+
+        try {
+            conversationThreadCache.set(conversationId, updatedCacheData);
+        } catch (err) {
+            console.error('Failed to update conversation posts cache after appending a drill-down:', err);
+            // Clear cache to ensure fresh data on next load
+            conversationThreadCache.clear();
+        }
+        
+        return newDrillDown;
+    }
+
+    /**
+     * Append a conclusion to a conversation and update the cache
+     */
+    static async appendConclusionAndUpdateCache(
+        conversationPK: string,
+        parentPostSK: string,
+        author: string,
+        messageBody: string
+    ): Promise<Post> {
+        const conclusionRequest: AppendConclusionRequest = {
+            ConversationPK: conversationPK,
+            ParentPostSK: parentPostSK,
+            NewConclusionGuid: crypto.randomUUID(),
+            Author: author,
+            MessageBody: messageBody,
+            UtcCreationTime: new Date().toISOString()
+        };
+
+        const newConclusion = await conversationApi.appendConclusion(conclusionRequest);
+
+        const conversationId: string = conclusionRequest.ConversationPK;
+
+        // Update cache with the new conclusion
+        const cachedPosts = conversationThreadCache.get(conversationId);
+
+        const conversationRootCacheItem = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
+        if (!conversationRootCacheItem) {
+            throw new Error(`Conversation metadata not found in the cache for conversation id: ${conversationId}`);
+        }            
+
+        let postsCachedItems = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA');        
+        if (!postsCachedItems) { postsCachedItems = []; }
+            
+        const updatedPosts = [...postsCachedItems, newConclusion];
+        const updatedCacheData = [conversationRootCacheItem, ...updatedPosts];
+
+        try {
+            conversationThreadCache.set(conversationId, updatedCacheData);
+        } catch (err) {
+            console.error('Failed to update conversation posts cache after appending a conclusion:', err);
+            // Clear cache to ensure fresh data on next load
+            conversationThreadCache.clear();
+        }
+
+            return newConclusion;
     }
 }

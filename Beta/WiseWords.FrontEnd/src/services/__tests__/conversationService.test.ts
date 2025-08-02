@@ -2,15 +2,17 @@
  * Unit tests for the ConversationService with caching functionality.
  * Tests the smart caching logic for fetching and creating conversations.
  */
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, vi, Mock, afterEach } from 'vitest';
 import { ConversationService } from '../conversationService';
 import { conversationApi } from '../../api/conversationApi';
 import { conversationCache } from '../conversationCache';
-import { ConversationResponse, CreateConversationRequest } from '../../types/conversation';
+import { conversationThreadCache } from '../conversationThreadCache';
+import { ConversationResponse, CreateConversationRequest, Post } from '../../types/conversation';
 
 // Mock the dependencies
 vi.mock('../../api/conversationApi');
 vi.mock('../conversationCache');
+vi.mock('../conversationThreadCache');
 
 const mockConversationApi = conversationApi as {
   fetchConversations: Mock;
@@ -19,9 +21,17 @@ const mockConversationApi = conversationApi as {
   updateConversation: Mock;
   deleteConversation: Mock;
   appendComment: Mock;
+  appendDrillDown: Mock;
+  appendConclusion: Mock;
 };
 
 const mockConversationCache = conversationCache as {
+  get: Mock;
+  set: Mock;
+  clear: Mock;
+};
+
+const mockConversationThreadCache = conversationThreadCache as unknown as {
   get: Mock;
   set: Mock;
   clear: Mock;
@@ -73,7 +83,7 @@ describe('ConversationService', () => {
     vi.clearAllMocks();
   });
 
-  describe('fetchConversations', () => {
+  describe('fetchConversationsViaCachedAPI', () => {
     it('should return cached conversations when cache exists and forceRefresh is false', async () => {
       // Arrange
       mockConversationCache.get.mockReturnValue(mockConversations);
@@ -154,9 +164,25 @@ describe('ConversationService', () => {
       await expect(ConversationService.fetchConversationsViaCachedAPI(2025)).rejects.toThrow('API Error');
       expect(mockConversationCache.set).not.toHaveBeenCalled();
     });
+
+    it('fetchConversationPosts should call the API directly without using the cache', async () => {
+      // Arrange
+      const mockPosts: Post[] = [{ PK: 'CONVO#1', SK: 'POST#1', MessageBody: 'Test post', Author: 'Author', UpdatedAt: '123', ConvoType: 'QUESTION' }];
+      mockConversationApi.fetchConversationPosts.mockResolvedValue(mockPosts);
+
+      // Act
+      const result = await conversationApi.fetchConversationPosts('CONVO#1');
+
+      // Assert
+      expect(result).toEqual(mockPosts);
+      expect(mockConversationApi.fetchConversationPosts).toHaveBeenCalledWith('CONVO#1');
+      expect(mockConversationCache.get).not.toHaveBeenCalled();
+      expect(mockConversationCache.set).not.toHaveBeenCalled();
+    });
+
   });
 
-  describe('createConversation', () => {
+  describe('createConversationAndUpdateCache', () => {
     it('should create conversation via API and add to existing cache', async () => {
       // Arrange
       mockConversationApi.createConversation.mockResolvedValue(mockNewConversation);
@@ -216,23 +242,308 @@ describe('ConversationService', () => {
     });
   });
 
-  describe('other methods (non-cached)', () => {
-    it('should call API directly for fetchConversationPosts', async () => {
-      // Arrange
-      const mockPosts = [{ PK: 'CONVO#1', SK: 'POST#1', MessageBody: 'Test post', Author: 'Author', UpdatedAt: '123', ConvoType: 'QUESTION' }];
-      mockConversationApi.fetchConversationPosts.mockResolvedValue(mockPosts);
+  describe('appendCommentAndUpdateCache', () => {
+    const mockConversationPK = 'CONVO#123';
+    const mockAuthor = 'Comment Author';
+    const mockMessage = 'This is a new comment.';
+    const mockUUID = 'cm-guid-123';
+    const mockDate = new Date('2024-07-15T10:00:00.000Z');
 
-      // Act
-      const result = await ConversationService.fetchConversationPostsViaCachedAPI('CONVO#1');
+    const mockNewCommentPost: Post = {
+      PK: mockConversationPK,
+      SK: `#CM#${mockUUID}`,
+      Author: mockAuthor,
+      MessageBody: mockMessage,
+      UpdatedAt: Math.floor(mockDate.getTime() / 1000).toString(),
+      ConvoType: 'QUESTION'
+    };
 
-      // Assert
-      expect(result).toEqual(mockPosts);
-      expect(mockConversationApi.fetchConversationPosts).toHaveBeenCalledWith('CONVO#1');
-      expect(mockConversationCache.get).not.toHaveBeenCalled();
-      expect(mockConversationCache.set).not.toHaveBeenCalled();
+    beforeEach(() => {
+      vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue(mockUUID) });
+      vi.setSystemTime(mockDate);
+      mockConversationApi.appendComment.mockResolvedValue(mockNewCommentPost);
     });
 
-    it('should call API directly for updateConversation', async () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    });
+
+    it('should append a comment to the root of a conversation and update the cache', async () => {
+      // Arrange
+      const initialCache: Post[] = [
+        { PK: mockConversationPK, SK: 'METADATA', MessageBody: 'Root post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+      ];
+      mockConversationThreadCache.get.mockReturnValue(initialCache);
+
+      // Act
+      const result = await ConversationService.appendCommentAndUpdateCache(
+        mockConversationPK,
+        '', // ParentSK for root
+        mockAuthor,
+        mockMessage
+      );
+
+      // Assert
+      expect(result).toEqual(mockNewCommentPost);
+      expect(mockConversationApi.appendComment).toHaveBeenCalledWith({
+        ConversationPK: mockConversationPK,
+        ParentPostSK: '',
+        NewCommentGuid: mockUUID,
+        Author: mockAuthor,
+        MessageBody: mockMessage,
+        UtcCreationTime: mockDate.toISOString(),
+      });
+
+      const expectedCache = [...initialCache, mockNewCommentPost];
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+    });
+
+    it('should append a comment to a nested post and update the cache', async () => {
+      // Arrange
+      const parentPostSK = '#DD#parent-guid';
+      const initialCache: Post[] = [
+        { PK: mockConversationPK, SK: 'METADATA', MessageBody: 'Root post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+        { PK: mockConversationPK, SK: parentPostSK, MessageBody: 'Parent post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+      ];
+      mockConversationThreadCache.get.mockReturnValue(initialCache);
+
+      const nestedCommentPost = {
+        ...mockNewCommentPost,
+        SK: `${parentPostSK}${mockNewCommentPost.SK}`,
+      };
+      mockConversationApi.appendComment.mockResolvedValue(nestedCommentPost);
+
+      // Act
+      const result = await ConversationService.appendCommentAndUpdateCache(
+        mockConversationPK,
+        parentPostSK,
+        mockAuthor,
+        mockMessage
+      );
+
+      // Assert
+      expect(result).toEqual(nestedCommentPost);
+      const expectedCache = [...initialCache, nestedCommentPost];
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+    });
+
+    it('should handle API errors and not update the cache', async () => {
+      // Arrange
+      const apiError = new Error('API Error');
+      mockConversationApi.appendComment.mockRejectedValue(apiError);
+      mockConversationThreadCache.get.mockReturnValue([]);
+
+      // Act & Assert
+      await expect(
+        ConversationService.appendCommentAndUpdateCache(mockConversationPK, '', mockAuthor, mockMessage)
+      ).rejects.toThrow(apiError);
+      expect(mockConversationThreadCache.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('appendDrillDownAndUpdateCache', () => {
+    const mockConversationPK = 'CONVO#123';
+    const mockAuthor = 'Drill Author';
+    const mockMessage = 'This is a new drill-down.';
+    const mockUUID = 'dd-guid-123';
+    const mockDate = new Date('2024-07-15T10:00:00.000Z');
+
+    const mockNewDrillDownPost: Post = {
+      PK: mockConversationPK,
+      SK: `#DD#${mockUUID}`,
+      Author: mockAuthor,
+      MessageBody: mockMessage,
+      UpdatedAt: Math.floor(mockDate.getTime() / 1000).toString(),
+      ConvoType: 'QUESTION'
+    };
+
+    beforeEach(() => {
+      vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue(mockUUID) });
+      vi.setSystemTime(mockDate);
+      mockConversationApi.appendDrillDown.mockResolvedValue(mockNewDrillDownPost);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    });
+
+    it('should append a drill-down to the root and update the cache', async () => {
+      // Arrange
+      const initialCache: Post[] = [
+        { PK: mockConversationPK, SK: 'METADATA', MessageBody: 'Root post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+      ];
+      mockConversationThreadCache.get.mockReturnValue(initialCache);
+
+      // Act
+      const result = await ConversationService.appendDrillDownAndUpdateCache(
+        mockConversationPK,
+        '', // ParentSK for root
+        mockAuthor,
+        mockMessage
+      );
+
+      // Assert
+      expect(result).toEqual(mockNewDrillDownPost);
+      expect(mockConversationApi.appendDrillDown).toHaveBeenCalledWith({
+        ConversationPK: mockConversationPK,
+        ParentPostSK: '',
+        NewDrillDownGuid: mockUUID,
+        Author: mockAuthor,
+        MessageBody: mockMessage,
+        UtcCreationTime: mockDate.toISOString(),
+      });
+
+      const expectedCache = [...initialCache, mockNewDrillDownPost];
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+    });
+
+    it('should append a drill-down to a nested post and update the cache', async () => {
+      // Arrange
+      const parentPostSK = '#DD#parent-guid';
+      const initialCache: Post[] = [
+        { PK: mockConversationPK, SK: 'METADATA', MessageBody: 'Root post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+        { PK: mockConversationPK, SK: parentPostSK, MessageBody: 'Parent post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+      ];
+      mockConversationThreadCache.get.mockReturnValue(initialCache);
+
+      const nestedDrillDownPost = {
+        ...mockNewDrillDownPost,
+        SK: `${parentPostSK}${mockNewDrillDownPost.SK}`,
+      };
+      mockConversationApi.appendDrillDown.mockResolvedValue(nestedDrillDownPost);
+
+      // Act
+      const result = await ConversationService.appendDrillDownAndUpdateCache(
+        mockConversationPK,
+        parentPostSK,
+        mockAuthor,
+        mockMessage
+      );
+
+      // Assert
+      expect(result).toEqual(nestedDrillDownPost);
+      const expectedCache = [...initialCache, nestedDrillDownPost];
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+    });
+
+    it('should handle API errors and not update the cache', async () => {
+      // Arrange
+      const apiError = new Error('API Error');
+      mockConversationApi.appendDrillDown.mockRejectedValue(apiError);
+      mockConversationThreadCache.get.mockReturnValue([]);
+
+      // Act & Assert
+      await expect(
+        ConversationService.appendDrillDownAndUpdateCache(mockConversationPK, '', mockAuthor, mockMessage)
+      ).rejects.toThrow(apiError);
+      expect(mockConversationThreadCache.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('appendConclusionAndUpdateCache', () => {
+    const mockConversationPK = 'CONVO#123';
+    const mockAuthor = 'Conclusion Author';
+    const mockMessage = 'This is a new conclusion.';
+    const mockUUID = 'cc-guid-123';
+    const mockDate = new Date('2024-07-15T10:00:00.000Z');
+
+    const mockNewConclusionPost: Post = {
+      PK: mockConversationPK,
+      SK: `#CC#${mockUUID}`,
+      Author: mockAuthor,
+      MessageBody: mockMessage,
+      UpdatedAt: Math.floor(mockDate.getTime() / 1000).toString(),
+      ConvoType: 'QUESTION'
+    };
+
+    beforeEach(() => {
+      vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue(mockUUID) });
+      vi.setSystemTime(mockDate);
+      mockConversationApi.appendConclusion.mockResolvedValue(mockNewConclusionPost);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    });
+
+    it('should append a conclusion to the root and update the cache', async () => {
+      // Arrange
+      const initialCache: Post[] = [
+        { PK: mockConversationPK, SK: 'METADATA', MessageBody: 'Root post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+      ];
+      mockConversationThreadCache.get.mockReturnValue(initialCache);
+
+      // Act
+      const result = await ConversationService.appendConclusionAndUpdateCache(
+        mockConversationPK,
+        '', // ParentSK for root
+        mockAuthor,
+        mockMessage
+      );
+
+      // Assert
+      expect(result).toEqual(mockNewConclusionPost);
+      expect(mockConversationApi.appendConclusion).toHaveBeenCalledWith({
+        ConversationPK: mockConversationPK,
+        ParentPostSK: '',
+        NewConclusionGuid: mockUUID,
+        Author: mockAuthor,
+        MessageBody: mockMessage,
+        UtcCreationTime: mockDate.toISOString(),
+      });
+
+      const expectedCache = [...initialCache, mockNewConclusionPost];
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+    });
+
+    it('should append a conclusion to a nested post and update the cache', async () => {
+      // Arrange
+      const parentPostSK = '#DD#parent-guid';
+      const initialCache: Post[] = [
+        { PK: mockConversationPK, SK: 'METADATA', MessageBody: 'Root post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+        { PK: mockConversationPK, SK: parentPostSK, MessageBody: 'Parent post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+      ];
+      mockConversationThreadCache.get.mockReturnValue(initialCache);
+
+      const nestedConclusionPost = {
+        ...mockNewConclusionPost,
+        SK: `${parentPostSK}${mockNewConclusionPost.SK}`,
+      };
+      mockConversationApi.appendConclusion.mockResolvedValue(nestedConclusionPost);
+
+      // Act
+      const result = await ConversationService.appendConclusionAndUpdateCache(
+        mockConversationPK,
+        parentPostSK,
+        mockAuthor,
+        mockMessage
+      );
+
+      // Assert
+      expect(result).toEqual(nestedConclusionPost);
+      const expectedCache = [...initialCache, nestedConclusionPost];
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+    });
+
+    it('should handle API errors and not update the cache', async () => {
+      // Arrange
+      const apiError = new Error('API Error');
+      mockConversationApi.appendConclusion.mockRejectedValue(apiError);
+      mockConversationThreadCache.get.mockReturnValue([]);
+
+      // Act & Assert
+      await expect(
+        ConversationService.appendConclusionAndUpdateCache(mockConversationPK, '', mockAuthor, mockMessage)
+      ).rejects.toThrow(apiError);
+      expect(mockConversationThreadCache.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Other methods (with no or partial cache interaction)', () => {
+    it('updateConversation should call the API directly without using the cache', async () => {
       // Arrange
       const updates = { Title: 'Updated Title' };
       mockConversationApi.updateConversation.mockResolvedValue(mockNewConversation);
@@ -247,7 +558,7 @@ describe('ConversationService', () => {
       expect(mockConversationCache.set).not.toHaveBeenCalled();
     });
 
-    it('should call API directly for deleteConversation', async () => {
+    it('deleteConversation should call the API directly without using the cache', async () => {
       // Arrange
       mockConversationApi.deleteConversation.mockResolvedValue(undefined);
 
@@ -258,40 +569,6 @@ describe('ConversationService', () => {
       expect(mockConversationApi.deleteConversation).toHaveBeenCalledWith('CONVO#1');
       expect(mockConversationCache.get).not.toHaveBeenCalled();
       expect(mockConversationCache.set).not.toHaveBeenCalled();
-    });
-
-    it('should call API directly for appendComment', async () => {
-      // Arrange
-      const mockCreatedPost = { PK: 'CONVO#1', SK: '#CM#1', MessageBody: 'New comment', Author: 'Author', UpdatedAt: '123', ConvoType: 'QUESTION' };
-      mockConversationApi.appendComment.mockResolvedValue(mockCreatedPost);
-      
-      // Mock crypto.randomUUID to return a predictable value
-      const mockUUID = '12345678-1234-1234-1234-123456789abc';
-      vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue(mockUUID) });
-      
-      // Mock Date to return a predictable ISO string
-      const mockDate = new Date('2024-01-01T00:00:00.000Z');
-      vi.setSystemTime(mockDate);
-
-      // Act
-      const result = await ConversationService.appendCommentAndUpdateCache('CONVO#1', '', 'Author', 'New comment');
-
-      // Assert
-      expect(result).toEqual(mockCreatedPost);
-      expect(mockConversationApi.appendComment).toHaveBeenCalledWith({
-        ConversationPK: 'CONVO#1',
-        ParentPostSK: '',
-        NewCommentGuid: mockUUID,
-        Author: 'Author',
-        MessageBody: 'New comment',
-        UtcCreationTime: '2024-01-01T00:00:00.000Z'
-      });
-      expect(mockConversationCache.get).not.toHaveBeenCalled();
-      expect(mockConversationCache.set).not.toHaveBeenCalled();
-      
-      // Cleanup
-      vi.unstubAllGlobals();
-      vi.useRealTimers();
     });
   });
 });
