@@ -70,6 +70,18 @@ export interface AppendCommentRequest {
 }
 
 /**
+ * Interface for appending a drill-down post to a conversation
+ */
+export interface AppendDrillDownRequest {
+  ConversationPK: string;
+  ParentPostSK: string;
+  NewDrillDownGuid: string;
+  Author: string;
+  MessageBody: string;
+  UtcCreationTime: string;
+}
+
+/**
  * API error response interface
  */
 export interface ApiError {

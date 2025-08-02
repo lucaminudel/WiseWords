@@ -2,7 +2,7 @@
  * Pure API communication layer for conversation-related endpoints
  */
 
-import { CreateConversationRequest, ConversationResponse, Post, ApiError, AppendCommentRequest } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, ApiError, AppendCommentRequest, AppendDrillDownRequest } from '../types/conversation';
 
 /**
  * Base API configuration
@@ -140,6 +140,16 @@ export const conversationApi = {
         return apiFetch<Post>('/conversations/comment', {
             method: 'POST',
             body: JSON.stringify(commentRequest),
+        });
+    },
+
+    /**
+     * Append a drill-down to a conversation
+     */
+    async appendDrillDown(drillDownRequest: AppendDrillDownRequest): Promise<Post> {
+        return apiFetch<Post>('/conversations/drilldown', {
+            method: 'POST',
+            body: JSON.stringify(drillDownRequest),
         });
     }
 };

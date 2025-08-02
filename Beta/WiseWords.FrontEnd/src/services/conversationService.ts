@@ -5,7 +5,7 @@
 
 import { conversationApi } from '../api/conversationApi';
 // Note: normalizeConversationId is handled in the API layer
-import { CreateConversationRequest, ConversationResponse, Post, AppendCommentRequest } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, AppendCommentRequest, AppendDrillDownRequest } from '../types/conversation';
 
 import { conversationCache as conversationsCache } from './conversationCache';
 import { conversationThreadCache } from '../services/conversationThreadCache';
@@ -161,5 +161,49 @@ export class ConversationService {
         }
         
         return newComment;
+    }
+
+    /**
+     * Append a drill-down to a conversation and update the cache
+     */
+    static async appendDrillDownAndUpdateCache(
+        conversationPK: string,
+        parentPostSK: string,
+        author: string,
+        messageBody: string
+    ): Promise<Post> {
+        const drillDownRequest: AppendDrillDownRequest = {
+            ConversationPK: conversationPK,
+            ParentPostSK: parentPostSK,
+            NewDrillDownGuid: crypto.randomUUID(),
+            Author: author,
+            MessageBody: messageBody,
+            UtcCreationTime: new Date().toISOString()
+        };
+
+        const newDrillDown = await conversationApi.appendDrillDown(drillDownRequest);
+
+        const conversationId: string = drillDownRequest.ConversationPK;
+
+        // Update cache with the new drill-down
+        const cachedPosts = conversationThreadCache.get(conversationId);
+        const conversationData = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
+        let postsData = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA');        
+        if (!postsData) { postsData = []; }
+
+        if (conversationData) {
+            const updatedPosts = [...postsData, newDrillDown];
+            const updatedCacheData = [conversationData, ...updatedPosts];
+
+            try {
+                conversationThreadCache.set(conversationId, updatedCacheData);
+            } catch (err) {
+                console.error('Failed to update conversation posts cache after appending a drill-down:', err);
+                // Clear cache to ensure fresh data on next load
+                conversationThreadCache.clear();
+            }
+        }
+        
+        return newDrillDown;
     }
 }

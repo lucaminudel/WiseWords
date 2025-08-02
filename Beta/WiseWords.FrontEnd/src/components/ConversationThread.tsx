@@ -25,12 +25,22 @@ const ConversationThread: React.FC = () => {
   const [conversation, setConversation] = useState<Post | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [showCommentForm, setShowCommentForm] = useState(false);
+  const [showDrillDownForm, setShowDrillDownForm] = useState(false);
   const [commentFormContext, setCommentFormContext] = useState<{
     conversationPK: string;
     parentPostSK: string;
     insertAfterSK?: string;
   } | null>(null);
+  const [drillDownFormContext, setDrillDownFormContext] = useState<{
+    conversationPK: string;
+    parentPostSK: string;
+    insertAfterSK?: string;
+  } | null>(null);
   const [commentFormData, setCommentFormData] = useState({
+    author: '',
+    messageBody: ''
+  });
+  const [drillDownFormData, setDrillDownFormData] = useState({
     author: '',
     messageBody: ''
   });
@@ -143,6 +153,35 @@ const isInitialLoadCompleted = useRef(false);
     }
   }, [showCommentForm, commentFormContext]);
 
+  // Scroll to drill-down form when it becomes visible and set focus
+  useEffect(() => {
+    if (showDrillDownForm && drillDownFormContext) {
+      setTimeout(() => {
+        const formId = `drill-down-form-${drillDownFormContext.insertAfterSK || 'main'}`;
+        const formElement = document.getElementById(formId);
+        
+        if (formElement) {
+          // Scroll so bottom of form aligns with bottom of viewport
+          formElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'end'
+          });
+          
+          // Focus on the message textarea and position cursor
+          const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.focus();
+            
+            // If there's pre-filled content, position cursor at the end
+            if (drillDownFormData.messageBody) {
+              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+          }
+        }
+      }, 200);
+    }
+  }, [showDrillDownForm, drillDownFormContext]);
+
   const handleCommentClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
     console.log('Opening comment form for:', conversationPK, parentPostSK, insertAfterSK);
     setCommentFormContext({
@@ -155,6 +194,15 @@ const isInitialLoadCompleted = useRef(false);
     setShowCommentForm(true);
     console.log('Opening comment form for: setShowCommentForm done ', showCommentForm , commentFormContext?.insertAfterSK , conversation?.SK, showCommentForm && commentFormContext?.insertAfterSK === conversation?.SK);
 
+  };
+
+  const handleDrillDownClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
+    setDrillDownFormContext({
+      conversationPK,
+      parentPostSK,
+      insertAfterSK
+    });
+    setShowDrillDownForm(true);
   };
 
   const handleReplyWithQuoteClick = (conversationPK: string, postSK: string, insertAfterSK: string, originalPost: Post) => {
@@ -188,6 +236,16 @@ const isInitialLoadCompleted = useRef(false);
     setFormError(null);
   };
 
+  const handleDrillDownCancel = () => {
+    setShowDrillDownForm(false);
+    setDrillDownFormContext(null);
+    setDrillDownFormData({
+      author: '',
+      messageBody: ''
+    });
+    setFormError(null);
+  };
+
   const handleCommentPost = async () => {
     if (!commentFormContext || !conversationId) return;
 
@@ -211,6 +269,34 @@ const isInitialLoadCompleted = useRef(false);
 
     } catch (err: any) {
       setFormError(`Failed to post comment. Please try again. (Error: ${err.message})`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDrillDownPost = async () => {
+    if (!drillDownFormContext || !conversationId) return;
+
+    setIsSubmitting(true);
+    setFormError(null);
+
+    try {
+      const newPost = await ConversationService.appendDrillDownAndUpdateCache(
+        drillDownFormContext.conversationPK,
+        drillDownFormContext.parentPostSK,
+        drillDownFormData.author.trim(),
+        drillDownFormData.messageBody.trim()
+      );
+
+      // Update local UI state immediately
+      const updatedPosts = [...posts, newPost];
+      setPosts(updatedPosts);
+
+      // Reset and hide the form
+      handleDrillDownCancel();
+
+    } catch (err: any) {
+      setFormError(`Failed to post drill down. Please try again. (Error: ${err.message})`);
     } finally {
       setIsSubmitting(false);
     }
@@ -461,7 +547,12 @@ const isInitialLoadCompleted = useRef(false);
             >
               Comment
             </button>
-            <button data-testid="sub-question-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
+            <button 
+              data-testid="drill-down-button" 
+              type="button" 
+              style={{ ...buttonStyle, marginLeft: '8px' }}
+              onClick={() => handleDrillDownClick(conversation.PK, '', conversation.SK)}
+            >
               {getAddSubActionButtonText(conversation.ConvoType)}
             </button>
             <button data-testid="propose-answer-button" type="button" style={{ ...buttonStyle, marginLeft: '8px' }}>
@@ -610,6 +701,137 @@ const isInitialLoadCompleted = useRef(false);
         </div>
       )}
       
+      {/* Drill Down Form for Main Conversation */}
+      {showDrillDownForm && drillDownFormContext?.insertAfterSK === conversation?.SK && (
+        <div 
+          id={`drill-down-form-${conversation.SK}`}
+          data-testid={`drill-down-form-${conversation.SK}`}
+          style={{ 
+          marginLeft: `${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`,
+          marginTop: '16px',
+          padding: '16px',
+          backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+          borderRadius: '8px',
+          border: '2px solid var(--color-accent)',
+          color: 'var(--color-text-primary)',
+          fontFamily: 'Inter, sans-serif'
+        }}>
+          <div style={{ 
+            color: 'var(--color-accent)',
+            fontWeight: 600,
+            marginBottom: '16px',
+            fontSize: '0.9rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Add {getAddSubActionButtonText(conversation.ConvoType)}
+          </div>
+          
+          {formError && (
+            <div style={{ 
+              color: 'var(--color-danger)', 
+              backgroundColor: 'rgba(255, 79, 90, 0.1)',
+              padding: '0.75rem',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              border: '1px solid var(--color-danger)'
+            }}>
+              {formError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                Message
+              </label>
+              <textarea 
+                value={drillDownFormData.messageBody}
+                onChange={(e) => setDrillDownFormData({ ...drillDownFormData, messageBody: e.target.value })}
+                placeholder="Enter your message..."
+                rows={3}
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '1rem',
+                  resize: 'vertical',
+                  minHeight: '80px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                Author
+              </label>
+              <input 
+                type="text"
+                value={drillDownFormData.author}
+                onChange={(e) => setDrillDownFormData({ ...drillDownFormData, author: e.target.value })}
+                placeholder="Enter your name"
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <button 
+                onClick={handleDrillDownCancel}
+                disabled={isSubmitting}
+                style={{
+                  backgroundColor: 'var(--color-text-secondary)',
+                  color: 'var(--color-background)',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDrillDownPost}
+                disabled={!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting}
+                style={{
+                  backgroundColor: 'var(--color-accent)',
+                  color: 'var(--color-text-primary)',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: (!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '1rem',
+                  opacity: (!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {posts.length === 0 ? (
         <div style={{ 
           textAlign: 'center', 
@@ -688,7 +910,11 @@ const isInitialLoadCompleted = useRef(false);
                         >
                           Comment
                         </button>
-                        <button data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
+                        <button 
+                          data-testid="drill-down-button" 
+                          style={{ ...buttonStyle, marginLeft: '8px' }}
+                          onClick={() => handleDrillDownClick(conversation.PK, '', post.SK)}
+                        >
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
@@ -720,7 +946,12 @@ const isInitialLoadCompleted = useRef(false);
                         >
                           Comment
                         </button>
-                        <button type="button" data-testid="sub-question-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
+                        <button 
+                          type="button" 
+                          data-testid="drill-down-button" 
+                          style={{ ...buttonStyle, marginLeft: '8px' }}
+                          onClick={() => handleDrillDownClick(conversation.PK, post.SK, post.SK)}
+                        >
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button type="button" data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
@@ -854,6 +1085,137 @@ const isInitialLoadCompleted = useRef(false);
                           fontFamily: 'Inter, sans-serif',
                           fontSize: '1rem',
                           opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Drill Down Form for this specific post */}
+              {showDrillDownForm && drillDownFormContext?.insertAfterSK === post.SK && (
+                <div 
+                  id={`drill-down-form-${post.SK}`}
+                  data-testid={`drill-down-form-${post.SK}`}
+                  style={{ 
+                  marginLeft: `${(depth + 1) * 48}px`,
+                  marginTop: '16px',
+                  padding: '16px',
+                  backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+                  borderRadius: '8px',
+                  border: '2px solid var(--color-accent)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Inter, sans-serif'
+                }}>
+                  <div style={{ 
+                    color: 'var(--color-accent)',
+                    fontWeight: 600,
+                    marginBottom: '16px',
+                    fontSize: '0.9rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Add {getAddSubActionButtonText(conversation.ConvoType)}
+                  </div>
+                  
+                  {formError && (
+                    <div style={{ 
+                      color: 'var(--color-danger)', 
+                      backgroundColor: 'rgba(255, 79, 90, 0.1)',
+                      padding: '0.75rem',
+                      borderRadius: '6px',
+                      marginBottom: '1rem',
+                      border: '1px solid var(--color-danger)'
+                    }}>
+                      {formError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                        Message
+                      </label>
+                      <textarea 
+                        value={drillDownFormData.messageBody}
+                        onChange={(e) => setDrillDownFormData({ ...drillDownFormData, messageBody: e.target.value })}
+                        placeholder="Enter your message..."
+                        rows={3}
+                        disabled={isSubmitting}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--color-background)',
+                          color: 'var(--color-text-primary)',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '1rem',
+                          resize: 'vertical',
+                          minHeight: '80px'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                        Author
+                      </label>
+                      <input 
+                        type="text"
+                        value={drillDownFormData.author}
+                        onChange={(e) => setDrillDownFormData({ ...drillDownFormData, author: e.target.value })}
+                        placeholder="Enter your name"
+                        disabled={isSubmitting}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--color-background)',
+                          color: 'var(--color-text-primary)',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '1rem'
+                        }}
+                      />
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                      <button 
+                        onClick={handleDrillDownCancel}
+                        disabled={isSubmitting}
+                        style={{
+                          backgroundColor: 'var(--color-text-secondary)',
+                          color: 'var(--color-background)',
+                          border: 'none',
+                          padding: '0.75rem 1.5rem',
+                          borderRadius: '8px',
+                          cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                          fontWeight: 700,
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '1rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleDrillDownPost}
+                        disabled={!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting}
+                        style={{
+                          backgroundColor: 'var(--color-accent)',
+                          color: 'var(--color-text-primary)',
+                          border: 'none',
+                          padding: '0.75rem 1.5rem',
+                          borderRadius: '8px',
+                          cursor: (!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
+                          fontWeight: 700,
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '1rem',
+                          opacity: (!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
                           transition: 'all 0.2s ease'
                         }}
                       >

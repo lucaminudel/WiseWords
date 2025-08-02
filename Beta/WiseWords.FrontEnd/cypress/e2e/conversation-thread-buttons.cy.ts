@@ -15,7 +15,7 @@ describe('ConversationThread Button Display Rules', () => {
     // Root conversation (METADATA) should have same buttons as drill-down posts
     cy.contains('Root question').closest('[data-testid="post-container"]').within(() => {
       cy.get('[data-testid="comment-button"]').should('be.visible')
-      cy.get('[data-testid="sub-question-button"]').should('be.visible')
+      cy.get('[data-testid="drill-down-button"]').should('be.visible')
       cy.get('[data-testid="propose-answer-button"]').should('be.visible')
       cy.get('[data-testid="reply-quote-button"]').should('not.exist')
     })
@@ -26,7 +26,7 @@ describe('ConversationThread Button Display Rules', () => {
       cy.contains(commentText).closest('[data-testid="post-container"]').within(() => {
         cy.get('[data-testid="reply-quote-button"]').should('be.visible')
         cy.get('[data-testid="comment-button"]').should('not.exist')
-        cy.get('[data-testid="sub-question-button"]').should('not.exist')
+        cy.get('[data-testid="drill-down-button"]').should('not.exist')
         cy.get('[data-testid="propose-answer-button"]').should('not.exist')
       })
     })
@@ -36,7 +36,7 @@ describe('ConversationThread Button Display Rules', () => {
     drillDownPosts.forEach(drillDownText => {
       cy.contains(drillDownText).closest('[data-testid="post-container"]').within(() => {
         cy.get('[data-testid="comment-button"]').should('be.visible')
-        cy.get('[data-testid="sub-question-button"]').should('be.visible')
+        cy.get('[data-testid="drill-down-button"]').should('be.visible')
         cy.get('[data-testid="propose-answer-button"]').should('be.visible')
         cy.get('[data-testid="reply-quote-button"]').should('not.exist')
       })
@@ -45,7 +45,7 @@ describe('ConversationThread Button Display Rules', () => {
     // Solution/conclusion posts should have no action buttons
     cy.contains('Proposed solution').closest('[data-testid="post-container"]').within(() => {
       cy.get('[data-testid="comment-button"]').should('not.exist')
-      cy.get('[data-testid="sub-question-button"]').should('not.exist')
+      cy.get('[data-testid="drill-down-button"]').should('not.exist')
       cy.get('[data-testid="propose-answer-button"]').should('not.exist')
       cy.get('[data-testid="reply-quote-button"]').should('not.exist')
     })
@@ -62,7 +62,7 @@ describe('ConversationThread Button Display Rules', () => {
       expect($btn).to.not.be.disabled
     })
 
-    cy.get('[data-testid="sub-question-button"]').first().should(($btn) => {
+    cy.get('[data-testid="drill-down-button"]').first().should(($btn) => {
       expect($btn).to.have.prop('tagName', 'BUTTON')
       expect($btn).to.have.attr('type', 'button')
       expect($btn).to.not.be.disabled
@@ -81,7 +81,7 @@ describe('ConversationThread Button Display Rules', () => {
 
     // For QUESTION type conversation, verify button text is contextual
     cy.get('[data-testid="propose-answer-button"]').first().should('contain.text', 'Propose Answer')
-    cy.get('[data-testid="sub-question-button"]').first().should('contain.text', 'Sub-question')
+    cy.get('[data-testid="drill-down-button"]').first().should('contain.text', 'Sub-question')
   })
 
   it('should handle button interactions correctly', () => {
