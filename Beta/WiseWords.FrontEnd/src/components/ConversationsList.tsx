@@ -37,7 +37,7 @@ const ConversationsList: React.FC = () => {
   const isInitialLoadCompleted = useRef(false);
 
   useEffect(() => {
-    const fetchData = async (forceRefresh: boolean = false) => {
+    const fetchConversations = async (forceRefresh: boolean = false) => {
       setLoading(true);
       setError(null);
       try {
@@ -82,7 +82,7 @@ const ConversationsList: React.FC = () => {
         }
       }      
 
-      fetchData(forceRefresh);
+      fetchConversations(forceRefresh);
     };
 
     // Set up pageshow listener
@@ -91,7 +91,7 @@ const ConversationsList: React.FC = () => {
     // Initial load - only if we haven't loaded yet
     if (!isInitialLoadStarted.current) {
       isInitialLoadStarted.current = true; // Avoid multiple initial loads due to re-renders by Double Mounting or Fast Refresh (or Hot Module Replacement
-      fetchData(false).finally(() => {
+      fetchConversations(false).finally(() => {
         isInitialLoadCompleted.current = true; // Enable pageshow to handle future loads
       });
     }

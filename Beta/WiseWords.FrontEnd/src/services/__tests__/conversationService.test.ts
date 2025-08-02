@@ -223,7 +223,7 @@ describe('ConversationService', () => {
       mockConversationApi.fetchConversationPosts.mockResolvedValue(mockPosts);
 
       // Act
-      const result = await ConversationService.fetchConversationPosts('CONVO#1');
+      const result = await ConversationService.fetchConversationPostsViaCachedAPI('CONVO#1');
 
       // Assert
       expect(result).toEqual(mockPosts);
@@ -274,7 +274,7 @@ describe('ConversationService', () => {
       vi.setSystemTime(mockDate);
 
       // Act
-      const result = await ConversationService.appendComment('CONVO#1', '', 'Author', 'New comment');
+      const result = await ConversationService.appendCommentAndUpdateCache('CONVO#1', '', 'Author', 'New comment');
 
       // Assert
       expect(result).toEqual(mockCreatedPost);

@@ -8,7 +8,7 @@ import { getConversationTypeColor } from '../utils/conversationUtils';
 import { postTypeService } from '../utils/postType';
 import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
 import { Post } from '../types/conversation';
-import { conversationThreadCache } from '../services/conversationThreadCache';
+
 
 // Post interface moved to types/conversation.ts
 interface PageShowEvent extends Event {
@@ -36,7 +36,11 @@ const ConversationThread: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const hasInitiallyLoaded = useRef(false);
+
+// Binary Semaphors to prevent double calls to fetchData (API - cache). 
+// In the future review the suggestion to use data fetching library like React Query or SWR instead.
+const isInitialLoadStarted = useRef(false);
+const isInitialLoadCompleted = useRef(false);
   
   useEffect(() => {
     const fetchConversation = async (forceRefresh: boolean = false) => {
@@ -44,37 +48,13 @@ const ConversationThread: React.FC = () => {
 
       setLoading(true);
       setError(null);
-
-      // 1. Check cache first
-      if (!forceRefresh) {
-        const cachedData = conversationThreadCache.get(conversationId);
-        if (cachedData) {
-          const conversationData = cachedData.find((item: Post) => item.SK === 'METADATA');
-          const postsData = cachedData.filter((item: Post) => item.SK !== 'METADATA');
-          
-          if (conversationData) {
-            setConversation(conversationData);
-            setPosts(postsData);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      // 2. Fetch from API if cache is empty or refresh is forced
       try {
-        const data = await ConversationService.fetchConversationPosts(conversationId);
-        
-        // 3. Store in cache
-        conversationThreadCache.set(conversationId, data);
-
+        const data = await ConversationService.fetchConversationPostsViaCachedAPI(conversationId, forceRefresh);
         const conversationData = data.find((item: Post) => item.SK === 'METADATA');
-        const postsData = data.filter((item: Post) => item.SK !== 'METADATA');
-        
+        const postsData = data.filter((item: Post) => item.SK !== 'METADATA');        
         if (!conversationData) {
           throw new Error('Conversation metadata not found in response');
         }
-        
         setConversation(conversationData);
         setPosts(postsData);
       } catch (err) {
@@ -87,43 +67,46 @@ const ConversationThread: React.FC = () => {
 
     const handlePageShow = (event: PageShowEvent) => {
       // Only handle pageshow after initial load is complete
-      if (!conversationId || !hasInitiallyLoaded.current) return;
+      if (!isInitialLoadCompleted.current) return;
       
+      if (!conversationId) return;
       const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
       const navType = navEntries.length > 0 ? navEntries[0].type : 'unknown';
       
-      let shouldUseCache = false;
-      
+      let forceRefresh;
       if (event.persisted) {
         // Page restored from bfcache (back/forward button)
-        shouldUseCache = true;
+          forceRefresh = false;
       } else {
         // Page loaded from server
         switch (navType) {
           case 'back_forward':
-            shouldUseCache = true;
+            forceRefresh = false;
             break;
           case 'reload':
-            shouldUseCache = false;
+            // User refreshed - force fresh data
+            forceRefresh = true;
             break;
           case 'navigate':
           default:
-            shouldUseCache = conversationThreadCache.get(conversationId) !== null;
+            // Standard navigation - use cache if available
+            forceRefresh = false;
             break;
         }
       }
       
-      fetchConversation(!shouldUseCache); // forceRefresh = !shouldUseCache
+      fetchConversation(forceRefresh); 
     };
 
     // Set up pageshow listener
     window.addEventListener('pageshow', handlePageShow);
     
     // Initial load - only if we haven't loaded yet and conversationId exists
-    if (conversationId && !hasInitiallyLoaded.current) {
-      hasInitiallyLoaded.current = true; // Set flag BEFORE making the call
-      const cachedData = conversationThreadCache.get(conversationId);
-      fetchConversation(cachedData === null);
+    if (conversationId && !isInitialLoadStarted.current) {
+      isInitialLoadStarted.current = true; // Avoid multiple initial loads due to re-renders by Double Mounting or Fast Refresh (or Hot Module Replacement
+      fetchConversation(false).finally(() => {
+        isInitialLoadCompleted.current = true; // Enable pageshow to handle future loads
+      });
     }
 
     return () => {
@@ -161,12 +144,17 @@ const ConversationThread: React.FC = () => {
   }, [showCommentForm, commentFormContext]);
 
   const handleCommentClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
+    console.log('Opening comment form for:', conversationPK, parentPostSK, insertAfterSK);
     setCommentFormContext({
       conversationPK,
       parentPostSK,
       insertAfterSK
     });
+    console.log('Opening comment form for: setCommentFormContext done - ');
+
     setShowCommentForm(true);
+    console.log('Opening comment form for: setShowCommentForm done ', showCommentForm , commentFormContext?.insertAfterSK , conversation?.SK, showCommentForm && commentFormContext?.insertAfterSK === conversation?.SK);
+
   };
 
   const handleReplyWithQuoteClick = (conversationPK: string, postSK: string, insertAfterSK: string, originalPost: Post) => {
@@ -207,7 +195,7 @@ const ConversationThread: React.FC = () => {
     setFormError(null);
 
     try {
-      const newPost = await ConversationService.appendComment(
+      const newPost = await ConversationService.appendCommentAndUpdateCache(
         commentFormContext.conversationPK,
         commentFormContext.parentPostSK,
         commentFormData.author.trim(),
@@ -218,18 +206,6 @@ const ConversationThread: React.FC = () => {
       const updatedPosts = [...posts, newPost];
       setPosts(updatedPosts);
 
-      // Update the cache with the new post
-      if (conversation) {
-        try {
-          const updatedCacheData = [conversation, ...updatedPosts];
-          conversationThreadCache.set(conversationId, updatedCacheData);
-        } catch (err) {
-          console.error('Failed to update cache after posting comment:', err);
-          // Clear entire cache to ensure fresh data on next load
-          conversationThreadCache.clear();
-        }
-      }
-
       // Reset and hide the form
       handleCommentCancel();
 
@@ -239,9 +215,6 @@ const ConversationThread: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-
-  // Get conversation type color
-  // getConversationTypeColor moved to utils/conversationUtils.ts
 
 
   if (loading) {
@@ -507,7 +480,137 @@ const ConversationThread: React.FC = () => {
         Responses
       </h2>
       
-      {sortPosts([conversation, ...posts]).length <= 1 ? (
+      {/* Comment Form for Main Conversation */}
+      {showCommentForm && commentFormContext?.insertAfterSK === conversation?.SK && (
+        <div 
+          id={`comment-form-${conversation?.SK || 'main'}`}
+          style={{ 
+          marginLeft: `${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`,
+          marginTop: '16px',
+          padding: '16px',
+          backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
+          borderRadius: '8px',
+          border: '2px solid var(--color-accent)',
+          color: 'var(--color-text-primary)',
+          fontFamily: 'Inter, sans-serif'
+        }}>
+          <div style={{ 
+            color: 'var(--color-accent)',
+            fontWeight: 600,
+            marginBottom: '16px',
+            fontSize: '0.9rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Add Comment
+          </div>
+          
+          {formError && (
+            <div style={{ 
+              color: 'var(--color-danger)', 
+              backgroundColor: 'rgba(255, 79, 90, 0.1)',
+              padding: '0.75rem',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              border: '1px solid var(--color-danger)'
+            }}>
+              {formError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                Message
+              </label>
+              <textarea 
+                value={commentFormData.messageBody}
+                onChange={(e) => setCommentFormData({ ...commentFormData, messageBody: e.target.value })}
+                placeholder="Enter your comment..."
+                rows={3}
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '1rem',
+                  resize: 'vertical',
+                  minHeight: '80px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                Author
+              </label>
+              <input 
+                type="text"
+                value={commentFormData.author}
+                onChange={(e) => setCommentFormData({ ...commentFormData, author: e.target.value })}
+                placeholder="Enter your name"
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <button 
+                onClick={handleCommentCancel}
+                disabled={isSubmitting}
+                style={{
+                  backgroundColor: 'var(--color-text-secondary)',
+                  color: 'var(--color-background)',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCommentPost}
+                disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting}
+                style={{
+                  backgroundColor: 'var(--color-accent)',
+                  color: 'var(--color-text-primary)',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '1rem',
+                  opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {posts.length === 0 ? (
         <div style={{ 
           textAlign: 'center', 
           padding: '32px',
@@ -517,136 +620,6 @@ const ConversationThread: React.FC = () => {
         </div>
       ) : (
         <div>
-          {/* Comment Form for Main Conversation */}
-          {showCommentForm && commentFormContext?.insertAfterSK === conversation?.SK && (
-            <div 
-              id={`comment-form-${conversation?.SK || 'main'}`}
-              style={{ 
-              marginLeft: `${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`,
-              marginTop: '16px',
-              padding: '16px',
-              backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-              borderRadius: '8px',
-              border: '2px solid var(--color-accent)',
-              color: 'var(--color-text-primary)',
-              fontFamily: 'Inter, sans-serif'
-            }}>
-              <div style={{ 
-                color: 'var(--color-accent)',
-                fontWeight: 600,
-                marginBottom: '16px',
-                fontSize: '0.9rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Add Comment
-              </div>
-              
-              {formError && (
-                <div style={{ 
-                  color: 'var(--color-danger)', 
-                  backgroundColor: 'rgba(255, 79, 90, 0.1)',
-                  padding: '0.75rem',
-                  borderRadius: '6px',
-                  marginBottom: '1rem',
-                  border: '1px solid var(--color-danger)'
-                }}>
-                  {formError}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                    Message
-                  </label>
-                  <textarea 
-                    value={commentFormData.messageBody}
-                    onChange={(e) => setCommentFormData({ ...commentFormData, messageBody: e.target.value })}
-                    placeholder="Enter your comment..."
-                    rows={3}
-                    disabled={isSubmitting}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '8px',
-                      backgroundColor: 'var(--color-background)',
-                      color: 'var(--color-text-primary)',
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: '1rem',
-                      resize: 'vertical',
-                      minHeight: '80px'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                    Author
-                  </label>
-                  <input 
-                    type="text"
-                    value={commentFormData.author}
-                    onChange={(e) => setCommentFormData({ ...commentFormData, author: e.target.value })}
-                    placeholder="Enter your name"
-                    disabled={isSubmitting}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '8px',
-                      backgroundColor: 'var(--color-background)',
-                      color: 'var(--color-text-primary)',
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-                
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                  <button 
-                    onClick={handleCommentCancel}
-                    disabled={isSubmitting}
-                    style={{
-                      backgroundColor: 'var(--color-text-secondary)',
-                      color: 'var(--color-background)',
-                      border: 'none',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '8px',
-                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                      fontWeight: 700,
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: '1rem',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={handleCommentPost}
-                    disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting}
-                    style={{
-                      backgroundColor: 'var(--color-accent)',
-                      color: 'var(--color-text-primary)',
-                      border: 'none',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '8px',
-                      cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
-                      fontWeight: 700,
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: '1rem',
-                      opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {sortPosts(posts).map((post) => {
             // Use utility functions for post type detection
             const postTypeInfo = postTypeService.getPostType(post.SK);
