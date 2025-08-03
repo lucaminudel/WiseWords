@@ -82,7 +82,7 @@ curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb
 
 These and the steps that remain to be carried out: 
 - ~~the implementation of the User Interface~~
-- Complete the UI implementation with the posting of messages on a conversation thread and minimising re-loads  
+- ~~Complete the UI implementation with the posting of messages on a conversation thread and minimising re-loads~~  
 - Gradually deploy the appliation on AWS:
   - deploy the db to the serverless Amazon DynamoDb, 
   - deploy of the serverless Lambdas 

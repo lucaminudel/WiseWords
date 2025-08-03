@@ -73,7 +73,14 @@ When fixing a failing e2e test or the code under test, always run the single fai
 # Here is an example for the test file conversation-thread-commenting.cy.ts run from the /WiseWords/Beta/WiseWords.FrontEnd folder
 npm run test:e2e -- --spec "cypress/e2e/conversation-thread-commenting.cy.ts" 
 ```
-
+In case of test failure search in the output of the previous command the following info starting with 'cyclope: saving page for failed test':
+```
+cyclope: saving page for failed test
+  spec <filename containing the test code>.cy.ts>
+  test <text describing the test senario>
+making folder <where the html that failed the expectation is stored>
+cyclope: savePage took xx ms
+```
 
 After an 2e2 test fails, always inspect the HTML with which the assert failed:
 ```bash
@@ -124,7 +131,8 @@ zip -r ../publish.zip .
 cd ..
 
 # Run the code in the local container
-sam local start-api  --template template.yaml  --debug 
+sam local start-api  --template template.yaml  --debug --warm-containers LAZY 
+# use EAGER instead of LAZY containers then stay running between lamba calls, not like like the real cloud environment
 ```
 
 This is the command to serve the CSR static pages of the frontend website, from the WiseWords.FrontEnd folder (requires the back-end to be running in the AWS SAM environment):
