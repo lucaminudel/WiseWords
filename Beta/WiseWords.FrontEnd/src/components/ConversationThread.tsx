@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Logo } from './common/Logo';
+import { ConversatonThreadAppendPostForm } from './ConversatonThreadAppendPostForm';
 import { sortPosts } from '../utils/postSorter';
 import { ConversationService } from '../services/conversationService';
 import { formatUnixTimestamp } from '../utils/dateUtils';
@@ -13,6 +14,14 @@ import { Post } from '../types/conversation';
 // Post interface moved to types/conversation.ts
 interface PageShowEvent extends Event {
   persisted: boolean;
+}
+
+// --- Refactored State Types ---
+type FormType = 'comment' | 'drilldown' | 'conclusion';
+interface FormContext {
+  conversationPK: string;
+  parentPostSK: string;
+  insertAfterSK?: string;
 }
 
 const ConversationThread: React.FC = () => {
@@ -29,36 +38,10 @@ const ConversationThread: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [conversation, setConversation] = useState<Post | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [showCommentForm, setShowCommentForm] = useState(false);
-  const [showDrillDownForm, setShowDrillDownForm] = useState(false);
-  const [showConclusionForm, setShowConclusionForm] = useState(false);
-  const [commentFormContext, setCommentFormContext] = useState<{
-    conversationPK: string;
-    parentPostSK: string;
-    insertAfterSK?: string;
-  } | null>(null);
-  const [drillDownFormContext, setDrillDownFormContext] = useState<{
-    conversationPK: string;
-    parentPostSK: string;
-    insertAfterSK?: string;
-  } | null>(null);
-  const [conclusionFormContext, setConclusionFormContext] = useState<{
-    conversationPK: string;
-    parentPostSK: string;
-    insertAfterSK?: string;
-  } | null>(null);
-  const [commentFormData, setCommentFormData] = useState({
-    author: '',
-    messageBody: ''
-  });
-  const [drillDownFormData, setDrillDownFormData] = useState({
-    author: '',
-    messageBody: ''
-  });
-  const [conclusionFormData, setConclusionFormData] = useState({
-    author: '',
-    messageBody: ''
-  });
+
+  // --- Refactored State ---
+  const [activeForm, setActiveForm] = useState<{ type: FormType; context: FormContext } | null>(null);
+  const [formData, setFormData] = useState({ author: '', messageBody: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -93,7 +76,7 @@ const isInitialLoadCompleted = useRef(false);
 
     const handlePageShow = (event: PageShowEvent) => {
       // Only handle pageshow after initial load is complete
-      if (!isInitialLoadCompleted.current) return;
+      if (!isInitialLoadCompleted.current) return; 
       
       if (!conversationId) return;
       const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
@@ -140,16 +123,16 @@ const isInitialLoadCompleted = useRef(false);
     };
   }, [conversationId]);
 
-  // Scroll to comment form when it becomes visible and set focus
+  // Scroll to form when it becomes visible and set focus
   useEffect(() => {
-    if (showCommentForm && commentFormContext) {
+    if (activeForm) {
       setTimeout(() => {
-        const formId = `comment-form-${commentFormContext.insertAfterSK || 'main'}`;
+        const formId = `${activeForm.type}-form-${activeForm.context.insertAfterSK || 'main'}`;
         const formElement = document.getElementById(formId);
         
         if (formElement) {
           // Scroll so bottom of form aligns with bottom of viewport
-          formElement.scrollIntoView({ 
+          formElement.scrollIntoView({
             behavior: 'smooth', 
             block: 'end'
           });
@@ -160,238 +143,71 @@ const isInitialLoadCompleted = useRef(false);
             textarea.focus();
             
             // If there's pre-filled content (quoted text), position cursor at the end
-            if (commentFormData.messageBody) {
+            if (formData.messageBody) {
               textarea.setSelectionRange(textarea.value.length, textarea.value.length);
             }
           }
         }
       }, 200);
     }
-  }, [showCommentForm, commentFormContext]);
+  }, [activeForm]);
 
-  // Scroll to drill-down form when it becomes visible and set focus
-  useEffect(() => {
-    if (showDrillDownForm && drillDownFormContext) {
-      setTimeout(() => {
-        const formId = `drill-down-form-${drillDownFormContext.insertAfterSK || 'main'}`;
-        const formElement = document.getElementById(formId);
-        
-        if (formElement) {
-          // Scroll so bottom of form aligns with bottom of viewport
-          formElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'end'
-          });
-          
-          // Focus on the message textarea and position cursor
-          const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.focus();
-            
-            // If there's pre-filled content, position cursor at the end
-            if (drillDownFormData.messageBody) {
-              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            }
-          }
-        }
-      }, 200);
+  const handleOpenForm = (type: FormType, context: FormContext, initialMessage: string = '') => {
+    setActiveForm({ type, context });
+    setFormData({ author: '', messageBody: initialMessage });
+    setFormError(null);
+  };
+
+  const handleCancelForm = () => {
+    setActiveForm(null);
+    setFormData({ author: '', messageBody: '' });
+    setFormError(null);
+  };
+
+  const handlePostForm = async () => {
+    if (!activeForm || !conversationId) return;
+
+    setIsSubmitting(true);
+    setFormError(null);
+
+    const { type, context } = activeForm;
+    const { conversationPK, parentPostSK } = context;
+    const { author, messageBody } = formData;
+
+    try {
+      let newPost: Post;
+      switch (type) {
+        case 'comment':
+          newPost = await ConversationService.appendCommentAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
+          break;
+        case 'drilldown':
+          newPost = await ConversationService.appendDrillDownAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
+          break;
+        case 'conclusion':
+          newPost = await ConversationService.appendConclusionAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
+          break;
+      }
+
+      setPosts(prevPosts => [...prevPosts, newPost]);
+      handleCancelForm();
+
+    } catch (err: any) {
+      setFormError(`Failed to post ${type}. Please try again. (Error: ${err.message})`);
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [showDrillDownForm, drillDownFormContext]);
-
-  // Scroll to conclusion form when it becomes visible and set focus
-  useEffect(() => {
-    if (showConclusionForm && conclusionFormContext) {
-      setTimeout(() => {
-        const formId = `conclusion-form-${conclusionFormContext.insertAfterSK || 'main'}`;
-        const formElement = document.getElementById(formId);
-        
-        if (formElement) {
-          // Scroll so bottom of form aligns with bottom of viewport
-          formElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'end'
-          });
-          
-          // Focus on the message textarea and position cursor
-          const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.focus();
-            
-            // If there's pre-filled content, position cursor at the end
-            if (conclusionFormData.messageBody) {
-              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            }
-          }
-        }
-      }, 200);
-    }
-  }, [showConclusionForm, conclusionFormContext]);
-
-  const handleCommentClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
-    console.log('Opening comment form for:', conversationPK, parentPostSK, insertAfterSK);
-    setCommentFormContext({
-      conversationPK,
-      parentPostSK,
-      insertAfterSK
-    });
-    console.log('Opening comment form for: setCommentFormContext done - ');
-
-    setShowCommentForm(true);
-    console.log('Opening comment form for: setShowCommentForm done ', showCommentForm , commentFormContext?.insertAfterSK , conversation?.SK, showCommentForm && commentFormContext?.insertAfterSK === conversation?.SK);
-
   };
 
-  const handleDrillDownClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
-    setDrillDownFormContext({
-      conversationPK,
-      parentPostSK,
-      insertAfterSK
-    });
-    setShowDrillDownForm(true);
-  };
-
-  const handleConclusionClick = (conversationPK: string, parentPostSK: string, insertAfterSK?: string) => {
-    setConclusionFormContext({
-      conversationPK,
-      parentPostSK,
-      insertAfterSK
-    });
-    setShowConclusionForm(true);
-  };
-
-  const handleReplyWithQuoteClick = (conversationPK: string, postSK: string, insertAfterSK: string, originalPost: Post) => {
-    // For a reply, the parent is the parent of the post being replied to.
-    const skParts = postSK.split('#');
-    const parentSKParts = skParts.slice(0, -2);
-    const correctParentSK = parentSKParts.join('#');
-
-    // Format the quoted message
-    const quotedMessage = `> Original post by ${originalPost.Author}:\n> ${originalPost.MessageBody.replace(/\n/g, '\n> ')}\n\n`;
+  const handleReplyWithQuoteClick = (post: Post) => {
+    const skParts = post.SK.split('#');
+    const parentSK = skParts.slice(0, -2).join('#');
+    const quotedMessage = `> Original post by ${post.Author}:\n> ${post.MessageBody.replace(/\n/g, '\n> ')}\n\n`;
     
-    setCommentFormContext({
-      conversationPK,
-      parentPostSK: correctParentSK,
-      insertAfterSK
-    });
-    setCommentFormData({
-      author: '',
-      messageBody: quotedMessage
-    });
-    setShowCommentForm(true);
-  };
-
-  const handleCommentCancel = () => {
-    setShowCommentForm(false);
-    setCommentFormContext(null);
-    setCommentFormData({
-      author: '',
-      messageBody: ''
-    });
-    setFormError(null);
-  };
-
-  const handleDrillDownCancel = () => {
-    setShowDrillDownForm(false);
-    setDrillDownFormContext(null);
-    setDrillDownFormData({
-      author: '',
-      messageBody: ''
-    });
-    setFormError(null);
-  };
-
-  const handleConclusionCancel = () => {
-    setShowConclusionForm(false);
-    setConclusionFormContext(null);
-    setConclusionFormData({
-      author: '',
-      messageBody: ''
-    });
-    setFormError(null);
-  };
-
-  const handleCommentPost = async () => {
-    if (!commentFormContext || !conversationId) return;
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      const newPost = await ConversationService.appendCommentAndUpdateCache(
-        commentFormContext.conversationPK,
-        commentFormContext.parentPostSK,
-        commentFormData.author.trim(),
-        commentFormData.messageBody.trim()
-      );
-
-      // Update local UI state immediately
-      const updatedPosts = [...posts, newPost];
-      setPosts(updatedPosts);
-
-      // Reset and hide the form
-      handleCommentCancel();
-
-    } catch (err: any) {
-      setFormError(`Failed to post comment. Please try again. (Error: ${err.message})`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDrillDownPost = async () => {
-    if (!drillDownFormContext || !conversationId) return;
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      const newPost = await ConversationService.appendDrillDownAndUpdateCache(
-        drillDownFormContext.conversationPK,
-        drillDownFormContext.parentPostSK,
-        drillDownFormData.author.trim(),
-        drillDownFormData.messageBody.trim()
-      );
-
-      // Update local UI state immediately
-      const updatedPosts = [...posts, newPost];
-      setPosts(updatedPosts);
-
-      // Reset and hide the form
-      handleDrillDownCancel();
-
-    } catch (err: any) {
-      setFormError(`Failed to post drill down. Please try again. (Error: ${err.message})`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleConclusionPost = async () => {
-    if (!conclusionFormContext || !conversationId) return;
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      const newPost = await ConversationService.appendConclusionAndUpdateCache(
-        conclusionFormContext.conversationPK,
-        conclusionFormContext.parentPostSK,
-        conclusionFormData.author.trim(),
-        conclusionFormData.messageBody.trim()
-      );
-
-      // Update local UI state immediately
-      const updatedPosts = [...posts, newPost];
-      setPosts(updatedPosts);
-
-      // Reset and hide the form
-      handleConclusionCancel();
-
-    } catch (err: any) {
-      setFormError(`Failed to post conclusion. Please try again. (Error: ${err.message})`);
-    } finally {
-      setIsSubmitting(false);
-    }
+    handleOpenForm('comment', {
+      conversationPK: post.PK,
+      parentPostSK: parentSK,
+      insertAfterSK: post.SK
+    }, quotedMessage);
   };
 
 
@@ -634,24 +450,27 @@ const isInitialLoadCompleted = useRef(false);
             <button 
               data-testid="comment-button" 
               type="button" 
-              style={buttonStyle}
-              onClick={() => handleCommentClick(conversation.PK, '', conversation.SK)}
+              style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+              disabled={!!activeForm}
+              onClick={() => handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })}
             >
               Comment
             </button>
             <button 
               data-testid="drill-down-button" 
               type="button" 
-              style={{ ...buttonStyle, marginLeft: '8px' }}
-              onClick={() => handleDrillDownClick(conversation.PK, '', conversation.SK)}
+              style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+              disabled={!!activeForm}
+              onClick={() => handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })}
             >
               {getAddSubActionButtonText(conversation.ConvoType)}
             </button>
             <button 
               data-testid="propose-answer-button" 
               type="button" 
-              style={{ ...buttonStyle, marginLeft: '8px' }}
-              onClick={() => handleConclusionClick(conversation.PK, '', conversation.SK)}
+              style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+              disabled={!!activeForm}
+              onClick={() => handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })}
             >
               {getProposeSolutionButtonText(conversation.ConvoType)}
             </button>
@@ -668,396 +487,20 @@ const isInitialLoadCompleted = useRef(false);
         Responses
       </h2>
       
-      {/* Comment Form for Main Conversation */}
-      {showCommentForm && commentFormContext?.insertAfterSK === conversation?.SK && (
-        <div 
-          id={`comment-form-${conversation?.SK || 'main'}`}
-          style={{ 
-          marginLeft: `${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`,
-          marginTop: '16px',
-          padding: '16px',
-          backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-          borderRadius: '8px',
-          border: '2px solid var(--color-accent)',
-          color: 'var(--color-text-primary)',
-          fontFamily: 'Inter, sans-serif'
-        }}>
-          <div style={{ 
-            color: 'var(--color-accent)',
-            fontWeight: 600,
-            marginBottom: '16px',
-            fontSize: '0.9rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            Add Comment
-          </div>
-          
-          {formError && (
-            <div style={{ 
-              color: 'var(--color-danger)', 
-              backgroundColor: 'rgba(255, 79, 90, 0.1)',
-              padding: '0.75rem',
-              borderRadius: '6px',
-              marginBottom: '1rem',
-              border: '1px solid var(--color-danger)'
-            }}>
-              {formError}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                Message
-              </label>
-              <textarea 
-                value={commentFormData.messageBody}
-                onChange={(e) => setCommentFormData({ ...commentFormData, messageBody: e.target.value })}
-                placeholder="Enter your comment..."
-                rows={3}
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  resize: 'vertical',
-                  minHeight: '80px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                Author
-              </label>
-              <input 
-                type="text"
-                value={commentFormData.author}
-                onChange={(e) => setCommentFormData({ ...commentFormData, author: e.target.value })}
-                placeholder="Enter your name"
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-            
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-              <button 
-                onClick={handleCommentCancel}
-                disabled={isSubmitting}
-                style={{
-                  backgroundColor: 'var(--color-text-secondary)',
-                  color: 'var(--color-background)',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleCommentPost}
-                disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting}
-                style={{
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'var(--color-text-primary)',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Drill Down Form for Main Conversation */}
-      {showDrillDownForm && drillDownFormContext?.insertAfterSK === conversation?.SK && (
-        <div 
-          id={`drill-down-form-${conversation.SK}`}
-          data-testid={`drill-down-form-${conversation.SK}`}
-          style={{ 
-          marginLeft: `${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`,
-          marginTop: '16px',
-          padding: '16px',
-          backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-          borderRadius: '8px',
-          border: '2px solid var(--color-accent)',
-          color: 'var(--color-text-primary)',
-          fontFamily: 'Inter, sans-serif'
-        }}>
-          <div style={{ 
-            color: 'var(--color-accent)',
-            fontWeight: 600,
-            marginBottom: '16px',
-            fontSize: '0.9rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            Add {getAddSubActionButtonText(conversation.ConvoType)}
-          </div>
-          
-          {formError && (
-            <div style={{ 
-              color: 'var(--color-danger)', 
-              backgroundColor: 'rgba(255, 79, 90, 0.1)',
-              padding: '0.75rem',
-              borderRadius: '6px',
-              marginBottom: '1rem',
-              border: '1px solid var(--color-danger)'
-            }}>
-              {formError}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                Message
-              </label>
-              <textarea 
-                value={drillDownFormData.messageBody}
-                onChange={(e) => setDrillDownFormData({ ...drillDownFormData, messageBody: e.target.value })}
-                placeholder="Enter your message..."
-                rows={3}
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  resize: 'vertical',
-                  minHeight: '80px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                Author
-              </label>
-              <input 
-                type="text"
-                value={drillDownFormData.author}
-                onChange={(e) => setDrillDownFormData({ ...drillDownFormData, author: e.target.value })}
-                placeholder="Enter your name"
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-            
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-              <button 
-                onClick={handleDrillDownCancel}
-                disabled={isSubmitting}
-                style={{
-                  backgroundColor: 'var(--color-text-secondary)',
-                  color: 'var(--color-background)',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleDrillDownPost}
-                disabled={!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting}
-                style={{
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'var(--color-text-primary)',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  cursor: (!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  opacity: (!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Conclusion Form for Main Conversation */}
-      {showConclusionForm && conclusionFormContext?.insertAfterSK === conversation?.SK && (
-        <div 
-          id={`conclusion-form-${conversation.SK}`}
-          data-testid={`conclusion-form-${conversation.SK}`}
-          style={{ 
-          marginLeft: `${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`,
-          marginTop: '16px',
-          padding: '16px',
-          backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-          borderRadius: '8px',
-          border: '2px solid var(--color-accent)',
-          color: 'var(--color-text-primary)',
-          fontFamily: 'Inter, sans-serif'
-        }}>
-          <div style={{ 
-            color: 'var(--color-accent)',
-            fontWeight: 600,
-            marginBottom: '16px',
-            fontSize: '0.9rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            Add {getProposeSolutionButtonText(conversation.ConvoType)}
-          </div>
-          
-          {formError && (
-            <div style={{ 
-              color: 'var(--color-danger)', 
-              backgroundColor: 'rgba(255, 79, 90, 0.1)',
-              padding: '0.75rem',
-              borderRadius: '6px',
-              marginBottom: '1rem',
-              border: '1px solid var(--color-danger)'
-            }}>
-              {formError}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                Message
-              </label>
-              <textarea 
-                value={conclusionFormData.messageBody}
-                onChange={(e) => setConclusionFormData({ ...conclusionFormData, messageBody: e.target.value })}
-                placeholder="Enter your message..."
-                rows={3}
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  resize: 'vertical',
-                  minHeight: '80px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                Author
-              </label>
-              <input 
-                type="text"
-                value={conclusionFormData.author}
-                onChange={(e) => setConclusionFormData({ ...conclusionFormData, author: e.target.value })}
-                placeholder="Enter your name"
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-            
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-              <button 
-                onClick={handleConclusionCancel}
-                disabled={isSubmitting}
-                style={{
-                  backgroundColor: 'var(--color-text-secondary)',
-                  color: 'var(--color-background)',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleConclusionPost}
-                disabled={!conclusionFormData.author.trim() || !conclusionFormData.messageBody.trim() || isSubmitting}
-                style={{
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'var(--color-text-primary)',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  cursor: (!conclusionFormData.author.trim() || !conclusionFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '1rem',
-                  opacity: (!conclusionFormData.author.trim() || !conclusionFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* --- Render Forms for Main Conversation --- */}
+      {activeForm && activeForm.context.insertAfterSK === conversation?.SK && (
+        <ConversatonThreadAppendPostForm
+          title={`Add ${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
+          formData={formData}
+          setFormData={setFormData}
+          onCancel={handleCancelForm}
+          onPost={handlePostForm}
+          isSubmitting={isSubmitting}
+          formError={formError}
+          marginLeft={`${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`}
+          id={`${activeForm.type}-form-${conversation?.SK || 'main'}`}
+          dataTestId={`${activeForm.type}-form-${conversation.SK}`}
+        />
       )}
       
       {posts.length === 0 ? (
@@ -1134,18 +577,20 @@ const isInitialLoadCompleted = useRef(false);
                         <button 
                           data-testid="comment-button" 
                           style={buttonStyle}
-                          onClick={() => handleCommentClick(conversation.PK, '', post.SK)}
+                          onClick={() => handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })}
                         >
                           Comment
                         </button>
                         <button 
                           data-testid="drill-down-button" 
                           style={{ ...buttonStyle, marginLeft: '8px' }}
-                          onClick={() => handleDrillDownClick(conversation.PK, '', post.SK)}
+                          onClick={() => handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })}
                         >
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
-                        <button data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px' }}>
+                        <button data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          disabled={!!activeForm}
+                          onClick={() => handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })}>
                           {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
                       </>
@@ -1156,8 +601,9 @@ const isInitialLoadCompleted = useRef(false);
                       <button 
                         type="button" 
                         data-testid="reply-quote-button" 
-                        style={buttonStyle}
-                        onClick={() => handleReplyWithQuoteClick(conversation.PK, post.SK, post.SK, post)}
+                        style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                        disabled={!!activeForm}
+                        onClick={() => handleReplyWithQuoteClick(post)}
                       >
                         Reply with quote
                       </button>
@@ -1169,24 +615,27 @@ const isInitialLoadCompleted = useRef(false);
                         <button 
                           type="button" 
                           data-testid="comment-button" 
-                          style={buttonStyle}
-                          onClick={() => handleCommentClick(conversation.PK, post.SK, post.SK)}
+                          style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          disabled={!!activeForm}
+                          onClick={() => handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })}
                         >
                           Comment
                         </button>
                         <button 
                           type="button" 
                           data-testid="drill-down-button" 
-                          style={{ ...buttonStyle, marginLeft: '8px' }}
-                          onClick={() => handleDrillDownClick(conversation.PK, post.SK, post.SK)}
+                          style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          disabled={!!activeForm}
+                          onClick={() => handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })}
                         >
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button 
                           type="button" 
                           data-testid="propose-answer-button" 
-                          style={{ ...buttonStyle, marginLeft: '8px' }}
-                          onClick={() => handleConclusionClick(conversation.PK, post.SK, post.SK)}
+                          style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          disabled={!!activeForm}
+                          onClick={() => handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })}
                         >
                           {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
@@ -1198,396 +647,20 @@ const isInitialLoadCompleted = useRef(false);
                 </div>
               </div>
 
-              {/* Comment Form for this specific post */}
-              {showCommentForm && commentFormContext?.insertAfterSK === post.SK && (
-                <div 
-                  id={`comment-form-${post.SK}`}
-                  style={{ 
-                  marginLeft: `${newCommentDepth * 48}px`,
-                  marginTop: '16px',
-                  padding: '16px',
-                  backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-                  borderRadius: '8px',
-                  border: '2px solid var(--color-accent)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif'
-                }}>
-                  <div style={{ 
-                    color: 'var(--color-accent)',
-                    fontWeight: 600,
-                    marginBottom: '16px',
-                    fontSize: '0.9rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Add Comment
-                  </div>
-                  
-                  {formError && (
-                    <div style={{ 
-                      color: 'var(--color-danger)', 
-                      backgroundColor: 'rgba(255, 79, 90, 0.1)',
-                      padding: '0.75rem',
-                      borderRadius: '6px',
-                      marginBottom: '1rem',
-                      border: '1px solid var(--color-danger)'
-                    }}>
-                      {formError}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                        Message
-                      </label>
-                      <textarea 
-                        value={commentFormData.messageBody}
-                        onChange={(e) => setCommentFormData({ ...commentFormData, messageBody: e.target.value })}
-                        placeholder="Enter your comment..."
-                        rows={3}
-                        disabled={isSubmitting}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          backgroundColor: 'var(--color-background)',
-                          color: 'var(--color-text-primary)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          resize: 'vertical',
-                          minHeight: '80px'
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                        Author
-                      </label>
-                      <input 
-                        type="text"
-                        value={commentFormData.author}
-                        onChange={(e) => setCommentFormData({ ...commentFormData, author: e.target.value })}
-                        placeholder="Enter your name"
-                        disabled={isSubmitting}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          backgroundColor: 'var(--color-background)',
-                          color: 'var(--color-text-primary)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem'
-                        }}
-                      />
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                      <button 
-                        onClick={handleCommentCancel}
-                        disabled={isSubmitting}
-                        style={{
-                          backgroundColor: 'var(--color-text-secondary)',
-                          color: 'var(--color-background)',
-                          border: 'none',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '8px',
-                          cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                          fontWeight: 700,
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={handleCommentPost}
-                        disabled={!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting}
-                        style={{
-                          backgroundColor: 'var(--color-accent)',
-                          color: 'var(--color-text-primary)',
-                          border: 'none',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '8px',
-                          cursor: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
-                          fontWeight: 700,
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          opacity: (!commentFormData.author.trim() || !commentFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Drill Down Form for this specific post */}
-              {showDrillDownForm && drillDownFormContext?.insertAfterSK === post.SK && (
-                <div 
-                  id={`drill-down-form-${post.SK}`}
-                  data-testid={`drill-down-form-${post.SK}`}
-                  style={{ 
-                  marginLeft: `${(depth + 1) * 48}px`,
-                  marginTop: '16px',
-                  padding: '16px',
-                  backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-                  borderRadius: '8px',
-                  border: '2px solid var(--color-accent)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif'
-                }}>
-                  <div style={{ 
-                    color: 'var(--color-accent)',
-                    fontWeight: 600,
-                    marginBottom: '16px',
-                    fontSize: '0.9rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Add {getAddSubActionButtonText(conversation.ConvoType)}
-                  </div>
-                  
-                  {formError && (
-                    <div style={{ 
-                      color: 'var(--color-danger)', 
-                      backgroundColor: 'rgba(255, 79, 90, 0.1)',
-                      padding: '0.75rem',
-                      borderRadius: '6px',
-                      marginBottom: '1rem',
-                      border: '1px solid var(--color-danger)'
-                    }}>
-                      {formError}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                        Message
-                      </label>
-                      <textarea 
-                        value={drillDownFormData.messageBody}
-                        onChange={(e) => setDrillDownFormData({ ...drillDownFormData, messageBody: e.target.value })}
-                        placeholder="Enter your message..."
-                        rows={3}
-                        disabled={isSubmitting}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          backgroundColor: 'var(--color-background)',
-                          color: 'var(--color-text-primary)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          resize: 'vertical',
-                          minHeight: '80px'
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                        Author
-                      </label>
-                      <input 
-                        type="text"
-                        value={drillDownFormData.author}
-                        onChange={(e) => setDrillDownFormData({ ...drillDownFormData, author: e.target.value })}
-                        placeholder="Enter your name"
-                        disabled={isSubmitting}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          backgroundColor: 'var(--color-background)',
-                          color: 'var(--color-text-primary)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem'
-                        }}
-                      />
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                      <button 
-                        onClick={handleDrillDownCancel}
-                        disabled={isSubmitting}
-                        style={{
-                          backgroundColor: 'var(--color-text-secondary)',
-                          color: 'var(--color-background)',
-                          border: 'none',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '8px',
-                          cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                          fontWeight: 700,
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={handleDrillDownPost}
-                        disabled={!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting}
-                        style={{
-                          backgroundColor: 'var(--color-accent)',
-                          color: 'var(--color-text-primary)',
-                          border: 'none',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '8px',
-                          cursor: (!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
-                          fontWeight: 700,
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          opacity: (!drillDownFormData.author.trim() || !drillDownFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Conclusion Form for this specific post */}
-              {showConclusionForm && conclusionFormContext?.insertAfterSK === post.SK && (
-                <div 
-                  id={`conclusion-form-${post.SK}`}
-                  data-testid={`conclusion-form-${post.SK}`}
-                  style={{ 
-                  marginLeft: `${(depth + 1) * 48}px`,
-                  marginTop: '16px',
-                  padding: '16px',
-                  backgroundColor: 'var(--color-background-secondary, #2a2a2a)',
-                  borderRadius: '8px',
-                  border: '2px solid var(--color-accent)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Inter, sans-serif'
-                }}>
-                  <div style={{ 
-                    color: 'var(--color-accent)',
-                    fontWeight: 600,
-                    marginBottom: '16px',
-                    fontSize: '0.9rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Add {getProposeSolutionButtonText(conversation.ConvoType)}
-                  </div>
-                  
-                  {formError && (
-                    <div style={{ 
-                      color: 'var(--color-danger)', 
-                      backgroundColor: 'rgba(255, 79, 90, 0.1)',
-                      padding: '0.75rem',
-                      borderRadius: '6px',
-                      marginBottom: '1rem',
-                      border: '1px solid var(--color-danger)'
-                    }}>
-                      {formError}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                        Message
-                      </label>
-                      <textarea 
-                        value={conclusionFormData.messageBody}
-                        onChange={(e) => setConclusionFormData({ ...conclusionFormData, messageBody: e.target.value })}
-                        placeholder="Enter your message..."
-                        rows={3}
-                        disabled={isSubmitting}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          backgroundColor: 'var(--color-background)',
-                          color: 'var(--color-text-primary)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          resize: 'vertical',
-                          minHeight: '80px'
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                        Author
-                      </label>
-                      <input 
-                        type="text"
-                        value={conclusionFormData.author}
-                        onChange={(e) => setConclusionFormData({ ...conclusionFormData, author: e.target.value })}
-                        placeholder="Enter your name"
-                        disabled={isSubmitting}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          backgroundColor: 'var(--color-background)',
-                          color: 'var(--color-text-primary)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem'
-                        }}
-                      />
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                      <button 
-                        onClick={handleConclusionCancel}
-                        disabled={isSubmitting}
-                        style={{
-                          backgroundColor: 'var(--color-text-secondary)',
-                          color: 'var(--color-background)',
-                          border: 'none',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '8px',
-                          cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                          fontWeight: 700,
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={handleConclusionPost}
-                        disabled={!conclusionFormData.author.trim() || !conclusionFormData.messageBody.trim() || isSubmitting}
-                        style={{
-                          backgroundColor: 'var(--color-accent)',
-                          color: 'var(--color-text-primary)',
-                          border: 'none',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '8px',
-                          cursor: (!conclusionFormData.author.trim() || !conclusionFormData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
-                          fontWeight: 700,
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '1rem',
-                          opacity: (!conclusionFormData.author.trim() || !conclusionFormData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              {/* --- Render Forms for this specific post --- */}
+              {activeForm && activeForm.context.insertAfterSK === post.SK && (
+                <ConversatonThreadAppendPostForm
+                  title={`Add ${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
+                  formData={formData}
+                  setFormData={setFormData}
+                  onCancel={handleCancelForm}
+                  onPost={handlePostForm}
+                  isSubmitting={isSubmitting}
+                  formError={formError}
+                  marginLeft={`${activeForm.type === 'comment' ? newCommentDepth * 48 : (depth + 1) * 48}px`}
+                  id={`${activeForm.type}-form-${post.SK}`}
+                  dataTestId={`${activeForm.type}-form-${post.SK}`}
+                />
               )}
               </React.Fragment>
             );

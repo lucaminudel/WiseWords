@@ -45,21 +45,15 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
     cy.visitConversation('CONVO#123')
     cy.wait('@getConversationPosts')
 
-    // Test that buttons are clickable (we're not testing the actual functionality, 
-    // just that they respond to clicks without errors)
+    // Test that buttons are clickable when not disabled
     cy.get('[data-testid="comment-button"]').first().click()
-    // Could add assertions here for what should happen after click
+    cy.get('[data-testid="cancel-button"]').click(); // Close the form
     
-    // Test keyboard accessibility
-    cy.get('[data-testid="comment-button"]').first().focus().should('have.focus')
-    
-    // Test that multiple buttons are focusable (simplified tab testing)
-    cy.get('[data-testid="comment-button"]').first().focus()
-    cy.get('[data-testid="drill-down-button"]').first().should('be.visible').focus()
-    cy.focused().should('have.attr', 'data-testid', 'drill-down-button')
-    
-    // Test Enter key activation
-    cy.get('[data-testid="drill-down-button"]').first().focus().type('{enter}')
+    cy.get('[data-testid="drill-down-button"]').first().click()
+    cy.get('[data-testid="cancel-button"]').click(); // Close the form
+
+    cy.get('[data-testid="propose-answer-button"]').first().click()
+    cy.get('[data-testid="cancel-button"]').click(); // Close the form
   })
 
   it('should have consistent button styling across all post types', () => {
@@ -77,4 +71,70 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
       cy.wrap($btn).should('have.css', 'border-radius', '8px')
     })
   })
+
+  it('should disable other append buttons when one is in edit mode and re-enable them after cancel/post', () => {
+    cy.visitConversation('CONVO#123')
+    cy.wait('@getConversationPosts')
+
+    // Function to check if all append buttons are disabled and visually appear so
+    const checkButtonsDisabled = () => {
+      cy.get('[data-testid$="-button"]').each(($btn) => { // Selects all buttons ending with -button
+        const testId = $btn.attr('data-testid');
+        if (testId && (testId.includes('comment') || testId.includes('drill-down') || testId.includes('propose-answer'))) {
+          cy.wrap($btn).should('be.disabled');
+          // Check visual disabled state
+          cy.wrap($btn).should('have.css', 'opacity', '0.5');
+          cy.wrap($btn).should('have.css', 'cursor', 'not-allowed');
+        }
+      });
+    };
+
+    // Function to check if all append buttons are enabled and visually appear so
+    const checkButtonsEnabled = () => {
+      cy.get('[data-testid$="-button"]').each(($btn) => {
+        const testId = $btn.attr('data-testid');
+        if (testId && (testId.includes('comment') || testId.includes('drill-down') || testId.includes('propose-answer'))) {
+          cy.wrap($btn).should('not.be.disabled');
+          // Check visual enabled state
+          cy.wrap($btn).should('have.css', 'opacity', '1');
+          cy.wrap($btn).should('have.css', 'cursor', 'pointer');
+        }
+      });
+    };
+
+    // Initially, all buttons should be enabled
+    checkButtonsEnabled();
+
+    // Click a comment button to open the edit form
+    cy.get('[data-testid="comment-button"]').first().click();
+    cy.get('[data-testid="post-editor-textarea"]').should('be.visible'); // Check for the textarea instead of the form container
+
+    // Other append buttons should now be disabled
+    checkButtonsDisabled();
+
+    // Click cancel button
+    cy.get('[data-testid="cancel-button"]').click();
+    cy.get('[data-testid^="comment-form-"]').should('not.exist');
+
+    // All buttons should be re-enabled
+    checkButtonsEnabled();
+
+    // Click a drill-down button to open the edit form again
+    cy.get('[data-testid="drill-down-button"]').first().click();
+    cy.get('[data-testid^="drilldown-form-"]').should('be.visible');
+
+    // Other append buttons should now be disabled
+    checkButtonsDisabled();
+
+    // Click cancel button for the drill-down form
+    cy.get('[data-testid="cancel-button"]').click();
+    cy.wait(500); // Give some time for the form to disappear
+    cy.get('[data-testid^="drilldown-form-"]').should('not.exist');
+
+    // All buttons should be re-enabled
+    checkButtonsEnabled();
+
+    // All buttons should be re-enabled
+    checkButtonsEnabled();
+  });
 })

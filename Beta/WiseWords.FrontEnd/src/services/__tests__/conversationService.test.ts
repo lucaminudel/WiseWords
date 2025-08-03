@@ -189,11 +189,24 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(mockConversations);
 
       // Act
-      const result = await ConversationService.createConversationAndUpdateCache(mockCreateRequest);
+      const result = await ConversationService.createConversationAndUpdateCache(
+        mockCreateRequest.Title,
+        mockCreateRequest.MessageBody,
+        mockCreateRequest.Author,
+        mockCreateRequest.ConvoType,
+        mockCreateRequest.UtcCreationTime
+      );
 
       // Assert
       expect(result).toEqual(mockNewConversation);
-      expect(mockConversationApi.createConversation).toHaveBeenCalledWith(mockCreateRequest);
+      expect(mockConversationApi.createConversation).toHaveBeenCalledWith(expect.objectContaining({
+        Title: mockCreateRequest.Title,
+        MessageBody: mockCreateRequest.MessageBody,
+        Author: mockCreateRequest.Author,
+        ConvoType: mockCreateRequest.ConvoType,
+        UtcCreationTime: mockCreateRequest.UtcCreationTime,
+        NewGuid: expect.any(String)
+      }));
       expect(mockConversationCache.get).toHaveBeenCalledTimes(1);
       expect(mockConversationCache.set).toHaveBeenCalledWith([mockNewConversation, ...mockConversations]);
     });
@@ -204,11 +217,24 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(null);
 
       // Act
-      const result = await ConversationService.createConversationAndUpdateCache(mockCreateRequest);
+      const result = await ConversationService.createConversationAndUpdateCache(
+        mockCreateRequest.Title,
+        mockCreateRequest.MessageBody,
+        mockCreateRequest.Author,
+        mockCreateRequest.ConvoType,
+        mockCreateRequest.UtcCreationTime
+      );
 
       // Assert
       expect(result).toEqual(mockNewConversation);
-      expect(mockConversationApi.createConversation).toHaveBeenCalledWith(mockCreateRequest);
+      expect(mockConversationApi.createConversation).toHaveBeenCalledWith(expect.objectContaining({
+        Title: mockCreateRequest.Title,
+        MessageBody: mockCreateRequest.MessageBody,
+        Author: mockCreateRequest.Author,
+        ConvoType: mockCreateRequest.ConvoType,
+        UtcCreationTime: mockCreateRequest.UtcCreationTime,
+        NewGuid: expect.any(String)
+      }));
       expect(mockConversationCache.get).toHaveBeenCalledTimes(1);
       expect(mockConversationCache.set).toHaveBeenCalledWith([mockNewConversation]);
     });
@@ -220,7 +246,13 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(mockConversations);
 
       // Act & Assert
-      await expect(ConversationService.createConversationAndUpdateCache(mockCreateRequest)).rejects.toThrow('Create API Error');
+      await expect(ConversationService.createConversationAndUpdateCache(
+        mockCreateRequest.Title,
+        mockCreateRequest.MessageBody,
+        mockCreateRequest.Author,
+        mockCreateRequest.ConvoType,
+        mockCreateRequest.UtcCreationTime
+      )).rejects.toThrow('Create API Error');
       expect(mockConversationCache.set).not.toHaveBeenCalled();
     });
 
@@ -230,7 +262,13 @@ describe('ConversationService', () => {
       mockConversationCache.get.mockReturnValue(mockConversations);
 
       // Act
-      await ConversationService.createConversationAndUpdateCache(mockCreateRequest);
+      await ConversationService.createConversationAndUpdateCache(
+        mockCreateRequest.Title,
+        mockCreateRequest.MessageBody,
+        mockCreateRequest.Author,
+        mockCreateRequest.ConvoType,
+        mockCreateRequest.UtcCreationTime
+      );
 
       // Assert
       const expectedUpdatedCache = [mockNewConversation, ...mockConversations];

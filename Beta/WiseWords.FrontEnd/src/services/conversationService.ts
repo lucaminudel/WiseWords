@@ -5,10 +5,12 @@
 
 import { conversationApi } from '../api/conversationApi';
 // Note: normalizeConversationId is handled in the API layer
-import { CreateConversationRequest, ConversationResponse, Post, AppendCommentRequest, AppendDrillDownRequest, AppendConclusionRequest } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, AppendCommentRequest, AppendDrillDownRequest, AppendConclusionRequest, AppendPostRequest} from '../types/conversation';
 
 import { conversationCache as conversationsCache } from './conversationCache';
 import { conversationThreadCache } from '../services/conversationThreadCache';
+
+
 
 /**
  * High-level business service for conversation operations
@@ -49,9 +51,23 @@ export class ConversationService {
      * Create a new conversation with validation
      * After successful creation, updates the cache with the new conversation
      */
-    static async createConversationAndUpdateCache(conversation: CreateConversationRequest): Promise<ConversationResponse> {
+    static async createConversationAndUpdateCache(
+        title: string,
+        messageBody: string,
+        author: string,
+        convoType: number,
+        utcCreationTime: string = new Date().toISOString()
+    ): Promise<ConversationResponse> {
+        const createConversationRequest: CreateConversationRequest = {
+            Title: title.trim(),
+            MessageBody: messageBody.trim(),
+            Author: author.trim(),
+            ConvoType: convoType,
+            NewGuid: crypto.randomUUID(),
+            UtcCreationTime: utcCreationTime
+        };
         
-        const newConversation = await conversationApi.createConversation(conversation);
+        const newConversation = await conversationApi.createConversation(createConversationRequest);
         
         // Update cache with the new conversation
         const cachedConversations = conversationsCache.get();
@@ -137,33 +153,7 @@ export class ConversationService {
             UtcCreationTime: new Date().toISOString()
         };
 
-        const newComment = await conversationApi.appendComment(commentRequest);
-
-        const conversationId: string = commentRequest.ConversationPK;
-
-        // Update cache with the new comment
-        const cachedPosts = conversationThreadCache.get(conversationId);
-
-        const conversationRootCacheItem = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
-        if (!conversationRootCacheItem) {
-            throw new Error(`Conversation metadata not found in the cache for conversation id: ${conversationId}`);
-        }            
-
-        let postsCachedItems = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA');        
-        if (!postsCachedItems) { postsCachedItems = []; }
-
-        const updatedPosts = [...postsCachedItems, newComment];
-        const updatedCacheData = [conversationRootCacheItem, ...updatedPosts];
-
-        try {
-            conversationThreadCache.set(conversationId, updatedCacheData);
-        } catch (err) {
-            console.error('Failed to update conversation posts cache after appending a comment:', err);
-            // Clear cache to ensure fresh data on next load
-            conversationThreadCache.clear();
-        }
-        
-        return newComment;
+        return this._appendPostAndUpdateCache(commentRequest, conversationApi.appendComment);
     }
 
     /**
@@ -184,33 +174,7 @@ export class ConversationService {
             UtcCreationTime: new Date().toISOString()
         };
 
-        const newDrillDown = await conversationApi.appendDrillDown(drillDownRequest);
-
-        const conversationId: string = drillDownRequest.ConversationPK;
-
-        // Update cache with the new drill-down
-        const cachedPosts = conversationThreadCache.get(conversationId);
-
-        const conversationRootCacheItem = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
-        if (!conversationRootCacheItem)  {
-            throw new Error(`Conversation metadata not found in the cache for conversation id: ${conversationId}`);
-        }            
-
-        let postsCachedItems = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA');        
-        if (!postsCachedItems) { postsCachedItems = []; }
-
-        const updatedPosts = [...postsCachedItems, newDrillDown];
-        const updatedCacheData = [conversationRootCacheItem, ...updatedPosts];
-
-        try {
-            conversationThreadCache.set(conversationId, updatedCacheData);
-        } catch (err) {
-            console.error('Failed to update conversation posts cache after appending a drill-down:', err);
-            // Clear cache to ensure fresh data on next load
-            conversationThreadCache.clear();
-        }
-        
-        return newDrillDown;
+        return this._appendPostAndUpdateCache(drillDownRequest, conversationApi.appendDrillDown);
     }
 
     /**
@@ -231,32 +195,45 @@ export class ConversationService {
             UtcCreationTime: new Date().toISOString()
         };
 
-        const newConclusion = await conversationApi.appendConclusion(conclusionRequest);
+        return this._appendPostAndUpdateCache(conclusionRequest, conversationApi.appendConclusion);
+    }
 
-        const conversationId: string = conclusionRequest.ConversationPK;
+    /**
+     * Private generic helper to append a post and update the cache.
+     * It takes a request object and the specific API function to call.
+     */
+    private static async _appendPostAndUpdateCache(
+        request: AppendPostRequest,
+        apiCall: (req: any) => Promise<Post> // Using `any` to satisfy TypeScript for different request types
+    ): Promise<Post> {
 
-        // Update cache with the new conclusion
+        const newPost = await apiCall(request);
+
+        const conversationId: string = request.ConversationPK;
+
+        // Update cache with the new post
         const cachedPosts = conversationThreadCache.get(conversationId);
 
-        const conversationRootCacheItem = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
-        if (!conversationRootCacheItem) {
+        const conversationRootCachedItem = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
+        if (!conversationRootCachedItem) {
             throw new Error(`Conversation metadata not found in the cache for conversation id: ${conversationId}`);
-        }            
+        }
 
-        let postsCachedItems = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA');        
+        let postsCachedItems = cachedPosts?.filter((item: Post) => item.SK !== 'METADATA') ?? [];
         if (!postsCachedItems) { postsCachedItems = []; }
-            
-        const updatedPosts = [...postsCachedItems, newConclusion];
-        const updatedCacheData = [conversationRootCacheItem, ...updatedPosts];
+        
+        const updatedPosts = [...postsCachedItems, newPost];
+        const updatedCacheData = [conversationRootCachedItem, ...updatedPosts];
 
         try {
             conversationThreadCache.set(conversationId, updatedCacheData);
         } catch (err) {
-            console.error('Failed to update conversation posts cache after appending a conclusion:', err);
+            console.error(`Failed to update conversation posts cache after appending a post:`, err);
             // Clear cache to ensure fresh data on next load
             conversationThreadCache.clear();
         }
-
-            return newConclusion;
+        
+        return newPost;
     }
+
 }

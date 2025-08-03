@@ -48,9 +48,6 @@ export interface ConversationResponse {
   ConvoType: string;  // String value from the API
 }
 
-// For backward compatibility
-export type ApiConversation = ConversationResponse;
-
 /**
  * Conversation type enumeration
  */
@@ -58,39 +55,35 @@ export type ConversationType = 'QUESTION' | 'PROBLEM' | 'DILEMMA';
 
 
 /**
- * Interface for appending a comment to a conversation
+ * Base interface for appending any type of post
  */
-export interface AppendCommentRequest {
+export interface AppendPostRequest {
   ConversationPK: string;
   ParentPostSK: string;
-  NewCommentGuid: string;
   Author: string;
   MessageBody: string;
   UtcCreationTime: string;
+}
+
+/**
+ * Interface for appending a comment to a conversation
+ */
+export interface AppendCommentRequest extends AppendPostRequest {
+  NewCommentGuid: string;
 }
 
 /**
  * Interface for appending a drill-down post to a conversation
  */
-export interface AppendDrillDownRequest {
-  ConversationPK: string;
-  ParentPostSK: string;
+export interface AppendDrillDownRequest extends AppendPostRequest {
   NewDrillDownGuid: string;
-  Author: string;
-  MessageBody: string;
-  UtcCreationTime: string;
 }
 
 /**
  * Interface for appending a conclusion post to a conversation
  */
-export interface AppendConclusionRequest {
-  ConversationPK: string;
-  ParentPostSK: string;
+export interface AppendConclusionRequest extends AppendPostRequest {
   NewConclusionGuid: string;
-  Author: string;
-  MessageBody: string;
-  UtcCreationTime: string;
 }
 
 /**

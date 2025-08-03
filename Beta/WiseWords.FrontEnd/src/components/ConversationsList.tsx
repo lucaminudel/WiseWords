@@ -148,14 +148,12 @@ const ConversationsList: React.FC = () => {
       // Convert string type to number using the utility function
       const convoTypeNumber = convertConvoTypeToNumber(formData.type);
       
-      const newConversation = await ConversationService.createConversationAndUpdateCache({
-        NewGuid: crypto.randomUUID(),
-        ConvoType: convoTypeNumber,
-        Title: formData.title.trim(),
-        MessageBody: formData.messageBody.trim(),
-        Author: formData.author.trim(),
-        UtcCreationTime: new Date().toISOString()
-      });
+      const newConversation = await ConversationService.createConversationAndUpdateCache(
+        formData.title,
+        formData.messageBody,
+        formData.author,
+        convoTypeNumber
+      );
 
       // Update the local state with the new conversation (cache is already updated by the service)
       setConversations(prevConversations => [newConversation, ...prevConversations]);

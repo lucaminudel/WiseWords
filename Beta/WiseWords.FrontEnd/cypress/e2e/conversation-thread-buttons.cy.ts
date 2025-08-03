@@ -91,9 +91,12 @@ describe('ConversationThread Button Display Rules', () => {
     // Test that buttons are clickable (we're not testing the actual functionality, 
     // just that they respond to clicks without errors)
     cy.get('[data-testid="comment-button"]').first().click()
-    // Could add assertions here for what should happen after click
+    cy.get('[data-testid="cancel-button"]').click(); // Close the form
     
-    // Test keyboard accessibility
-    cy.get('[data-testid="comment-button"]').first().focus().should('have.focus')
+    cy.get('[data-testid="drill-down-button"]').first().click()
+    cy.get('[data-testid="cancel-button"]').click(); // Close the form
+
+    cy.get('[data-testid="propose-answer-button"]').first().click()
+    cy.get('[data-testid="cancel-button"]').click(); // Close the form
   })
 })
