@@ -3,15 +3,23 @@
  */
 
 import { CreateConversationRequest, ConversationResponse, Post, ApiError, AppendCommentRequest, AppendDrillDownRequest, AppendConclusionRequest } from '../types/conversation';
+import { loadConfig } from '../config/environment';
 
 /**
  * Base API configuration
  */
-const API_CONFIG = {
-    baseUrl: 'http://localhost:3000',
-    headers: {
-        'Content-Type': 'application/json',
-    },
+let apiBaseUrl: string | null = null;
+
+async function getApiBaseUrl(): Promise<string> {
+    if (!apiBaseUrl) {
+        const config = await loadConfig();
+        apiBaseUrl = config.ApiBaseUrl;
+    }
+    return apiBaseUrl;
+}
+
+const API_HEADERS = {
+    'Content-Type': 'application/json',
 } as const;
 
 /**
@@ -32,11 +40,12 @@ class ConversationApiError extends Error {
  * Generic fetch wrapper with error handling
  */
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${API_CONFIG.baseUrl}${endpoint}`;
+    const baseUrl = await getApiBaseUrl();
+    const url = `${baseUrl}${endpoint}`;
     
     try {
         const response = await fetch(url, {
-            headers: API_CONFIG.headers,
+            headers: API_HEADERS,
             ...options,
         });
 

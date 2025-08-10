@@ -6,7 +6,8 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
     public class WiseWordsTableTest : IAsyncLifetime
     {
-        private readonly WiseWordsTable _db = new(new Uri("http://localhost:8000"));
+        private readonly WiseWordsTable _db = new(new Uri(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl));
+        
         private readonly Queue<string> _dbCleanupConversationPostTest = new();
 
 

@@ -20,10 +20,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
             .AddEnvironmentVariables()
             .Build();
 
-        var baseUrl = Configuration["API_GATEWAY_BASE_URL"] ??
-        Configuration["ApiGateway:BaseUrl"] ??
-        "http://127.0.0.1:3000/";
-
+        var baseUrl = new DataStore.Configuration.Loader().GetEnvironmentVariables().ApiBaseUrl;
 
         _httpClient = new HttpClient
         {

@@ -42,3 +42,4 @@ DevNotepad.txt
 .gitignore
 Beta/WiseWords.FrontEnd/cypress/failed
 publish.zip
+Beta/WiseWords.FrontEnd/public

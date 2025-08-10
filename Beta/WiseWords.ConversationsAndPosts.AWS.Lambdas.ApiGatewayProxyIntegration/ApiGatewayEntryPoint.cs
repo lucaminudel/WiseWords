@@ -15,13 +15,17 @@ public class ApiGatewayEntryPoint
     private readonly ILoggerObserver _forwardingObserver;
 
     public ApiGatewayEntryPoint()
+    : this(new Functions(new Uri(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalContainerUrl)),
+            new LoggerObserver("Api Gateway Routing"), new LoggerObserver("Api Gateway Forwarding"))
     {
-        var dynamoDbServiceUrl = Environment.GetEnvironmentVariable("DYNAMODB_SERVICE_URL") ?? "http://localhost:8000";
-        _lambdaFunctions = new Functions(new Uri(dynamoDbServiceUrl));
-        _routingObserver = new LoggerObserver("Api Gateway Routing");
-        _forwardingObserver = new LoggerObserver("Api Gateway Forwarding");
     }
 
+    public ApiGatewayEntryPoint(Functions lambdaFunctions, LoggerObserver routingObserver, LoggerObserver forwardingObserver)
+    {
+        _lambdaFunctions = lambdaFunctions;
+        _routingObserver = routingObserver;
+        _forwardingObserver = forwardingObserver;        
+    }
     public async Task<APIGatewayProxyResponse> RouteHttpRequestToLambda(APIGatewayProxyRequest request, ILambdaContext context)
     {
         _routingObserver.OnStart($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
@@ -49,8 +53,8 @@ public class ApiGatewayEntryPoint
 
                 "DELETE" => await (request.Path switch
                 {
-                    _ when request.Path.StartsWith("/conversations/") && 
-                          !request.Path.EndsWith("/posts") 
+                    _ when request.Path.StartsWith("/conversations/") &&
+                          !request.Path.EndsWith("/posts")
                                     => ForwardDeleteConversations(request, context),
                     _ => Task.FromResult(CreateResponse(HttpStatusCode.NotFound, "Not found"))
                 }),
