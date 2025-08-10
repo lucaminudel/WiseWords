@@ -4,7 +4,7 @@
 - When you are not sure about something or you have low confidence about something, say so.
 
 # Commands for collecting feedback in agentic mode whenever you write or change code
-- When you change the applicaiton code or the tests code use the build and test commands to verify that they succeed without error or to collect the error info so thare you can fix them; when you run Cypress end to end (e2e) tests and a test fails then use the commands to inspect the HTML of the page that failed and the screeshot of the page in order to find-out what needs fixing. Read all these commands from this file: ~/Code/WiseWords/Beta/KeyInfo.md
+- When you change the applicaiton code or the tests code use the build and test commands to verify that they succeed without error or to collect the error info so thare you can fix them; when you run Cypress end to end (e2e) tests and a test fails then use the commands to inspect the HTML of the page that failed and the screeshot of the page in order to find-out what needs fixing. Read all these commands from this local file: [~/Code/WiseWords/Beta/KeyInfo.md](KeyInfo.md)
 
 # When working on and writing test code or working on a test failure
 - First present me with a description of what the test is trying to do, and also ask me if I want you to analyse the code under test to identify potential bugs
@@ -12,16 +12,16 @@
 - When fixing some new or recently changed code that is making an pre-existing test fail, ask me if the code under test is currently working correctly, and if the answer is yes then: do NOT try to delete asserts or the test to resolve the failure.
 
 # WiseWords.FrontEnds Web applicaton in React and TypeScript
-- When working on WiseWords.FrontEnds read from this file ~/Code/WiseWords/Beta/WiseWords.FrontEnd/KeyInfo.md this info:
+- When working on WiseWords.FrontEnds read from this local file [~/Code/WiseWords/Beta/WiseWords.FrontEnd/KeyInfo.md](WiseWords.FrontEnd/KeyInfo.md) the following info:
  - the info about the sorting of the posts received by the API and presented in the page 
  - the buttons and related functions available on the posts of the conversation thread
 - When select an element with an ID in Cypress, especially one that contains special characters like #, use an Attribute Selector like this cy.get('[id="comment-form-#DD#1#DD#1"]').should('be.visible'); 
 
 # WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration RESTful API
-- When using or working on the ApiGatewayProxyIntegration RESTful API read from this file ~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/KeyInfo.md this info
+- When using or working on the ApiGatewayProxyIntegration RESTful API read from this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/KeyInfo.md) this info
  - The details of the API
  - Sort order of items returned by the API and the way the conversation tree is represented
-
+The API then calls the Lambda functions with a payload described in this local file [~/Users/lucaminudel~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md)
 
 # When writing code and when asked to review the code, apply these design principles
 - prefer Simple Design, Simplicity and KISS and YAGNI principles 

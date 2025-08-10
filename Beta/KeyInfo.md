@@ -128,11 +128,13 @@ dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegr
 
 cd publish
 zip -r ../publish.zip .
-cd ..
+cd ../
+rm -rf publish
 
 # Run the code in the local container
 sam local start-api  --template template.yaml  --debug --warm-containers LAZY 
 # use EAGER instead of LAZY containers then stay running between lamba calls, not like like the real cloud environment
+cd ..
 ```
 
 This is the command to serve the CSR static pages of the frontend website, from the WiseWords.FrontEnd folder (requires the back-end to be running in the AWS SAM environment):
@@ -140,15 +142,25 @@ This is the command to serve the CSR static pages of the frontend website, from 
 ```bash
 cd WiseWords.FrontEnd
 
-npm run dev
+WISEWORDS_ENV=local_dev npm run dev
 ```
+
+
+This is the command to build the frontend website bundle, from the WiseWords.FrontEnd folder, to be deployed on S3 with the right config embedded in the static files:
+
+```bash
+cd WiseWords.FrontEnd
+
+WISEWORDS_ENV=aws_prod npm run build
+```
+
 
 ## Commands for the developer for manual testing in the local development environment
 
 This is the command line to run and test the *AWS Lambda .NET Mock Lambda Test Tool* to locally test Lambda functions, from the WiseWords.ConversationsAndPosts.AWS.Lambdas folder
 
 ```bash
-export DYNAMODB_SERVICE_URL=http://localhost:8000 
+export WISEWORDS_ENV=local_dev
 dotnet-lambda-test-tool-8.0  
 ```
 

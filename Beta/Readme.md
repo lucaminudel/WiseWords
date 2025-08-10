@@ -78,12 +78,13 @@ curl -i -X GET "http://localhost:3000/conversations?updatedAtYear=2025"
 curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84
 ```
 
-## TODO: What's left to be implemented
+## TODO: Work completed and work left to be implemented
 
 These and the steps that remain to be carried out: 
 - ~~the implementation of the User Interface~~
 - ~~Complete the UI implementation with the posting of messages on a conversation thread and minimising re-loads~~  
 - Gradually deploy the appliation on AWS:
+  - ~~added simple environment configuration settings for dev, CI/CD, AWS production environment,~~ 
   - deploy the db to the serverless Amazon DynamoDb, 
   - deploy of the serverless Lambdas 
   - deploy Api Gateway infrastructure
@@ -92,7 +93,7 @@ These and the steps that remain to be carried out:
 - Verify the current logging works and its integration with Amazon CloudWatch monitoring and observability
 - Finalise automatic deploy, CI/CD.
 
-## UI Mockups, now implemented in the current UI
+## Original UI Mockups, now implemented in the current UI
 
 #### Page: Conversations list + Start new conversation button
 

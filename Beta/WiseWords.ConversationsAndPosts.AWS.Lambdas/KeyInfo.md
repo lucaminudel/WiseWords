@@ -1,6 +1,6 @@
 # Lambdas' Json 
 
-The below are examples of well-formed JSON that can be used to call the Lambdas via the AWS Lambda .NET Mock Lambda Test Tool invoked via command line: dotnet-lambda-test-tool-8.0 (it requires the environment variable DYNAMODB_SERVICE_URL in order to run)  
+The below are examples of well-formed JSON that can be used to call the Lambdas via the AWS Lambda .NET Mock Lambda Test Tool invoked via command line: dotnet-lambda-test-tool-8.0
 
 The ConvoType string - enum value map is
 - QUESTION (0), 

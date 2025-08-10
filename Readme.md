@@ -35,10 +35,10 @@ In the user's language,
   - a Conclusion post is called *Proposed choice*
 
 
-## The Spikes
-- Here are the spikes: follow the [(link)](Spikes/Readme.md) for the related details
+## The Spikes (Experiments and POC of the tech-stack components detailed below in the System design)
+- Here are the spikes, now completed: follow the [(link)](Spikes/Readme.md) for the related details
 
-## The latest Beta
+## The latest Beta (still under development)
 - Here is the Beta of *Wise Words*, still under development: follow the link [(link)](Beta/Readme.md) for the related details
 
 ## Technical design
@@ -116,3 +116,9 @@ I have started the development of this side project in the local development env
 - AWS DynamoDB local development instance on Docker
 - AWS Lambda .NET Mock Lambda Test Tool, to develop and test locally Lambda functions
 - AWS SAM (Serverless Application Model) for local development and testing of AWS API Gateway routing and Lambda events
+
+## Other online tools used
+
+- [GUID Generator](https://guidgenerator.app/)
+- [Epoch & Unix Timestamp Conversion Tools](https://www.epochconverter.com/)
+- [JSON validator and formatter](https://jsonlint.com/)
