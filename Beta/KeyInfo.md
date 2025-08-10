@@ -61,7 +61,7 @@ Build and run WiseWords.FrontEnd unit and e2e tests, to do all the above until t
 npm: build_and_test
 
 # Equivalent command
-# All the three related commands above
+# All three related commands above
 ```
 
 
@@ -73,16 +73,16 @@ When fixing a failing e2e test or the code under test, always run the single fai
 # Here is an example for the test file conversation-thread-commenting.cy.ts run from the /WiseWords/Beta/WiseWords.FrontEnd folder
 npm run test:e2e -- --spec "cypress/e2e/conversation-thread-commenting.cy.ts" 
 ```
-In case of test failure search in the output of the previous command the following info starting with 'cyclope: saving page for failed test':
+In case of test failure, search in the output of the previous command for the following info, starting with 'cyclope: saving page for failed test':
 ```
 cyclope: saving page for failed test
   spec <filename containing the test code>.cy.ts>
-  test <text describing the test senario>
-making folder <where the html that failed the expectation is stored>
+  test <text describing the test scenario>
+making folder <here goes the path to the html file that made the expectation and so the test fails, you HAVE inspect this file>
 cyclope: savePage took xx ms
 ```
 
-After an 2e2 test fails, always inspect the HTML with which the assert failed:
+After a 2e2 test fails, always inspect the HTML with which the assert failed:
 ```bash
 # Here is an example for a failed assert: should display an error message and keep form content on API error
 # in the test page: conversation-thread-commenting.cy.ts
@@ -133,7 +133,7 @@ rm -rf publish
 
 # Run the code in the local container
 sam local start-api  --template template.yaml  --debug --warm-containers LAZY 
-# use EAGER instead of LAZY containers then stay running between lamba calls, not like like the real cloud environment
+# use EAGER instead of LAZY containers then stay running between lamba calls, not like the real cloud environment
 cd ..
 ```
 
@@ -146,7 +146,7 @@ WISEWORDS_ENV=local_dev npm run dev
 ```
 
 
-This is the command to build the frontend website bundle, from the WiseWords.FrontEnd folder, to be deployed on S3 with the right config embedded in the static files:
+This is the command to build the frontend website bundle from the WiseWords.FrontEnd folder, to be deployed on S3 with the right config embedded in the static files:
 
 ```bash
 cd WiseWords.FrontEnd
