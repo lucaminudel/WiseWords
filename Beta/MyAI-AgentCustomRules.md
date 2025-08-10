@@ -21,7 +21,7 @@
 - When using or working on the ApiGatewayProxyIntegration RESTful API read from this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/KeyInfo.md) this info
  - The details of the API
  - Sort order of items returned by the API and the way the conversation tree is represented
-The API then calls the Lambda functions with a payload described in this local file [~/Users/lucaminudel~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md)
+The API then calls the Lambda functions with a payload described in this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md)
 
 # When writing code and when asked to review the code, apply these design principles
 - prefer Simple Design, Simplicity and KISS and YAGNI principles 
