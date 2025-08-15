@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Template for ConversationsAndPosts Lambda + API Gateway
+Resources:
+  ConversationsApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration::WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.ApiGatewayEntryPoint::RouteHttpRequestToLambda
+      Runtime: dotnet8
+      CodeUri: publish.zip
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          WISEWORDS_ENV: aws_prod
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY

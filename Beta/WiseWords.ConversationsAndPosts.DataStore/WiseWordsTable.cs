@@ -13,12 +13,13 @@ namespace WiseWords.ConversationsAndPosts.DataStore
         private const string DUMMY_AWS_ACCESS_KEY_ID = "dummy";
         private const string DUMMY_AWS_SECRET_ACCESS_KEY = "dummy";
 
-        private readonly Uri _serviceUrl;
+        private readonly Uri? _localDynamoDbServiceUrl;
+        private readonly Amazon.RegionEndpoint? _remoteDynamoDbRegion;
 
-        public WiseWordsTable(Uri serviceUrl)
+        public WiseWordsTable(Uri? localDynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion)
         {
-            ValidateServiceUrl(serviceUrl);
-            _serviceUrl = serviceUrl;
+            _localDynamoDbServiceUrl = localDynamoDbServiceUrl;
+            _remoteDynamoDbRegion = remoteDynamoDbRegion;
         }
 
         private const string CONVERSATION_PK_PREFIX = "CONVO#";
@@ -273,30 +274,28 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
         private async Task AsyncExecuteWithDynamoDB(Func<AmazonDynamoDBClient, DynamoDBContext, Task> action)
         {
-            var clientConfig = new AmazonDynamoDBConfig
-            {
-                ServiceURL = _serviceUrl.ToString(),
-                // RegionEndpoint intentionally omitted for DynamoDB Local
-            };
+            AmazonDynamoDBConfig clientConfig;
 
-            using (var client = new AmazonDynamoDBClient(DUMMY_AWS_ACCESS_KEY_ID, DUMMY_AWS_SECRET_ACCESS_KEY, clientConfig))
+            if (_localDynamoDbServiceUrl != null)
+            {
+                clientConfig = new AmazonDynamoDBConfig
+                {
+                    ServiceURL = _localDynamoDbServiceUrl.ToString(),
+                };
+            }
+            else
+            {
+                clientConfig = new AmazonDynamoDBConfig
+                {
+                    RegionEndpoint = _remoteDynamoDbRegion
+                };
+            }
+
+            using (var client = new AmazonDynamoDBClient(clientConfig))
             using (var context = new DynamoDBContextBuilder().WithDynamoDBClient(() => client).Build())
             {
                 await action(client, context);
             }
-        }
-
-        private static void ValidateServiceUrl(Uri serviceUrl)
-        {
-            if (serviceUrl == null)
-                throw new ArgumentNullException(nameof(serviceUrl));
-            
-            if (!serviceUrl.IsAbsoluteUri)
-                throw new ArgumentException("Service URL must be an absolute URI", nameof(serviceUrl));
-                
-            if (!serviceUrl.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) && 
-                !serviceUrl.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
-                throw new ArgumentException("Service URL must use HTTP or HTTPS scheme", nameof(serviceUrl));
         }
 
     }

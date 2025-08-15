@@ -24,7 +24,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
         _httpClient = new HttpClient
         {
-            BaseAddress = new Uri(baseUrl),
+            BaseAddress = baseUrl,
             Timeout = TimeSpan.FromSeconds(30)
         };
     }

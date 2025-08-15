@@ -10,18 +10,16 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
         private readonly DataStore.WiseWordsTable _service;
         private readonly ILoggerObserver _observer;
 
-#pragma warning disable CS8604 // Possible null reference argument.
-        public Functions() : this(new Uri(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl) ) { }
-#pragma warning restore CS8604 // Possible null reference argument.
+        public Functions() : this(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl,
+                                  new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region) { }
         
-        public Functions(Uri dynamoDbServiceUrl) : this(dynamoDbServiceUrl, new LoggerObserver("Lambda"))
+        public Functions(Uri? localDynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion) : this(localDynamoDbServiceUrl, remoteDynamoDbRegion, new LoggerObserver("Lambda"))
         {
         }
 
-        public Functions(Uri dynamoDbServiceUrl, ILoggerObserver observer)
+        public Functions(Uri? dynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion, ILoggerObserver observer)
         {
-            ValidateServiceUrl(dynamoDbServiceUrl);
-            _service = new DataStore.WiseWordsTable(dynamoDbServiceUrl);
+            _service = new DataStore.WiseWordsTable(dynamoDbServiceUrl, remoteDynamoDbRegion);
             _observer = observer;
         }
 
@@ -160,19 +158,6 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
                 _observer.OnError($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
-        }
-
-        private static void ValidateServiceUrl(Uri serviceUrl)
-        {
-            if (serviceUrl == null)
-                throw new ArgumentNullException(nameof(serviceUrl));
-            
-            if (!serviceUrl.IsAbsoluteUri)
-                throw new ArgumentException("Service URL must be an absolute URI", nameof(serviceUrl));
-                
-            if (!serviceUrl.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) && 
-                !serviceUrl.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
-                throw new ArgumentException("Service URL must use HTTP or HTTPS scheme", nameof(serviceUrl));
         }
     }
 }

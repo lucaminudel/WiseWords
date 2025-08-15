@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Local test template for ConversationsAndPosts Lambda + API Gateway
+Description: Template for ConversationsAndPosts Lambda + API Gateway
 Resources:
   ConversationsApi:
     Type: AWS::Serverless::Function
@@ -12,7 +12,7 @@ Resources:
       Timeout: 30
       Environment:
         Variables:
-          WISEWORDS_ENV: local_dev
+          WISEWORDS_ENV: local_integration_tests
       Events:
         Api:
           Type: Api

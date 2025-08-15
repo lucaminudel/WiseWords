@@ -15,7 +15,8 @@ public class ApiGatewayEntryPoint
     private readonly ILoggerObserver _forwardingObserver;
 
     public ApiGatewayEntryPoint()
-    : this(new Functions(new Uri(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalContainerUrl)),
+    : this(new Functions(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalContainerUrl,
+                         new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region),
             new LoggerObserver("Api Gateway Routing"), new LoggerObserver("Api Gateway Forwarding"))
     {
     }

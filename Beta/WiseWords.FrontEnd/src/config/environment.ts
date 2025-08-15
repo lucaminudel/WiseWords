@@ -14,7 +14,7 @@ let cachedConfig: EnvironmentConfig | null = null;
 export async function loadConfig(): Promise<EnvironmentConfig> {
   if (cachedConfig) return cachedConfig;
   
-  const environment = import.meta.env.WISEWORDS_ENV;
+  const environment = (import.meta as any).env.WISEWORDS_ENV as string;
   
   if (!environment) {
     throw new Error('WISEWORDS_ENV environment variable is not set. Please set it to one of: local_dev, aws_prod, local_integration_tests');
@@ -31,7 +31,7 @@ export async function loadConfig(): Promise<EnvironmentConfig> {
       throw new Error(`Failed to load configuration file for environment '${environment}'. HTTP status: ${response.status}. Make sure the config file exists and is accessible.`);
     }
     
-    cachedConfig = await response.json();
+    cachedConfig = await response.json() as EnvironmentConfig;
     return cachedConfig;
   } catch (error) {
     if (error instanceof Error) {

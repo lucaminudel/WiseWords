@@ -13,6 +13,10 @@ dotnet build WiseWords.ConversationsAndPosts.DataStore.sln
 
 Run DataStore.Tests from their folder (requires the local Docker image of AWS DynamoDb to be running)  after any change to the DataStore code or DataStore.Tests tests:
 ```bash
+# Set the environment variable to select the configuration variables local_dev | aws_prod | local_dev_integration_tests
+WISEWORDS_ENV=local_dev 
+export WISEWORDS_ENV                                              
+
 dotnet test WiseWords.ConversationsAndPosts.DataStore.Tests.csproj
 ```
 
@@ -23,6 +27,11 @@ dotnet build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegrat
 
 Run API Gateway Integration Tests from their folder (requires the back-end to be running in the AWS SAM environment) after any changes to the ApiGatewayProxyIntegration code or the tests:
 ```bash
+# Set the environment variable to select the configuration variables local_dev | aws_prod | local_dev_integration_tests
+# This affects the tests and not the API code executed locally on SAM or in the cloud
+WISEWORDS_ENV=local_dev 
+export WISEWORDS_ENV                                              
+
 dotnet test WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests.csproj 
 ```
 
@@ -135,7 +144,8 @@ cd ../
 rm -rf publish
 
 # Run the code in the local container
-sam local start-api  --template template.yaml  --debug --warm-containers LAZY 
+# Specify the template_<environment>.yaml version to use the related config variables
+sam local start-api  --template template_local_dev.yaml --debug --warm-containers LAZY 
 # use EAGER instead of LAZY containers then stay running between lamba calls, not like the real cloud environment
 cd ..
 ```
