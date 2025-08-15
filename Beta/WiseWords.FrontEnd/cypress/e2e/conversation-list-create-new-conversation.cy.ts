@@ -249,23 +249,18 @@ describe('New Conversation Form - Complete Integration', () => {
 
   it('should maintain form state during submission', () => {
     // Mock slow API response to test loading state
-    cy.intercept('POST', '**/conversations', (req) => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            statusCode: 200,
-            body: {
-              PK: "CONVO#slow-response-guid",
-              SK: "METADATA",
-              Title: req.body.Title,
-              MessageBody: req.body.MessageBody,
-              Author: req.body.Author,
-              ConvoType: "QUESTION",
-              UpdatedAt: "1640995200"
-            }
-          });
-        }, 500); // Shorter delay for test reliability
-      });
+    cy.intercept('POST', '**/conversations', {
+      statusCode: 200,
+      body: {
+        PK: "CONVO#slow-response-guid",
+        SK: "METADATA",
+        Title: 'Slow Response Test',
+        MessageBody: 'Testing slow response handling',
+        Author: 'TestUser',
+        ConvoType: "QUESTION",
+        UpdatedAt: "1640995200"
+      },
+      delay: 500
     }).as('createSlowConversation');
 
     cy.contains('button', 'New Conversation').click();
@@ -284,9 +279,10 @@ describe('New Conversation Form - Complete Integration', () => {
     // Wait for API completion
     cy.wait('@createSlowConversation');
     
-    // Note: In test environment, form might not hide due to mocking limitations
-    // The important part is that loading state worked correctly
-    // In production, this flow works as expected
-    cy.log('Loading state test completed - form behavior verified');
+    // After successful creation, the form should disappear
+    cy.get('#new-conversation-form').should('not.exist');
+    
+    // And the new conversation should be in the list
+    cy.contains('Slow Response Test').should('be.visible');
   });
 });
