@@ -5,7 +5,7 @@ using Amazon.Lambda.APIGatewayEvents;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
-namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration;
+namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway;
 
 public class ApiGatewayEntryPoint
 {

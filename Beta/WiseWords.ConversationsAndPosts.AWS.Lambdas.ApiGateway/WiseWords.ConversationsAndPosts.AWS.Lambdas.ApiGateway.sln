@@ -9,9 +9,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WiseWords.ConversationsAndP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WiseWords.ConversationsAndPosts.AWS.Lambdas", "..\WiseWords.ConversationsAndPosts.AWS.Lambdas\WiseWords.ConversationsAndPosts.AWS.Lambdas.csproj", "{C10A370E-4A8A-4B68-97D3-673973C5B3E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration", "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj", "{010015AB-2CB5-41C4-B91B-60A1915A700F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway", "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.csproj", "{010015AB-2CB5-41C4-B91B-60A1915A700F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests", "..\WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests\WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests.csproj", "{E3D412FD-7ECB-453D-ACFE-71E037D1ADF0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests", "..\WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests\WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests.csproj", "{E3D412FD-7ECB-453D-ACFE-71E037D1ADF0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

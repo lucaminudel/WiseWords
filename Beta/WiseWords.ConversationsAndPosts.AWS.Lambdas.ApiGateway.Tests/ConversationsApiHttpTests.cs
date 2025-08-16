@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Xunit;
 using System.Text.Json;
 
-namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests;
+namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests;
 
 public class ConversationsApiHttpTests : IAsyncLifetime
 {

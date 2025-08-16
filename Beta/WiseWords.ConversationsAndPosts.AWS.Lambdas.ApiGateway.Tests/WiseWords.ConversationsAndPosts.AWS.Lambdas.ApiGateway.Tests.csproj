@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration\WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj" />
+    <ProjectReference Include="..\WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway\WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.csproj" />
   </ItemGroup>
 
 </Project>
