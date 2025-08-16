@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
@@ -15,10 +16,8 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
 #if DEBUG
             // This fallback allows IDE Tests explores to run using local_dev settings
             var environment = Environment.GetEnvironmentVariable("WISEWORDS_ENV") ?? "local_dev";
-            Console.WriteLine($"Environnment variable WISEWORDS_ENV: {Environment.GetEnvironmentVariable("WISEWORDS_ENV")}");
-
+            Console.WriteLine($"Environnment variable WISEWORDS_ENV: {Environment.GetEnvironmentVariable("WISEWORDS_ENV") ?? "not set, defaulting to " + environment}");
 #else
-            // This fallback allows IDE Tests explores to run using local_dev settings
             var environment = Environment.GetEnvironmentVariable("WISEWORDS_ENV");
             if (string.IsNullOrEmpty(environment))
                 throw new InvalidOperationException("The WISEWORDS_ENV environment variable should be set (local_dev, local_integration_tests, aws_prod) but is not.");
