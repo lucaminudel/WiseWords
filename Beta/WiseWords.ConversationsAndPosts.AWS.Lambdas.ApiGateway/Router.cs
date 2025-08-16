@@ -7,29 +7,29 @@ using Amazon.Lambda.APIGatewayEvents;
 
 namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway;
 
-public class ApiGatewayEntryPoint
+public class Router
 {
     private readonly Functions _lambdaFunctions;
     private readonly ILoggerObserver _routingObserver;
 
     private readonly ILoggerObserver _forwardingObserver;
 
-    public ApiGatewayEntryPoint()
+    public Router()
     : this(new Functions(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalContainerUrl,
                          new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region),
             new LoggerObserver("Api Gateway Routing"), new LoggerObserver("Api Gateway Forwarding"))
     {
     }
 
-    public ApiGatewayEntryPoint(Functions lambdaFunctions, LoggerObserver routingObserver, LoggerObserver forwardingObserver)
+    public Router(Functions lambdaFunctions, LoggerObserver routingObserver, LoggerObserver forwardingObserver)
     {
         _lambdaFunctions = lambdaFunctions;
         _routingObserver = routingObserver;
         _forwardingObserver = forwardingObserver;        
     }
-    public async Task<APIGatewayProxyResponse> RouteHttpRequestToLambda(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayProxyResponse> Dispatch(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _routingObserver.OnStart($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _routingObserver.OnStart($"HTTP Request Router={nameof(Dispatch)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         try
         {
@@ -65,7 +65,7 @@ public class ApiGatewayEntryPoint
                 _ => CreateResponse(HttpStatusCode.MethodNotAllowed, "Method not allowed"),
             };
 
-            _routingObserver.OnSuccess($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+            _routingObserver.OnSuccess($"HTTP Request Router={nameof(Dispatch)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
 
             return response;
@@ -73,31 +73,31 @@ public class ApiGatewayEntryPoint
         }
         catch (ArgumentException ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.BadRequest, $"Invalid request: {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.BadRequest, $"Invalid operation: {ex.Message}");
         }
         catch (OperationCanceledException ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.RequestTimeout, $"Request cancelled: {ex.Message}");
         }
         catch (Amazon.Runtime.AmazonServiceException ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.ServiceUnavailable, $"Amazon service error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(RouteHttpRequestToLambda)}", context, ex);
+            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.InternalServerError, $"Internal server error: {{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}");
         }
