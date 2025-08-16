@@ -13,6 +13,9 @@ Resources:
       Environment:
         Variables:
           WISEWORDS_ENV: aws_prod
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
       Events:
         Api:
           Type: Api
