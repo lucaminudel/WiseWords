@@ -1,7 +1,7 @@
-cd ../WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration
+cd ../WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway
 
 # Build the Lambda and API Gateway code for deployment into the ./publish folder  
-dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish -r linux-x64
+dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.csproj  -c Release -o ./publish -r linux-x64
 
 cd publish && zip -r ../publish.zip . && cd ..
 rm -rf publish

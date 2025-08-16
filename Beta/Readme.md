@@ -12,8 +12,8 @@ These are the projects I have completed in the Beta so far:
 1. **WiseWords.ConversationsAndPosts.DataStore** - Real DynamoDB implementation
 2. **WiseWords.ConversationsAndPosts.DataStore.Tests** - Comprehensive data layer testing
 3. **WiseWords.ConversationsAndPosts.AWS.Lambdas** - Production Lambda functions
-4. **WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration** - API Gateway integration
-5. **WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests** - HTTP API testing
+4. **WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway** - API Gateway integration
+5. **WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests** - HTTP API testing
 
 #### Key Improvements made in the Beta
 

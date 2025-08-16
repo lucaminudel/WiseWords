@@ -17,8 +17,8 @@
  - the buttons and related functions available on the posts of the conversation thread
 - When selecting an element with an ID in Cypress, especially one that contains special characters like #, use an Attribute Selector like this cy.get('[id="comment-form-#DD#1#DD#1"]').should('be.visible'); 
 
-# WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration RESTful API
-- When using or working on the ApiGatewayProxyIntegration RESTful API read from this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration/KeyInfo.md) this info
+# WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway RESTful API
+- When using or working on the ApiGateway RESTful API read from this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway/KeyInfo.md) this info
  - The details of the API
  - Sort order of items returned by the API and the way the conversation tree is represented
 The API then calls the Lambda functions with a payload described in this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md)

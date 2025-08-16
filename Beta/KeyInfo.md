@@ -20,19 +20,19 @@ export WISEWORDS_ENV
 dotnet test WiseWords.ConversationsAndPosts.DataStore.Tests.csproj
 ```
 
-Build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration after any changes to the ApiGatewayProxyIntegration code:
+Build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway after any changes to the ApiGateway code:
 ```bash
-dotnet build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.sln
+dotnet build WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.sln
 ```
 
-Run API Gateway Integration Tests from their folder (requires the back-end to be running in the AWS SAM environment) after any changes to the ApiGatewayProxyIntegration code or the tests:
+Run API Gateway Integration Tests from their folder (requires the back-end to be running in the AWS SAM environment) after any changes to the ApiGateway code or the tests:
 ```bash
 # Set the environment variable to select the configuration variables local_dev | aws_prod | local_dev_integration_tests
 # This affects the tests and not the API code executed locally on SAM or in the cloud
 WISEWORDS_ENV=local_dev 
 export WISEWORDS_ENV                                              
 
-dotnet test WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests.csproj 
+dotnet test WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests.csproj 
 ```
 
 
@@ -133,10 +133,10 @@ ls "Conversation Thread Commenting Workflow -- Replying to the Root Conversation
 These are the commands to build the code and deploy it into the *AWS SAM (Serverless Application Model)* for local development and testing of AWS API Gateway routing and Lambda events:
 
 ```bash
-cd WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration
+cd WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway
 
 # Build the Lambda and API Gateway code for deployment into the ./publish folder  
-dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.csproj  -c Release -o ./publish -r linux-x64
+dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.csproj  -c Release -o ./publish -r linux-x64
 
 cd publish
 zip -r ../publish.zip .

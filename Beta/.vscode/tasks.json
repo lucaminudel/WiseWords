@@ -9,9 +9,9 @@
 				"$msCompile"
 			],
 			"label": "Build: solution",
-			"detail": "Build the WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.sln solution using dotnet build",
+			"detail": "Build the WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.sln solution using dotnet build",
 			"options": {
-				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration"
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway"
 			}
 		},
 		{
@@ -29,9 +29,9 @@
 				"$msCompile"
 			],
 			"label": "Build: solution (shell fallback)",
-			"detail": "Build the WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.sln solution using shell command",
+			"detail": "Build the WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.sln solution using shell command",
 			"options": {
-				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration"
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway"
 			}
 		},
 		{
@@ -114,7 +114,7 @@
 		{
 			"type": "shell",
 			"command": "dotnet",
-			"args": ["test", "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests.csproj"],
+			"args": ["test", "WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests.csproj"],
 			"group": "test",
 			"presentation": {
 				"echo": true,
@@ -128,7 +128,7 @@
 			"label": "Test: API Gateway Tests",
 			"detail": "Run API Gateway integration tests",
 			"options": {
-				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGatewayProxyIntegration.Tests"
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests"
 			}
 		},
 		{
