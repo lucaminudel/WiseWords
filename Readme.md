@@ -76,26 +76,25 @@ graph TD
     APIGateway[Amazon API Gateway HTTP API]
     Lambda[AWS Lambda Microservices]
     DynamoDB[Amazon DynamoDB NoSQL Storage]
-    Amplify[AWS Amplify JS libraries or JS SDK]
     UI["User Interface (UI) - Client Side Rendering (CSR) Web Pages"]
     
 
     %% Connections with labels
-    S3 -->|Delivers static assets| CloudFront
-    CloudFront -->|Serves CSR web pages| Amplify
-    Amplify -->|Handles auth| Cognito
-    Amplify -->|Calls HTTP APIs| APIGateway
-    Amplify -->|Renders| UI
+    CloudFront -->|Serves and caches CSR web pages| S3
+    S3 -->|Handles auth via| Cognito
+    S3 -->|Calls HTTP APIs| APIGateway
+    S3 -->|Renders static assets| UI
     APIGateway -->|Invokes| Lambda
     Lambda -->|Reads/Writes| DynamoDB
 
     %% Assign classes to nodes
-    class S3,CloudFront frontend;
+    class CloudFront frontend;
+    class S3 frontend;
     class Cognito auth;
-    class APIGateway,Lambda api;
+    class APIGateway api;
+    class Lambda api;
     class DynamoDB db;
-    class Amplify sdk;
-
+    class frontend2 sdk;
 ```
 
 #### Single-table data design:
