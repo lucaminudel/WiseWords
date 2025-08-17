@@ -83,14 +83,15 @@ curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb
 These and the steps that remain to be carried out: 
 - ~~the implementation of the User Interface~~
 - ~~Complete the UI implementation with the posting of messages on a conversation thread and minimising re-loads~~  
-- Gradually deploy the appliation on AWS:
+- ~~Gradually deploy the appliation on AWS:~~
   - ~~added simple environment configuration settings for dev, CI/CD, AWS production environment,~~ 
-  - deploy the db to the serverless Amazon DynamoDb, 
-  - deploy of the serverless Lambdas 
-  - deploy Api Gateway infrastructure
-  - deploy the front-end to S3 
+  - ~~deploy the db to the serverless Amazon DynamoDb,~~ 
+  - ~~deploy of the serverless Lambdas~~ 
+  - ~~deploy Api Gateway infrastructure~~
+  - ~~deploy the front-end to S3~~ 
+- ~~Verify the current logging works and its integration with Amazon CloudWatch monitoring and observability~~
 - Implement users authentication with Amazon Cognito, including registratation and login 
-- Verify the current logging works and its integration with Amazon CloudWatch monitoring and observability
+- Automate infrastructure deploy with Terraform.
 - Finalise automatic deploy, CI/CD.
 
 ## Original UI Mockups, now implemented in the current UI
