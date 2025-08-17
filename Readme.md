@@ -80,7 +80,7 @@ graph TD
     
 
     %% Connections with labels
-    CloudFront -->|Serves and caches CSR web pages| S3
+    CloudFront -->|Serves and cache| S3
     S3 -->|Handles auth via| Cognito
     S3 -->|Calls HTTP APIs| APIGateway
     S3 -->|Renders static assets| UI
