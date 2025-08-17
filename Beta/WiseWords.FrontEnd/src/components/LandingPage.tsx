@@ -25,9 +25,10 @@ const LandingPage: React.FC = () => {
         
         <p className="app-description">
           <br/>
-          All social networks are good to share news, opinions and statements.
+          All social networks are good to share news, opinions, statements.
           <br/><br/>
-          Wise Words is the place for productive collaborative conversations for finding <span className="highlight">answers</span> to difficult questions, exploring <span className="highlight">solutions</span> to intractable problems, and discussing dilemmas to find suitable <span className="highlight">options</span>.
+          Wise Words gets you from questions to <span className="highlight">answers</span>, problems to <span className="highlight">solutions</span>, and dilemmas to <span className="highlight">options</span>.
+          Enabling productive collaborative conversations.
         </p>
         
         <button 
