@@ -11,8 +11,9 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
         private readonly ILoggerObserver _observer;
 
         public Functions() : this(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl,
-                                  new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region) { }
-        
+                                  new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region)
+        { }
+
         public Functions(Uri? localDynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion) : this(localDynamoDbServiceUrl, remoteDynamoDbRegion, new LoggerObserver("Lambda"))
         {
         }
@@ -29,7 +30,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.CreateNewConversation(req.NewGuid, req.ConvoType, req.Title, req.MessageBody, req.Author, req.UtcCreationTime);
+                var result = await _service.CreateNewConversation(req.NewGuid, req.ConvoType, req.Title, req.MessageBody, GetAuthor(context, req.Author), req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(CreateNewConversationHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -94,7 +95,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             {
                 _observer.OnError($"Handler={nameof(AdministrativeNonAtomicDeleteConversationAndPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
-                
+
             }
             catch (Exception ex)
             {
@@ -109,7 +110,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendDrillDownPost(req.ConversationPK, req.ParentPostSK, req.NewDrillDownGuid, req.Author, req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendDrillDownPost(req.ConversationPK, req.ParentPostSK, req.NewDrillDownGuid, GetAuthor(context, req.Author), req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendDrillDownPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -128,7 +129,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendCommentPost(req.ConversationPK, req.ParentPostSK, req.NewCommentGuid, req.Author, req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendCommentPost(req.ConversationPK, req.ParentPostSK, req.NewCommentGuid, GetAuthor(context, req.Author), req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendCommentPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -147,7 +148,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, req.Author, req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, GetAuthor(context, req.Author), req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -158,6 +159,20 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
                 _observer.OnError($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
+        }        
+
+        private string GetAuthor(ILambdaContext context, string requestAuthor)
+        {
+            if (string.IsNullOrEmpty(context.Identity?.IdentityId))
+            {
+                return requestAuthor;
+            }
+            else
+            {
+                return context.Identity.IdentityId;
+            }
+
         }
+
     }
 }
