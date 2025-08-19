@@ -1,7 +1,73 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Template for ConversationsAndPosts Lambda + API Gateway
+Description: Template for ConversationsAndPosts Lambda + API Gateway with Cognito Authentication
+
 Resources:
+  # Cognito User Pool
+  WiseWordsUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: WiseWordsUserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+        - Name: preferred_username
+          AttributeDataType: String
+          Required: true
+        - Name: name
+          AttributeDataType: String
+          Required: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      UserPoolAddOns:
+        AdvancedSecurityMode: ENFORCED
+
+  # Cognito User Pool Client
+  WiseWordsUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref WiseWordsUserPool
+      ClientName: WiseWordsWebClient
+      GenerateSecret: false
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - https://doxsj8lfqq7dm.cloudfront.net/callback
+      LogoutURLs:
+        - https://doxsj8lfqq7dm.cloudfront.net
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      AllowedOAuthFlowsUserPoolClient: true
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  # Cognito Identity Pool
+  WiseWordsIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: WiseWordsIdentityPool
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref WiseWordsUserPoolClient
+          ProviderName: !GetAtt WiseWordsUserPool.ProviderName
+
+  # Lambda Function with API Gateway
   ConversationsAndPostsAPI:
     Type: AWS::Serverless::Function
     Properties:
@@ -22,3 +88,38 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
+            RestApiId: !Ref WiseWordsApi
+
+  # API Gateway with Cognito Authorizer
+  WiseWordsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: WiseWordsCognitoAuthorizer
+        Authorizers:
+          WiseWordsCognitoAuthorizer:
+            UserPoolArn: !GetAtt WiseWordsUserPool.Arn
+
+Outputs:
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref WiseWordsUserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolId"
+  
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref WiseWordsUserPoolClient
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolClientId"
+  
+  IdentityPoolId:
+    Description: Cognito Identity Pool ID
+    Value: !Ref WiseWordsIdentityPool
+    Export:
+      Name: !Sub "${AWS::StackName}-IdentityPoolId"
+  
+  CognitoHostedUIUrl:
+    Description: Cognito Hosted UI Login URL (after domain is created)
+    Value: !Sub "https://DOMAIN_NAME.auth.${AWS::Region}.amazoncognito.com/login?client_id=${WiseWordsUserPoolClient}&response_type=code&scope=email+openid+profile&redirect_uri=https://doxsj8lfqq7dm.cloudfront.net/callback"

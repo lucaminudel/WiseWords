@@ -73,12 +73,22 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
         public string DynamoDbServiceLocalContainerUrl { get; set; } = string.Empty;
 
         public AwsConfigDeserialisation AWS { get; set; } = new();
+        public CognitoConfigDeserialisation? Cognito { get; set; }
     }
 
     internal class AwsConfigDeserialisation
     {
         public string Profile { get; set; } = string.Empty;
         public string? Region { get; set; }
+    }
+
+    internal class CognitoConfigDeserialisation
+    {
+        public string UserPoolId { get; set; } = string.Empty;
+        public string ClientId { get; set; } = string.Empty;
+        public string IdentityPoolId { get; set; } = string.Empty;
+        public string Region { get; set; } = string.Empty;
+        public string Domain { get; set; } = string.Empty;
     }
     
     public class EnvironmentConfig
@@ -99,6 +109,18 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
 
             if (!string.IsNullOrEmpty(cfg.AWS.Region))
                 AWS.Region = Amazon.RegionEndpoint.GetBySystemName(cfg.AWS.Region);
+
+            if (cfg.Cognito != null)
+            {
+                Cognito = new CognitoConfig
+                {
+                    UserPoolId = cfg.Cognito.UserPoolId,
+                    ClientId = cfg.Cognito.ClientId,
+                    IdentityPoolId = cfg.Cognito.IdentityPoolId,
+                    Region = cfg.Cognito.Region,
+                    Domain = cfg.Cognito.Domain
+                };
+            }
 
         }
 
@@ -130,17 +152,27 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
                 throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.DynamoDbServiceLocalContainerUrl)} cannot be both empty or botth specified.");
         }
 
-        public Uri? ApiBaseUrl { get; set; } = null;
-        public Uri? DynamoDbServiceLocalUrl { get; set; } = null;
-        public Uri? DynamoDbServiceLocalContainerUrl { get; set; } = null;
+        public Uri? ApiBaseUrl { get; internal set; } = null;
+        public Uri? DynamoDbServiceLocalUrl { get; internal set; } = null;
+        public Uri? DynamoDbServiceLocalContainerUrl { get; internal set; } = null;
 
-        public AwsConfig AWS { get; set; } = new();
+        public AwsConfig AWS { get; internal set; } = new();
+        public CognitoConfig? Cognito { get; internal set; }
     }
     
     public class AwsConfig
     {
-        public string Profile { get; set; } = string.Empty;
-        public Amazon.RegionEndpoint? Region { get; set; }
+        public string Profile { get; internal set; } = string.Empty;
+        public Amazon.RegionEndpoint? Region { get; internal set; }
+    }
+
+    public class CognitoConfig
+    {
+        public string UserPoolId { get; internal set; } = string.Empty;
+        public string ClientId { get; internal set; } = string.Empty;
+        public string IdentityPoolId { get; internal set; } = string.Empty;
+        public string Region { get; internal set; } = string.Empty;
+        public string Domain { get; internal set; } = string.Empty;
     }
 
 }
