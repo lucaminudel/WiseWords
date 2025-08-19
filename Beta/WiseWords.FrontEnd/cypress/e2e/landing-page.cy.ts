@@ -5,7 +5,7 @@ describe('Landing Page', () => {
 
     // 2. Verify key elements are visible
     cy.contains('Wise Words').should('be.visible');
-    cy.contains('All social networks are good to share news, opinions and statements.').should('be.visible');
+    cy.contains('All social networks are good to share news, opinions, statements.').should('be.visible');
     const enterButton = cy.contains('button', 'Enter');
     enterButton.should('be.visible');
 
