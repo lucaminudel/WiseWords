@@ -7,6 +7,13 @@ export interface EnvironmentConfig {
     Profile: string;
     Region: string | null;
   };
+  Cognito?: CognitoConfig;
+}
+
+export interface CognitoConfig {
+  ClientId: string;
+  Domain: string;
+  Region: string;
 }
 
 let cachedConfig: EnvironmentConfig | null = null;

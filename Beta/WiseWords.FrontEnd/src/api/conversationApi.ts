@@ -37,17 +37,46 @@ class ConversationApiError extends Error {
 }
 
 /**
+ * Get authorization headers for API calls
+ */
+let getAuthToken: (() => Promise<string | null>) | null = null;
+
+export function setAuthTokenProvider(provider: () => Promise<string | null>) {
+    getAuthToken = provider;
+}
+
+/**
  * Generic fetch wrapper with error handling
  */
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const baseUrl = await getApiBaseUrl();
     const url = `${baseUrl}${endpoint}`;
     
+    // Add authorization header for AWS mode
+    const headers: Record<string, string> = { ...API_HEADERS };
+    if (getAuthToken) {
+        const token = await getAuthToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+    }
+    
     try {
         const response = await fetch(url, {
-            headers: API_HEADERS,
+            headers,
             ...options,
         });
+
+        // Handle 401 - authentication required
+        if (response.status === 401 && getAuthToken) {
+            // Clear any stored tokens
+            localStorage.removeItem('cognito_access_token');
+            localStorage.removeItem('cognito_id_token');
+            localStorage.removeItem('cognito_refresh_token');
+            localStorage.removeItem('cognito_username');
+            
+            throw new ConversationApiError('Authentication required. Please log in.', 401);
+        }
 
         if (!response.ok) {
             const errorText = await response.text();

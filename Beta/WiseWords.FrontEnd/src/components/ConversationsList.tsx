@@ -6,6 +6,7 @@ import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToN
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { ConversationResponse } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
+import { useAuth } from '../contexts/AuthContext';
 
 // TypeScript interface for PageShowEvent
 interface PageShowEvent extends Event {
@@ -101,7 +102,13 @@ const ConversationsList: React.FC = () => {
     };
   }, []);
 
-  const handleNewConversation = () => {
+  const { requireAuth, username, IsCognitoAuthEnabled } = useAuth();
+
+  const handleNewConversation = async () => {
+    // Check authentication for write operations
+    const canProceed = await requireAuth();
+    if (!canProceed) return; // Will redirect to login
+    
     setShowNewConversationForm(true);
     // Use anchor navigation for reliable scrolling
     setTimeout(() => {
@@ -135,8 +142,11 @@ const ConversationsList: React.FC = () => {
   };
 
   const handleCreate = async () => {
+    // Use authenticated username in AWS mode, form author in local mode
+    const effectiveAuthor = IsCognitoAuthEnabled ? (username || '') : formData.author.trim();
+    
     // Validate all fields
-    if (!formData.type.trim() || !formData.title.trim() || !formData.author.trim() || !formData.messageBody.trim()) {
+    if (!formData.type.trim() || !formData.title.trim() || !effectiveAuthor.trim() || !formData.messageBody.trim()) {
       setFormError('Please fill in all fields');
       return;
     }
@@ -151,7 +161,7 @@ const ConversationsList: React.FC = () => {
       const newConversation = await ConversationService.createConversationAndUpdateCache(
         formData.title,
         formData.messageBody,
-        formData.author,
+        effectiveAuthor,
         convoTypeNumber
       );
 
@@ -362,26 +372,28 @@ const ConversationsList: React.FC = () => {
               />
             </div>
 
-            {/* Author Field - LAST */}
-            <div className="form-group">
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Author</label>
-              <input 
-                type="text"
-                value={formData.author}
-                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                placeholder="Enter your name"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Orbitron, Inter, sans-serif',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
+            {/* Author Field - LAST - Only show in local mode */}
+            {!IsCognitoAuthEnabled && (
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Author</label>
+                <input 
+                  type="text"
+                  value={formData.author}
+                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                  placeholder="Enter your name"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--color-background)',
+                    color: 'var(--color-text-primary)',
+                    fontFamily: 'Orbitron, Inter, sans-serif',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+            )}
             
             {/* Form Buttons */}
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
