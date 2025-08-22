@@ -18,7 +18,7 @@ interface PageShowEvent extends Event {
 // formatDate logic moved to utils/dateUtils.ts
 
 const ConversationsList: React.FC = () => {
-  const { isAuthenticated, IsCognitoAuthEnabled, login } = useAuth();
+  const { isAuthenticated, IsCognitoAuthEnabled, login, username } = useAuth();
   const [conversations, setConversations] = useState<ConversationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,8 +167,9 @@ const ConversationsList: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    // Validate all fields
-    if (!formData.type.trim() || !formData.title.trim() || !formData.author.trim() || !formData.messageBody.trim()) {
+    // Validate required fields (author not required when Cognito is enabled)
+    const authorRequired = !IsCognitoAuthEnabled;
+    if (!formData.type.trim() || !formData.title.trim() || !formData.messageBody.trim() || (authorRequired && !formData.author.trim())) {
       setFormError('Please fill in all fields');
       return;
     }
@@ -180,10 +181,13 @@ const ConversationsList: React.FC = () => {
       // Convert string type to number using the utility function
       const convoTypeNumber = convertConvoTypeToNumber(formData.type);
       
+      // Use authenticated username when Cognito is enabled, otherwise use form data
+      const authorName = IsCognitoAuthEnabled ? (username || 'user') : formData.author;
+      
       const newConversation = await ConversationService.createConversationAndUpdateCache(
         formData.title,
         formData.messageBody,
-        formData.author,
+        authorName,
         convoTypeNumber
       );
 
@@ -394,26 +398,28 @@ const ConversationsList: React.FC = () => {
               />
             </div>
 
-            {/* Author Field - LAST */}
-            <div className="form-group">
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Author</label>
-              <input 
-                type="text"
-                value={formData.author}
-                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                placeholder="Enter your name"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'Orbitron, Inter, sans-serif',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
+            {/* Author Field - LAST - Only show when Cognito is not enabled */}
+            {!IsCognitoAuthEnabled && (
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Author</label>
+                <input 
+                  type="text"
+                  value={formData.author}
+                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                  placeholder="Enter your name"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--color-background)',
+                    color: 'var(--color-text-primary)',
+                    fontFamily: 'Orbitron, Inter, sans-serif',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+            )}
             
             {/* Form Buttons */}
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>

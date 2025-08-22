@@ -147,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [userPool, cognitoConfig]);
 
   const login = () => {
-    console.log('[WiseWords v1.4] Starting login flow');
+    console.log('[WiseWords v1.6] Starting login flow');
     if (!cognitoConfig) {
       console.log('[AuthContext] Login called but no Cognito config available');
       return;
@@ -177,7 +177,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const getAccessToken = async (): Promise<string | null> => {
-    if (!userPool || !isAuthenticated) return null;
+    if (!isAuthenticated || !cognitoConfig) return null;
+    
+    // Try to get ID token directly from localStorage first (API Gateway typically uses ID tokens)
+    const keyPrefix = `CognitoIdentityServiceProvider.${cognitoConfig.ClientId}`;
+    const storedIdToken = localStorage.getItem(`${keyPrefix}.user.idToken`);
+    
+    if (storedIdToken) {
+      return storedIdToken;
+    }
+    
+    // Fallback to Cognito SDK session if available
+    if (!userPool) return null;
     
     return new Promise((resolve) => {
       const currentUser = userPool.getCurrentUser();
@@ -191,7 +202,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           resolve(null);
           return;
         }
-        resolve(session.getAccessToken().getJwtToken());
+        resolve(session.getIdToken().getJwtToken());
       });
     });
   };
