@@ -18,6 +18,7 @@ interface PageShowEvent extends Event {
 // formatDate logic moved to utils/dateUtils.ts
 
 const ConversationsList: React.FC = () => {
+  const { isAuthenticated, IsCognitoAuthEnabled, login } = useAuth();
   const [conversations, setConversations] = useState<ConversationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,13 +103,37 @@ const ConversationsList: React.FC = () => {
     };
   }, []);
 
-  const { requireAuth, username, IsCognitoAuthEnabled } = useAuth();
+  // Auto-show form after successful login
+  useEffect(() => {
+    const loginInitiated = sessionStorage.getItem('loginInitiated') === 'true';
+    console.log('[ConversationsList] Auth state changed - Cognito enabled:', IsCognitoAuthEnabled, 'Authenticated:', isAuthenticated, 'Login initiated:', loginInitiated);
+    if (IsCognitoAuthEnabled && isAuthenticated && loginInitiated) {
+      console.log('[ConversationsList] Auto-showing form after successful login');
+      sessionStorage.removeItem('loginInitiated');
+      setShowNewConversationForm(true);
+      setTimeout(() => {
+        window.location.hash = '#new-conversation-form';
+        if (formRef.current) {
+          const firstInput = formRef.current.querySelector('select, input, textarea') as HTMLElement;
+          if (firstInput) {
+            firstInput.focus();
+          }
+        }
+      }, 100);
+    }
+  }, [isAuthenticated, IsCognitoAuthEnabled]);
 
-  const handleNewConversation = async () => {
-    // Check authentication for write operations
-    const canProceed = await requireAuth();
-    if (!canProceed) return; // Will redirect to login
+  const handleNewConversation = () => {
+    console.log('[ConversationsList] New Conversation clicked - Cognito enabled:', IsCognitoAuthEnabled, 'Authenticated:', isAuthenticated);
+    // Check authentication if Cognito is enabled
+    if (IsCognitoAuthEnabled && !isAuthenticated) {
+      console.log('[ConversationsList] User not authenticated, initiating login');
+      sessionStorage.setItem('loginInitiated', 'true');
+      login();
+      return;
+    }
     
+    console.log('[ConversationsList] Showing new conversation form');
     setShowNewConversationForm(true);
     // Use anchor navigation for reliable scrolling
     setTimeout(() => {
@@ -142,11 +167,8 @@ const ConversationsList: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    // Use authenticated username in AWS mode, form author in local mode
-    const effectiveAuthor = IsCognitoAuthEnabled ? (username || '') : formData.author.trim();
-    
     // Validate all fields
-    if (!formData.type.trim() || !formData.title.trim() || !effectiveAuthor.trim() || !formData.messageBody.trim()) {
+    if (!formData.type.trim() || !formData.title.trim() || !formData.author.trim() || !formData.messageBody.trim()) {
       setFormError('Please fill in all fields');
       return;
     }
@@ -161,7 +183,7 @@ const ConversationsList: React.FC = () => {
       const newConversation = await ConversationService.createConversationAndUpdateCache(
         formData.title,
         formData.messageBody,
-        effectiveAuthor,
+        formData.author,
         convoTypeNumber
       );
 
@@ -372,28 +394,26 @@ const ConversationsList: React.FC = () => {
               />
             </div>
 
-            {/* Author Field - LAST - Only show in local mode */}
-            {!IsCognitoAuthEnabled && (
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Author</label>
-                <input 
-                  type="text"
-                  value={formData.author}
-                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                  placeholder="Enter your name"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--color-background)',
-                    color: 'var(--color-text-primary)',
-                    fontFamily: 'Orbitron, Inter, sans-serif',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-            )}
+            {/* Author Field - LAST */}
+            <div className="form-group">
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Author</label>
+              <input 
+                type="text"
+                value={formData.author}
+                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                placeholder="Enter your name"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'Orbitron, Inter, sans-serif',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
             
             {/* Form Buttons */}
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>

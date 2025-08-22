@@ -6,19 +6,29 @@ REGION="eu-west-2"
 PROFILE="deploy-to-production-profile"
 DIST_FOLDER="../WiseWords.FrontEnd/dist"
 
-echo "🚀 Deploying WiseWords Frontend to S3..."
+echo -e "\033[33m🚀 Deploying WiseWords Frontend to S3...\033[0m"
 echo "Bucket: $BUCKET_NAME"
 echo "Region: $REGION"
+
+# Build frontend with production environment
+echo -e "\033[33m🔨 Building frontend for production...\033[0m"
+cd ../WiseWords.FrontEnd
+export WISEWORDS_ENV=aws_prod
+if ! npm run build; then
+    echo "❌ Build failed, aborting deployment"
+    exit 1
+fi
+cd ../scripts
 
 # Check if dist folder exists
 if [ ! -d "$DIST_FOLDER" ]; then
     echo "❌ Error: dist folder not found at $DIST_FOLDER"
-    echo "Please run 'npm run build' in the WiseWords.FrontEnd directory first"
+    echo "Build may have failed"
     exit 1
 fi
 
 # Create S3 bucket (or use existing)
-echo "📦 Creating S3 bucket..."
+echo -e "\033[33m📦 Creating S3 bucket...\033[0m"
 if aws s3api head-bucket --bucket $BUCKET_NAME --profile $PROFILE 2>/dev/null; then
     echo "Bucket $BUCKET_NAME already exists, using existing bucket"
 else
@@ -30,7 +40,7 @@ echo "🌐 Configuring static website hosting..."
 aws s3 website s3://$BUCKET_NAME --index-document index.html --error-document index.html --profile $PROFILE
 
 # Upload files
-echo "📤 Uploading files..."
+echo -e "\033[33m📤 Uploading files...\033[0m"
 aws s3 sync $DIST_FOLDER s3://$BUCKET_NAME --delete --profile $PROFILE
 
 # Check if CloudFront distribution exists
@@ -65,7 +75,7 @@ else
 fi
 
 echo ""
-echo "✅ Deployment complete!"
+echo -e "\033[33m✅ Deployment complete!\033[0m"
 echo ""
 if [ -n "$CLOUDFRONT_DOMAIN" ]; then
     echo "🌍 HTTPS Website URL: https://$CLOUDFRONT_DOMAIN"

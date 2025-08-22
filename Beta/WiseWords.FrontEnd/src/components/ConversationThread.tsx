@@ -9,7 +9,6 @@ import { getConversationTypeColor } from '../utils/conversationUtils';
 import { postTypeService } from '../utils/postType';
 import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
 import { Post } from '../types/conversation';
-import { useAuth } from '../contexts/AuthContext';
 
 
 // Post interface moved to types/conversation.ts
@@ -153,19 +152,9 @@ const isInitialLoadCompleted = useRef(false);
     }
   }, [activeForm]);
 
-  const { requireAuth, username, IsCognitoAuthEnabled } = useAuth();
-
-  const handleOpenForm = async (type: FormType, context: FormContext, initialMessage: string = '') => {
-    // Check authentication for write operations
-    const canProceed = await requireAuth();
-    if (!canProceed) return; // Will redirect to login
-    
+  const handleOpenForm = (type: FormType, context: FormContext, initialMessage: string = '') => {
     setActiveForm({ type, context });
-    // Pre-fill author in local mode, leave empty in AWS mode (will use username)
-    setFormData({ 
-      author: IsCognitoAuthEnabled ? '' : '', 
-      messageBody: initialMessage 
-    });
+    setFormData({ author: '', messageBody: initialMessage });
     setFormError(null);
   };
 
@@ -186,19 +175,16 @@ const isInitialLoadCompleted = useRef(false);
     const { author, messageBody } = formData;
 
     try {
-      // Use authenticated username in AWS mode, form author in local mode
-      const effectiveAuthor = IsCognitoAuthEnabled ? (username || '') : author.trim();
-      
       let newPost: Post;
       switch (type) {
         case 'comment':
-          newPost = await ConversationService.appendCommentAndUpdateCache(conversationPK, parentPostSK, effectiveAuthor, messageBody.trim());
+          newPost = await ConversationService.appendCommentAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
           break;
         case 'drilldown':
-          newPost = await ConversationService.appendDrillDownAndUpdateCache(conversationPK, parentPostSK, effectiveAuthor, messageBody.trim());
+          newPost = await ConversationService.appendDrillDownAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
           break;
         case 'conclusion':
-          newPost = await ConversationService.appendConclusionAndUpdateCache(conversationPK, parentPostSK, effectiveAuthor, messageBody.trim());
+          newPost = await ConversationService.appendConclusionAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
           break;
       }
 

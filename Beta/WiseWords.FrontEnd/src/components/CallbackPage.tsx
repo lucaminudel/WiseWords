@@ -1,32 +1,22 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-
 export default function CallbackPage() {
-  const navigate = useNavigate();
-  const { handleCallback } = useAuth();
+  console.log('[CallbackPage] Processing Cognito callback');
+  
+  // Get the return URL from session storage
+  const returnUrl = sessionStorage.getItem('returnUrl');
+  console.log('[CallbackPage] Return URL:', returnUrl);
+  
+  // Get current URL parameters (code, state, error, etc.)
+  const urlParams = window.location.search;
+  console.log('[CallbackPage] URL parameters:', urlParams);
+  
+  // Clear the stored return URL
+  sessionStorage.removeItem('returnUrl');
+  
+  // Redirect to return URL with all parameters
+  const redirectUrl = returnUrl + urlParams;
+  console.log('[CallbackPage] Redirecting to:', redirectUrl);
+  
+  window.location.replace(redirectUrl);
 
-  useEffect(() => {
-    const processCallback = async () => {
-      try {
-        await handleCallback();
-        // Redirect to intended destination or home
-        const returnTo = sessionStorage.getItem('returnTo') || '/';
-        sessionStorage.removeItem('returnTo');
-        navigate(returnTo);
-      } catch (error) {
-        console.error('Authentication callback failed:', error);
-        navigate('/');
-      }
-    };
-
-    processCallback();
-  }, [handleCallback, navigate]);
-
-  return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h2>Completing sign in...</h2>
-      <p>Please wait while we complete your authentication.</p>
-    </div>
-  );
+  return null;
 }

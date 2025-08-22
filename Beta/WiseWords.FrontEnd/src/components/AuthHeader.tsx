@@ -26,12 +26,18 @@ export default function AuthHeader() {
               background: 'none', 
               border: 'none', 
               cursor: 'pointer', 
-              fontSize: '1.2rem',
               padding: '0.2rem'
             }}
             title="Logout"
           >
-            🚪
+            <img 
+              src="/logout.jpg" 
+              alt="Logout" 
+              style={{ 
+                width: '20px', 
+                height: '20px' 
+              }} 
+            />
           </button>
         </>
       ) : null}

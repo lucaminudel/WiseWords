@@ -83,11 +83,67 @@ Resources:
         - AWSLambdaBasicExecutionRole
         - AmazonDynamoDBFullAccess
       Events:
-        Api:
+        # Protected POST endpoints
+        PostConversations:
+          Type: Api
+          Properties:
+            Path: /conversations
+            Method: POST
+            RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: WiseWordsCognitoAuthorizer
+        PostDrilldown:
+          Type: Api
+          Properties:
+            Path: /conversations/drilldown
+            Method: POST
+            RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: WiseWordsCognitoAuthorizer
+        PostComment:
+          Type: Api
+          Properties:
+            Path: /conversations/comment
+            Method: POST
+            RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: WiseWordsCognitoAuthorizer
+        PostConclusion:
+          Type: Api
+          Properties:
+            Path: /conversations/conclusion
+            Method: POST
+            RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: WiseWordsCognitoAuthorizer
+        # Protected DELETE endpoints
+        DeleteConversation:
+          Type: Api
+          Properties:
+            Path: /conversations/{conversationId}
+            Method: DELETE
+            RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: WiseWordsCognitoAuthorizer
+        # Public GET endpoints
+        GetConversations:
+          Type: Api
+          Properties:
+            Path: /conversations
+            Method: GET
+            RestApiId: !Ref WiseWordsApi
+        GetConversationPosts:
+          Type: Api
+          Properties:
+            Path: /conversations/{conversationId}/posts
+            Method: GET
+            RestApiId: !Ref WiseWordsApi
+        # Public OPTIONS for CORS
+        OptionsAny:
           Type: Api
           Properties:
             Path: /{proxy+}
-            Method: ANY
+            Method: OPTIONS
             RestApiId: !Ref WiseWordsApi
 
   # API Gateway with Cognito Authorizer
@@ -95,8 +151,12 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
+      Cors:
+        AllowMethods: "'GET,POST,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'https://doxsj8lfqq7dm.cloudfront.net'"
+        AllowCredentials: true
       Auth:
-        DefaultAuthorizer: WiseWordsCognitoAuthorizer
         Authorizers:
           WiseWordsCognitoAuthorizer:
             UserPoolArn: !GetAtt WiseWordsUserPool.Arn

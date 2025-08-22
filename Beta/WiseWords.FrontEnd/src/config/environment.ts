@@ -11,6 +11,7 @@ export interface EnvironmentConfig {
 }
 
 export interface CognitoConfig {
+  UserPoolId?: string;
   ClientId: string;
   Domain: string;
   Region: string;
