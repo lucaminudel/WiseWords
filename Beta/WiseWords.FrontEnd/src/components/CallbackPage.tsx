@@ -1,20 +1,37 @@
 export default function CallbackPage() {
-  console.log('[CallbackPage] Processing Cognito callback');
   
-  // Get the return URL from session storage
+  // Check if this is a logout callback (no code parameter)
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  
+  if (!code) {
+    // This is a logout callback
+    const logoutReturnUrl = sessionStorage.getItem('logoutReturnUrl');
+    
+    if (logoutReturnUrl) {
+      sessionStorage.removeItem('logoutReturnUrl');
+      window.location.replace(logoutReturnUrl);
+    } else {
+    }
+
+    return null;
+  }
+  
+  // This is a login callback
   const returnUrl = sessionStorage.getItem('returnUrl');
-  console.log('[CallbackPage] Return URL:', returnUrl);
+
+  if (!returnUrl) {
+    return null;
+  }
   
   // Get current URL parameters (code, state, error, etc.)
-  const urlParams = window.location.search;
-  console.log('[CallbackPage] URL parameters:', urlParams);
+  const urlParamsString = window.location.search;
   
   // Clear the stored return URL
   sessionStorage.removeItem('returnUrl');
-  
+
   // Redirect to return URL with all parameters
-  const redirectUrl = returnUrl + urlParams;
-  console.log('[CallbackPage] Redirecting to:', redirectUrl);
+  const redirectUrl = returnUrl + urlParamsString;
   
   window.location.replace(redirectUrl);
 

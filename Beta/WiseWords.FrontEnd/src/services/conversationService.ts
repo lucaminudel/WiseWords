@@ -37,7 +37,6 @@ export class ConversationService {
         try {
             conversationsCache.set(conversations);
         } catch (err) {
-            console.error('Failed to update conversations cache after fetching conversations:', err);
             
             // Clear cache to ensure fresh data on next load
             conversationsCache.clear();
@@ -77,7 +76,6 @@ export class ConversationService {
             try {
                 conversationsCache.set(updatedConversations);
             } catch (err) {
-                console.error('Failed to update conversation cache after creating new conversation:', err);
                 // Clear cache to ensure fresh data on next load
                 conversationsCache.clear();
             }
@@ -108,7 +106,6 @@ export class ConversationService {
         try {
             conversationThreadCache.set(conversationId, posts);
         } catch (err) {
-            console.error('Failed to update conversation posts cache after fetching a conversation thread:', err);
 
             // Clear cache to ensure fresh data on next load
             conversationThreadCache.clear();
@@ -228,7 +225,6 @@ export class ConversationService {
         try {
             conversationThreadCache.set(conversationId, updatedCacheData);
         } catch (err) {
-            console.error(`Failed to update conversation posts cache after appending a post:`, err);
             // Clear cache to ensure fresh data on next load
             conversationThreadCache.clear();
         }

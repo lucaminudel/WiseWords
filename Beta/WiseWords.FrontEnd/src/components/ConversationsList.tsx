@@ -19,6 +19,8 @@ interface PageShowEvent extends Event {
 
 const ConversationsList: React.FC = () => {
   const { isAuthenticated, IsCognitoAuthEnabled, login } = useAuth();
+  
+  
   const [conversations, setConversations] = useState<ConversationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,9 +108,7 @@ const ConversationsList: React.FC = () => {
   // Auto-show form after successful login
   useEffect(() => {
     const loginInitiated = sessionStorage.getItem('loginInitiated') === 'true';
-    console.log('[ConversationsList] Auth state changed - Cognito enabled:', IsCognitoAuthEnabled, 'Authenticated:', isAuthenticated, 'Login initiated:', loginInitiated);
     if (IsCognitoAuthEnabled && isAuthenticated && loginInitiated) {
-      console.log('[ConversationsList] Auto-showing form after successful login');
       sessionStorage.removeItem('loginInitiated');
       setShowNewConversationForm(true);
       setTimeout(() => {
@@ -123,17 +123,20 @@ const ConversationsList: React.FC = () => {
     }
   }, [isAuthenticated, IsCognitoAuthEnabled]);
 
+  const { authError } = useAuth();
+  useEffect(() => {
+    if (authError) {
+      setFormError(authError + " Trying again. ");
+      handleLoginIfNeeded();
+    }
+  }, [authError]);
+
   const handleNewConversation = () => {
-    console.log('[ConversationsList] New Conversation clicked - Cognito enabled:', IsCognitoAuthEnabled, 'Authenticated:', isAuthenticated);
-    // Check authentication if Cognito is enabled
-    if (IsCognitoAuthEnabled && !isAuthenticated) {
-      console.log('[ConversationsList] User not authenticated, initiating login');
-      sessionStorage.setItem('loginInitiated', 'true');
-      login();
+    
+    if (handleLoginIfNeeded()) {
       return;
     }
     
-    console.log('[ConversationsList] Showing new conversation form');
     setShowNewConversationForm(true);
     // Use anchor navigation for reliable scrolling
     setTimeout(() => {
@@ -147,6 +150,16 @@ const ConversationsList: React.FC = () => {
         }
       }
     }, 100);
+  };
+
+  const handleLoginIfNeeded = (): boolean => {
+    if (IsCognitoAuthEnabled && !isAuthenticated) {
+      sessionStorage.setItem('loginInitiated', 'true');
+      const returnUrl = window.location.origin + window.location.pathname;
+      login(returnUrl);
+      return true; // Indicates login flow was initiated
+    }
+    return false; // No login needed or already authenticated
   };
 
   const handleCancel = () => {

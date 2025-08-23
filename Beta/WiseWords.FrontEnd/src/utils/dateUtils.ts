@@ -35,7 +35,6 @@ export const formatUnixTimestamp = (unixTimestamp: string, locale?: string): str
     
     return date.toLocaleString(locale);
   } catch (error) {
-    console.warn('Error formatting timestamp:', unixTimestamp, error);
     return 'Invalid date';
   }
 };

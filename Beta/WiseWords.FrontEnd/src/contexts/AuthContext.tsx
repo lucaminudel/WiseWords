@@ -6,9 +6,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   username: string | null;
   IsCognitoAuthEnabled: boolean;
-  login: () => void;
-  logout: () => void;
+  login: (returnUrl: string) => void;
+  logout: (returnUrl: string) => void;
   getAccessToken: () => Promise<string | null>;
+  authError: string | null; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,31 +31,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [username, setUsername] = useState<string | null>(null);
   const [cognitoConfig, setCognitoConfig] = useState<CognitoConfig | null>(null);
   const [userPool, setUserPool] = useState<CognitoUserPool | null>(null);
-
+  const [authError, setAuthError] = useState<string | null>(null);
+  
   const IsCognitoAuthEnabled = cognitoConfig !== null;
 
   // Extract username from ID token
   const extractUsernameFromToken = (idToken: string): string => {
     if (!idToken || typeof idToken !== 'string') {
-      console.log('[AuthContext] ID token is null or invalid');
       return 'user';
     }
     try {
       const payload = JSON.parse(atob(idToken.split('.')[1]));
       return payload.preferred_username || payload.name || payload.email || payload.sub || 'user';
     } catch (error) {
-      console.error('[AuthContext] Failed to decode ID token:', error);
       return 'user';
     }
   };
 
   useEffect(() => {
     async function initAuth() {
-      console.log('[AuthContext] Initializing authentication');
+      
       try {
         const config = await loadConfig();
         if (config.Cognito && config.Cognito.ClientId) {
-          console.log('[AuthContext] Cognito enabled - ClientId:', config.Cognito.ClientId);
           setCognitoConfig(config.Cognito);
           const pool = new CognitoUserPool({
             UserPoolId: config.Cognito.UserPoolId || '',
@@ -64,31 +63,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
           
           const currentUser = pool.getCurrentUser();
           if (currentUser) {
-            console.log('[AuthContext] Found existing user, checking session');
             currentUser.getSession((err: any, session: CognitoUserSession) => {
               if (!err && session.isValid() && config.Cognito) {
-                console.log('[AuthContext] Valid session found for user:', currentUser.getUsername());
                 
                 // Extract username from stored ID token
                 const keyPrefix = `CognitoIdentityServiceProvider.${config.Cognito.ClientId}`;
                 const storedIdToken = localStorage.getItem(`${keyPrefix}.user.idToken`);
                 const extractedUsername = extractUsernameFromToken(storedIdToken || '');
-                console.log('[AuthContext] Extracted username from stored token:', extractedUsername);
                 
                 setIsAuthenticated(true);
                 setUsername(extractedUsername);
               } else {
-                console.log('[AuthContext] No valid session found');
+                setIsAuthenticated(false);
+                setUsername(null);
               }
             });
           } else {
-            console.log('[AuthContext] No existing user found');
+            setIsAuthenticated(false);
+            setUsername(null);
           }
         } else {
-          console.log('[AuthContext] Cognito disabled - no ClientId in config');
+          setIsAuthenticated(false);
+          setUsername(null);
         }
       } catch (error) {
-        console.error('[AuthContext] Auth initialization failed:', error);
+        setIsAuthenticated(false);
+        setUsername(null);
       }
     }
     
@@ -98,14 +98,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Process Cognito callback code
   useEffect(() => {
     if (!userPool || !cognitoConfig) return;
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    
+
     if (code) {
-      console.log('[AuthContext] Processing callback code:', code);
-      
+
+      // Prevent re-processing the same authorization code multiple times
+      const previousCode = sessionStorage.getItem('previousCode');
+      if (previousCode === code) {
+        clearAuthState();
+        
+        setAuthError("Temporary login error (duplicated call).");
+        return;
+      }
+
       // Exchange code for tokens using Cognito SDK
+      // Use the correct redirect URI that matches Cognito configuration
+      const redirectUri = window.location.origin + '/callback';
+      
+      sessionStorage.setItem('previousCode', code);
+
       fetch(`https://${cognitoConfig.Domain}/oauth2/token`, {
         method: 'POST',
         headers: {
@@ -115,12 +128,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
           grant_type: 'authorization_code',
           client_id: cognitoConfig.ClientId,
           code: code,
-          redirect_uri: window.location.origin + '/callback'
+          redirect_uri: redirectUri
         })
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Token exchange failed with status ${response.status}`);
+        }
+
+        return response.json();
+      })
       .then(tokens => {
-        console.log('[AuthContext] Received tokens, setting up session');
         
         // Store tokens in localStorage for Cognito SDK
         const keyPrefix = `CognitoIdentityServiceProvider.${cognitoConfig.ClientId}`;
@@ -131,7 +149,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         
         // Extract username from ID token
         const extractedUsername = extractUsernameFromToken(tokens.id_token);
-        console.log('[AuthContext] Extracted username:', extractedUsername);
         
         // Update auth state
         setIsAuthenticated(true);
@@ -140,41 +157,75 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname);
       })
-      .catch(error => {
-        console.error('[AuthContext] Token exchange failed:', error);
+      .catch(() => {
       });
     }
   }, [userPool, cognitoConfig]);
 
-  const login = () => {
-    console.log('[WiseWords v1.4] Starting login flow');
+  const login = (returnUrl: string) => {
+    
     if (!cognitoConfig) {
-      console.log('[AuthContext] Login called but no Cognito config available');
       return;
     }
     
-    // Store current URL for return after login
-    sessionStorage.setItem('returnUrl', window.location.href);
-    console.log('[AuthContext] Stored return URL:', window.location.href);
-    
+    // Store provided return URL    
+    sessionStorage.setItem('returnUrl', returnUrl);
+        
     const redirectUri = encodeURIComponent(window.location.origin + '/callback');
     const cognitoUrl = `https://${cognitoConfig.Domain}/login?client_id=${cognitoConfig.ClientId}&response_type=code&scope=email+openid+profile&redirect_uri=${redirectUri}`;
-    console.log('[AuthContext] Redirecting to Cognito login:', cognitoUrl);
     window.location.href = cognitoUrl;
   };
 
-  const logout = () => {
-    if (!userPool) return;
-    
-    console.log('[AuthContext] Logging out user');
-    const currentUser = userPool.getCurrentUser();
-    if (currentUser) {
-      currentUser.signOut();
+function clearAuthState() {
+  // Clear all React state
+  setIsAuthenticated(false);
+  setUsername(null);
+  setUserPool(null);
+
+  // Remove Cognito-related localStorage keys if config is available
+  if (cognitoConfig && cognitoConfig.ClientId) {
+    const keyPrefix = `CognitoIdentityServiceProvider.${cognitoConfig.ClientId}`;
+    localStorage.removeItem(`${keyPrefix}.LastAuthUser`);
+    localStorage.removeItem(`${keyPrefix}.user.accessToken`);
+    localStorage.removeItem(`${keyPrefix}.user.idToken`);
+    localStorage.removeItem(`${keyPrefix}.user.refreshToken`);
+  }
+
+  // Remove sessionStorage items related to auth/navigation
+  const sessionKeys = ['previousCode', 'returnUrl', 'loginInitiated'];
+  sessionKeys.forEach(item => {
+    if (sessionStorage.getItem(item)) {
+      sessionStorage.removeItem(item);
     }
-    setIsAuthenticated(false);
-    setUsername(null);
-    localStorage.clear();
-  };
+  });
+}
+
+const logout = (returnUrl: string) => {
+
+  if (!cognitoConfig) {
+    return;
+  }
+
+  if (!userPool) {
+    return;
+  }
+
+  // Store return URL for after logout
+  sessionStorage.setItem('logoutReturnUrl', returnUrl);
+  const currentUser = userPool.getCurrentUser();
+  if (currentUser) {
+    currentUser.signOut();
+  }
+
+  // Clear all authentication state and storage
+  clearAuthState();
+
+  // Use callback page as logout_uri
+  const logoutUri = encodeURIComponent(window.location.origin + '/callback');
+  const cognitoLogoutUrl = `https://${cognitoConfig.Domain}/logout?client_id=${cognitoConfig.ClientId}&logout_uri=${logoutUri}`;
+
+  window.location.href = cognitoLogoutUrl;
+};
 
   const getAccessToken = async (): Promise<string | null> => {
     if (!userPool || !isAuthenticated) return null;
@@ -203,7 +254,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       IsCognitoAuthEnabled,
       login,
       logout,
-      getAccessToken
+      getAccessToken,
+      authError
     }}>
       {children}
     </AuthContext.Provider>

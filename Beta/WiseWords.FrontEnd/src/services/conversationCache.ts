@@ -19,7 +19,7 @@ export const conversationCache = {
       }
       return null;
     } catch (error) {
-      console.error('Error getting conversation cache:', error);
+      console.error('Error parsing conversation cache:', error);
       return null;
     }
   },
@@ -32,7 +32,6 @@ export const conversationCache = {
     try {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(conversations));
     } catch (error) {
-      console.error('Error setting conversation cache:', error);
     }
   },
 
@@ -43,7 +42,6 @@ export const conversationCache = {
     try {
       sessionStorage.removeItem(CACHE_KEY);
     } catch (error) {
-      console.error('Error clearing conversation cache:', error);
     }
   },
 };

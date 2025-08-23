@@ -21,7 +21,7 @@ export default function AuthHeader() {
         <>
           <span>{username}</span>
           <button 
-            onClick={logout}
+            onClick={() => logout(window.location.origin + window.location.pathname)}
             style={{ 
               background: 'none', 
               border: 'none', 

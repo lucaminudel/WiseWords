@@ -61,13 +61,11 @@ const isInitialLoadCompleted = useRef(false);
         const conversationData = data.find((item: Post) => item.SK === 'METADATA');
         const postsData = data.filter((item: Post) => item.SK !== 'METADATA');        
         if (!conversationData) {
-          console.log('Conversation metadata not found in response for conversationId:', conversationId);
           throw new Error('Conversation metadata not found in response');
         }
         setConversation(conversationData);
         setPosts(postsData);
       } catch (err) {
-        console.error('Error fetching conversation:', err);
         setError(err instanceof Error ? err.message : 'An error occurred while loading the conversation');
       } finally {
         setLoading(false);

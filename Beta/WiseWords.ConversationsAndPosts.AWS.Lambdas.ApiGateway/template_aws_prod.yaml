@@ -45,6 +45,7 @@ Resources:
         - https://doxsj8lfqq7dm.cloudfront.net/callback
       LogoutURLs:
         - https://doxsj8lfqq7dm.cloudfront.net
+        - https://doxsj8lfqq7dm.cloudfront.net/callback
       AllowedOAuthFlows:
         - code
       AllowedOAuthScopes:

@@ -20,7 +20,6 @@ class ConversationThreadCache {
       const metadata = localStorage.getItem(METADATA_KEY);
       return metadata ? JSON.parse(metadata) : {};
     } catch (e) {
-      console.error('Error reading cache metadata from localStorage', e);
       return {};
     }
   }
@@ -29,7 +28,6 @@ class ConversationThreadCache {
     try {
       localStorage.setItem(METADATA_KEY, JSON.stringify(metadata));
     } catch (e) {
-      console.error('Error writing cache metadata to localStorage', e);
     }
   }
 
@@ -53,7 +51,6 @@ class ConversationThreadCache {
           currentSize -= entryToRemove.size;
           delete metadata[entryToRemove.key];
         } catch (e) {
-          console.error(`Error removing cache entry ${entryToRemove.key} from localStorage`, e);
         }
       }
     }
@@ -82,7 +79,6 @@ class ConversationThreadCache {
       this.setMetadata(metadata);
       return JSON.parse(item);
     } catch (e) {
-      console.error(`Error reading cache item ${key} from localStorage`, e);
       return null;
     }
   }
@@ -97,7 +93,6 @@ class ConversationThreadCache {
 
       // If item is larger than the entire cache, don't cache it.
       if (size > MAX_CACHE_SIZE) {
-        console.warn(`Item with key ${key} is too large to be cached.`);
         // Ensure it's not already in cache
         if (metadata[key]) {
             localStorage.removeItem(key);
@@ -117,7 +112,6 @@ class ConversationThreadCache {
       };
       this.setMetadata(metadata);
     } catch (e) {
-      console.error(`Error writing item ${key} to localStorage`, e);
     }
   }
 
@@ -127,7 +121,6 @@ class ConversationThreadCache {
       try {
         localStorage.removeItem(key);
       } catch (e) {
-        console.error(`Error removing item ${key} from localStorage during clear`, e);
       }
     }
     localStorage.removeItem(METADATA_KEY);
