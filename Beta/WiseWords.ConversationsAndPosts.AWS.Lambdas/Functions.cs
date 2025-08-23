@@ -5,7 +5,7 @@ using Amazon.Lambda.Core;
 namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 {
 
-    public class Functions
+    public class Functions: IFunctions  
     {
         private readonly DataStore.WiseWordsTable _service;
         private readonly ILoggerObserver _observer;
@@ -161,7 +161,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
         }        
 
-        private string GetAuthor(ILambdaContext context, string requestAuthor)
+        private static string GetAuthor(ILambdaContext context, string requestAuthor)
         {
             if (string.IsNullOrEmpty(context.Identity?.IdentityId))
             {

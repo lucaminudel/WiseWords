@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Web;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.APIGatewayEvents;
 
@@ -9,9 +10,8 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway;
 
 public class Router
 {
-    private readonly Functions _lambdaFunctions;
+    private readonly IFunctions _lambdaFunctions;
     private readonly ILoggerObserver _routingObserver;
-
     private readonly ILoggerObserver _forwardingObserver;
 
     public Router()
@@ -21,7 +21,7 @@ public class Router
     {
     }
 
-    public Router(Functions lambdaFunctions, LoggerObserver routingObserver, LoggerObserver forwardingObserver)
+    public Router(IFunctions lambdaFunctions, ILoggerObserver routingObserver, ILoggerObserver forwardingObserver)
     {
         _lambdaFunctions = lambdaFunctions;
         _routingObserver = routingObserver;
@@ -176,7 +176,7 @@ public class Router
 
         var lambdaHandlerRequest = new RetrieveConversationPostsRequest
         {
-            ConversationPK = segments[1]
+            ConversationPK = SafeUrlDecode(segments[1])
         };
 
         var result = await _lambdaFunctions.RetrieveConversationPostsHandler(lambdaHandlerRequest, context);
@@ -204,7 +204,7 @@ public class Router
 
         var deleteConversationRequest = new DeleteConversationRequest
         {
-            ConversationPK = segments[1]
+            ConversationPK = SafeUrlDecode(segments[1])
         };
         
         try
@@ -291,9 +291,9 @@ public class Router
         return CreateResponse(HttpStatusCode.Created, result, locationHeader);
     }
 
-    private APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body)
+    private static APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body)
         => CreateResponse(statusCode, body, new Dictionary<string, string>());
-    private APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body, Dictionary<string, string> additionalHeaders)
+    private static APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body, Dictionary<string, string> additionalHeaders)
     {
         var headers = new Dictionary<string, string>
         {
@@ -382,7 +382,7 @@ public class Router
         return (true, year, HttpStatusCode.OK, string.Empty);
     }
 
-    private (bool IsValid, string Author, HttpStatusCode ErrorStatusCode, string ErrorMessage) ValidateOptonalFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
+    private static (bool IsValid, string Author, HttpStatusCode ErrorStatusCode, string ErrorMessage) ValidateOptonalFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
     {
         string? authorStr;
 
@@ -401,6 +401,26 @@ public class Router
         }
 
         return (true, authorStr, HttpStatusCode.OK, string.Empty);
+    }
+
+    private static string SafeUrlDecode(string potentiallyUrlEncodedString)
+    {
+        // Based on the deployment environment and the web server, a url encoded paramater like Conversaton PK could be received already decoded or not.
+        // HttpUtility.UrlDecode handles both encoded and already-decoded strings safely
+
+        if (string.IsNullOrEmpty(potentiallyUrlEncodedString))
+            return potentiallyUrlEncodedString;
+        
+        try
+        {
+            string decoded = HttpUtility.UrlDecode(potentiallyUrlEncodedString);
+            
+            return decoded;
+        }
+        catch
+        {
+            return potentiallyUrlEncodedString;
+        }
     }
 
 }
