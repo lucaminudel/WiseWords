@@ -48,13 +48,19 @@ export function setAuthTokenProvider(provider: () => Promise<string | null>) {
 /**
  * Generic fetch wrapper with error handling
  */
-async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const baseUrl = await getApiBaseUrl();
     const url = `${baseUrl}${endpoint}`;
     
-    // Add authorization header for AWS mode
+    // Start with default headers
     const headers: Record<string, string> = { ...API_HEADERS };
-    if (getAuthToken) {
+    
+    // Only add auth token if:
+    // 1. It's not a GET request, AND
+    // 2. We have an auth token provider, AND
+    // 3. The token is available
+    const isGetRequest = (options.method || 'GET').toUpperCase() === 'GET';
+    if (!isGetRequest && getAuthToken) {
         const token = await getAuthToken();
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;

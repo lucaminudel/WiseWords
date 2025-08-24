@@ -2,6 +2,15 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Template for ConversationsAndPosts Lambda + API Gateway with Cognito Authentication
 
+Parameters:
+  AllowedOrigin:
+    Type: String
+    Default: "https://doxsj8lfqq7dm.cloudfront.net"
+  CognitoDomainPrefix:
+    Type: String
+    Default: "wisewords"
+    Description: Globally unique domain prefix for Cognito Hosted UI (e.g., wisewords-prod)
+
 Resources:
   # Cognito User Pool
   WiseWordsUserPool:
@@ -32,6 +41,13 @@ Resources:
       UserPoolAddOns:
         AdvancedSecurityMode: ENFORCED
 
+  # Cognito User Pool Domain for Hosted UI
+  WiseWordsUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref WiseWordsUserPool
+
   # Cognito User Pool Client
   WiseWordsUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -42,10 +58,10 @@ Resources:
       SupportedIdentityProviders:
         - COGNITO
       CallbackURLs:
-        - https://doxsj8lfqq7dm.cloudfront.net/callback
+        - !Sub "${AllowedOrigin}/callback"
       LogoutURLs:
-        - https://doxsj8lfqq7dm.cloudfront.net
-        - https://doxsj8lfqq7dm.cloudfront.net/callback
+        - !Ref AllowedOrigin
+        - !Sub "${AllowedOrigin}/callback"
       AllowedOAuthFlows:
         - code
       AllowedOAuthScopes:
@@ -57,16 +73,14 @@ Resources:
         - ALLOW_USER_SRP_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
         - ALLOW_USER_PASSWORD_AUTH
-
-  # Cognito Identity Pool
-  WiseWordsIdentityPool:
-    Type: AWS::Cognito::IdentityPool
-    Properties:
-      IdentityPoolName: WiseWordsIdentityPool
-      AllowUnauthenticatedIdentities: false
-      CognitoIdentityProviders:
-        - ClientId: !Ref WiseWordsUserPoolClient
-          ProviderName: !GetAtt WiseWordsUserPool.ProviderName
+      ReadAttributes:
+        - email
+        - name
+        - preferred_username
+      WriteAttributes:
+        - email
+        - name
+        - preferred_username
 
   # Lambda Function with API Gateway
   ConversationsAndPostsAPI:
@@ -80,6 +94,7 @@ Resources:
       Environment:
         Variables:
           WISEWORDS_ENV: aws_prod
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
       Policies:
         - AWSLambdaBasicExecutionRole
         - AmazonDynamoDBFullAccess
@@ -133,12 +148,16 @@ Resources:
             Path: /conversations
             Method: GET
             RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: NONE
         GetConversationPosts:
           Type: Api
           Properties:
             Path: /conversations/{conversationId}/posts
             Method: GET
             RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: NONE
         # Public OPTIONS for CORS
         OptionsAny:
           Type: Api
@@ -146,6 +165,8 @@ Resources:
             Path: /{proxy+}
             Method: OPTIONS
             RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: NONE
 
   # API Gateway with Cognito Authorizer
   WiseWordsApi:
@@ -155,9 +176,12 @@ Resources:
       Cors:
         AllowMethods: "'GET,POST,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: "'https://doxsj8lfqq7dm.cloudfront.net'"
+        AllowOrigin: !Sub "'${AllowedOrigin}'" 
         AllowCredentials: true
+        MaxAge: 600  # Cache preflight response for 10 minutes
       Auth:
+        DefaultAuthorizer: WiseWordsCognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
         Authorizers:
           WiseWordsCognitoAuthorizer:
             UserPoolArn: !GetAtt WiseWordsUserPool.Arn
@@ -175,12 +199,6 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-UserPoolClientId"
   
-  IdentityPoolId:
-    Description: Cognito Identity Pool ID
-    Value: !Ref WiseWordsIdentityPool
-    Export:
-      Name: !Sub "${AWS::StackName}-IdentityPoolId"
-  
   CognitoHostedUIUrl:
-    Description: Cognito Hosted UI Login URL (after domain is created)
-    Value: !Sub "https://DOMAIN_NAME.auth.${AWS::Region}.amazoncognito.com/login?client_id=${WiseWordsUserPoolClient}&response_type=code&scope=email+openid+profile&redirect_uri=https://doxsj8lfqq7dm.cloudfront.net/callback"
+    Description: Cognito Hosted UI Login URL
+    Value: !Sub "https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com/login?client_id=${WiseWordsUserPoolClient}&response_type=code&scope=email+openid+profile&redirect_uri=${AllowedOrigin}/callback"

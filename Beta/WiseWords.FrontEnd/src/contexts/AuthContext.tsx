@@ -228,7 +228,7 @@ const logout = (returnUrl: string) => {
 };
 
   const getAccessToken = async (): Promise<string | null> => {
-    if (!userPool || !isAuthenticated) return null;
+    if (!userPool || !isAuthenticated || !cognitoConfig) return null;
     
     return new Promise((resolve) => {
       const currentUser = userPool.getCurrentUser();
@@ -242,7 +242,8 @@ const logout = (returnUrl: string) => {
           resolve(null);
           return;
         }
-        resolve(session.getAccessToken().getJwtToken());
+        // Return ID token instead of access token
+        resolve(session.getIdToken().getJwtToken());
       });
     });
   };

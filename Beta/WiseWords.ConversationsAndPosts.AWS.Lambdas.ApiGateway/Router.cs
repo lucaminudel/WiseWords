@@ -295,13 +295,13 @@ public class Router
         => CreateResponse(statusCode, body, new Dictionary<string, string>());
     private static APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body, Dictionary<string, string> additionalHeaders)
     {
+        var allowedOrigin = Environment.GetEnvironmentVariable("ALLOWED_ORIGIN") ?? "*";
         var headers = new Dictionary<string, string>
         {
-            // In production replace the * in the header below with an url to only allow access
-            // to the API from web pages from trusted domains
-            { "Access-Control-Allow-Origin", "*" },
-            { "Access-Control-Allow-Headers", "Content-Type" },
-            { "Access-Control-Allow-Methods", "OPTIONS,POST,GET, DELETE" }
+            { "Access-Control-Allow-Origin", allowedOrigin },
+            { "Access-Control-Allow-Headers", "Content-Type,Authorization" },
+            { "Access-Control-Allow-Methods", "OPTIONS,POST,GET,DELETE" },
+            { "Access-Control-Allow-Credentials", "true" }
         };
 
         foreach (var keyVal in additionalHeaders)
