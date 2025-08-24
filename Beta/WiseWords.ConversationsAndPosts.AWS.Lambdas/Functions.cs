@@ -1,5 +1,7 @@
 using Amazon.Lambda.Core;
 
+using WiseWords.ConversationsAndPosts.DataStore;
+
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
 namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
@@ -7,20 +9,25 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
     public class Functions: IFunctions  
     {
-        private readonly DataStore.WiseWordsTable _service;
+        private readonly WiseWordsTable _service;
         private readonly ILoggerObserver _observer;
 
+        private readonly Func<string> _getAuthenticatedUser;
+
         public Functions() : this(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl,
-                                  new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region)
+                                  new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region,
+                                  () => "")
         { }
 
-        public Functions(Uri? localDynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion) : this(localDynamoDbServiceUrl, remoteDynamoDbRegion, new LoggerObserver("Lambda"))
+        public Functions(Uri? localDynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion, Func<string> GetAuthenticatedUser) 
+            : this(localDynamoDbServiceUrl, remoteDynamoDbRegion, GetAuthenticatedUser, new LoggerObserver("Lambda"))
         {
         }
 
-        public Functions(Uri? dynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion, ILoggerObserver observer)
+        public Functions(Uri? dynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion, Func<string> getAuthenticatedUser, ILoggerObserver observer)
         {
             _service = new DataStore.WiseWordsTable(dynamoDbServiceUrl, remoteDynamoDbRegion);
+            _getAuthenticatedUser = getAuthenticatedUser;
             _observer = observer;
         }
 
@@ -30,7 +37,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.CreateNewConversation(req.NewGuid, req.ConvoType, req.Title, req.MessageBody, GetAuthor(context, req.Author), req.UtcCreationTime);
+                var result = await _service.CreateNewConversation(req.NewGuid, req.ConvoType, req.Title, req.MessageBody, GetAuthor(req.Author, context), req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(CreateNewConversationHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -38,7 +45,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
             catch (Exception ex)
             {
-                _observer.OnError($"Handler={nameof(CreateNewConversationHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                _observer.OnFailure($"Handler={nameof(CreateNewConversationHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
         }
@@ -57,7 +64,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
             catch (Exception ex)
             {
-                _observer.OnError($"Handler={nameof(RetrieveConversationsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                _observer.OnFailure($"Handler={nameof(RetrieveConversationsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
         }
@@ -76,7 +83,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
             catch (Exception ex)
             {
-                _observer.OnError($"Handler={nameof(RetrieveConversationPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                _observer.OnFailure($"Handler={nameof(RetrieveConversationPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
         }
@@ -93,13 +100,13 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
             catch (InvalidOperationException ex)
             {
-                _observer.OnError($"Handler={nameof(AdministrativeNonAtomicDeleteConversationAndPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                _observer.OnFailure($"Handler={nameof(AdministrativeNonAtomicDeleteConversationAndPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
 
             }
             catch (Exception ex)
             {
-                _observer.OnError($"Handler={nameof(AdministrativeNonAtomicDeleteConversationAndPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                _observer.OnFailure($"Handler={nameof(AdministrativeNonAtomicDeleteConversationAndPostsHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
         }
@@ -110,7 +117,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendDrillDownPost(req.ConversationPK, req.ParentPostSK, req.NewDrillDownGuid, GetAuthor(context, req.Author), req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendDrillDownPost(req.ConversationPK, req.ParentPostSK, req.NewDrillDownGuid, GetAuthor(req.Author, context), req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendDrillDownPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -118,7 +125,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
             catch (Exception ex)
             {
-                _observer.OnError($"Handler={nameof(AppendDrillDownPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                _observer.OnFailure($"Handler={nameof(AppendDrillDownPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
         }
@@ -129,7 +136,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendCommentPost(req.ConversationPK, req.ParentPostSK, req.NewCommentGuid, GetAuthor(context, req.Author), req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendCommentPost(req.ConversationPK, req.ParentPostSK, req.NewCommentGuid, GetAuthor(req.Author, context), req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendCommentPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -137,7 +144,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
             catch (Exception ex)
             {
-                _observer.OnError($"Handler={nameof(AppendCommentPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                _observer.OnFailure($"Handler={nameof(AppendCommentPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
         }
@@ -148,7 +155,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, GetAuthor(context, req.Author), req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, GetAuthor(req.Author, context), req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -156,23 +163,28 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             }
             catch (Exception ex)
             {
-                _observer.OnError($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                _observer.OnFailure($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
         }        
 
-        private static string GetAuthor(ILambdaContext context, string requestAuthor)
+        private string GetAuthor(string requestAuthor, ILambdaContext context)
         {
-            if (string.IsNullOrEmpty(context.Identity?.IdentityId))
+            requestAuthor = requestAuthor.Trim();
+            var preferredUsername = _getAuthenticatedUser();
+
+            if (!string.IsNullOrEmpty(preferredUsername) && preferredUsername != requestAuthor)
             {
-                return requestAuthor;
-            }
-            else
-            {
-                return context.Identity.IdentityId;
+                _observer.OnWarning($"SECURITY WARNING: Request author '{requestAuthor}' does not match authenticated user '{preferredUsername}'", context);
             }
 
+            if (string.IsNullOrEmpty(requestAuthor))
+            {
+                return preferredUsername;
+            }
+
+            return requestAuthor;
         }
 
-    }
+   }
 }

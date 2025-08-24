@@ -6,6 +6,8 @@ public interface ILoggerObserver
 {
     void OnStart(string message, ILambdaContext context);
     void OnSuccess(string message, ILambdaContext context);
-    void OnError(string message, ILambdaContext context, string errorDetails);
-    void OnError(string message, ILambdaContext context, Exception ex);
+    void OnFailure(string message, ILambdaContext context, string errorDetails);
+    void OnFailure(string message, ILambdaContext context, Exception ex);
+    void OnWarning(string message, ILambdaContext context);
+
 }

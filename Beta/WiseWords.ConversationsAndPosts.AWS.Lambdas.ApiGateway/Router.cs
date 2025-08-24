@@ -13,23 +13,32 @@ public class Router
     private readonly IFunctions _lambdaFunctions;
     private readonly ILoggerObserver _routingObserver;
     private readonly ILoggerObserver _forwardingObserver;
-
-    public Router()
-    : this(new Functions(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalContainerUrl,
-                         new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region),
-            new LoggerObserver("Api Gateway Routing"), new LoggerObserver("Api Gateway Forwarding"))
-    {
-    }
+    private APIGatewayProxyRequest? _currentRequest;
 
     public Router(IFunctions lambdaFunctions, ILoggerObserver routingObserver, ILoggerObserver forwardingObserver)
     {
         _lambdaFunctions = lambdaFunctions;
         _routingObserver = routingObserver;
-        _forwardingObserver = forwardingObserver;        
+        _forwardingObserver = forwardingObserver;
     }
+
+    public Router()
+    {
+        _lambdaFunctions = new Functions(
+            new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalContainerUrl,
+            new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region,
+            GetAuthenticatedUserFromCognitoAuthorizerClaims);
+            
+        _routingObserver = new LoggerObserver("Api Gateway Routing");
+        _forwardingObserver = new LoggerObserver("Api Gateway Forwarding");
+    }
+
     public async Task<APIGatewayProxyResponse> Dispatch(APIGatewayProxyRequest request, ILambdaContext context)
     {
+
         _routingObserver.OnStart($"HTTP Request Router={nameof(Dispatch)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+
+        _currentRequest = request;
 
         try
         {
@@ -73,33 +82,37 @@ public class Router
         }
         catch (ArgumentException ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
+            _routingObserver.OnFailure($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.BadRequest, $"Invalid request: {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
+            _routingObserver.OnFailure($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.BadRequest, $"Invalid operation: {ex.Message}");
         }
         catch (OperationCanceledException ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
+            _routingObserver.OnFailure($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.RequestTimeout, $"Request cancelled: {ex.Message}");
         }
         catch (Amazon.Runtime.AmazonServiceException ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
+            _routingObserver.OnFailure($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.ServiceUnavailable, $"Amazon service error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            _routingObserver.OnError($"HTTP Request Router={nameof(Dispatch)}", context, ex);
+            _routingObserver.OnFailure($"HTTP Request Router={nameof(Dispatch)}", context, ex);
 
             return CreateResponse(HttpStatusCode.InternalServerError, $"Internal server error: {{Additional info: Error type:{ex.GetType().ToString}; Error message:{ex.Message}}}");
+        }
+        finally
+        {
+            _currentRequest = null;
         }
     }
 
@@ -112,7 +125,7 @@ public class Router
 
         if (validLambdaHandlerRequestOrNull == null)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversations)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardPostConversations)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
             return CreateResponse(errorStatusCode, errorMessage);
         }
@@ -132,7 +145,7 @@ public class Router
         var upsatedAtYearValidationResult = ValidateUpdatedAtYearQueryStringRequest(request);
         if (!upsatedAtYearValidationResult.IsValid)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code {(int)upsatedAtYearValidationResult.ErrorStatusCode}, HTTP error message {upsatedAtYearValidationResult.ErrorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code {(int)upsatedAtYearValidationResult.ErrorStatusCode}, HTTP error message {upsatedAtYearValidationResult.ErrorMessage}");
 
             return CreateResponse(upsatedAtYearValidationResult.ErrorStatusCode, upsatedAtYearValidationResult.ErrorMessage);
         }
@@ -140,7 +153,7 @@ public class Router
         var filterByAuthorValidationResult = ValidateOptonalFilterByAuthorQueryStringRequest(request);
         if (!filterByAuthorValidationResult.IsValid)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code {(int)filterByAuthorValidationResult.ErrorStatusCode}, HTTP error message {filterByAuthorValidationResult.ErrorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code {(int)filterByAuthorValidationResult.ErrorStatusCode}, HTTP error message {filterByAuthorValidationResult.ErrorMessage}");
 
             return CreateResponse(filterByAuthorValidationResult.ErrorStatusCode, filterByAuthorValidationResult.ErrorMessage);
         }
@@ -169,7 +182,7 @@ public class Router
             var errorStatusCode = HttpStatusCode.BadRequest;
             var errorMessage = $"Invalid path format. Path:{request.Path}";
 
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}", context,  $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}", context,  $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
             return CreateResponse(errorStatusCode, errorMessage);
         }
@@ -197,7 +210,7 @@ public class Router
             var errorStatusCode = HttpStatusCode.BadRequest;
             var errorMessage = $"Invalid path format. Path:{request.Path}";
 
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardDeleteConversations)}", context,  $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardDeleteConversations)}", context,  $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
             return CreateResponse(errorStatusCode, errorMessage);
         }
@@ -220,7 +233,7 @@ public class Router
             var errorStatusCode = HttpStatusCode.NotFound;
             var errorMessage = "Item not found";
 
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardDeleteConversations)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardDeleteConversations)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
             return CreateResponse(errorStatusCode, errorMessage);
 
@@ -235,7 +248,7 @@ public class Router
 
         if (validLambdaHandlerRequestOrNull == null)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
             return CreateResponse(errorStatusCode, errorMessage);
         }
@@ -257,7 +270,7 @@ public class Router
 
         if (validLambdaHandlerRequestOrNull == null)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
             return CreateResponse(errorStatusCode, errorMessage);
         }
@@ -278,7 +291,7 @@ public class Router
 
         if (validLambdaHandlerRequestOrNull == null)
         {
-            _forwardingObserver.OnError($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}", context, $"HTTP error code {(int)errorStatusCode}, HTTP error message {errorMessage}");
 
             return CreateResponse(errorStatusCode, errorMessage);
         }
@@ -401,6 +414,22 @@ public class Router
         }
 
         return (true, authorStr, HttpStatusCode.OK, string.Empty);
+    }
+
+    private  string GetAuthenticatedUserFromCognitoAuthorizerClaims()
+    {
+        if (_currentRequest?.RequestContext?.Authorizer?.Claims is System.Collections.Generic.IDictionary<string, string> claims)
+        {
+            if (claims.TryGetValue("preferred_username", out var preferred) && !string.IsNullOrWhiteSpace(preferred))
+                return preferred;
+            if (claims.TryGetValue("email", out var email) && !string.IsNullOrWhiteSpace(email))
+                return email;
+            if (claims.TryGetValue("cognito:username", out var cognitoUser) && !string.IsNullOrWhiteSpace(cognitoUser))
+                return cognitoUser;
+            if (claims.TryGetValue("name", out var name) && !string.IsNullOrWhiteSpace(name))
+                return name;
+        }
+        return string.Empty;
     }
 
     private static string SafeUrlDecode(string potentiallyUrlEncodedString)

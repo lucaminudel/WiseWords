@@ -4,7 +4,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.Tests;
 
 public class LambdaLoggerStub : ILoggerObserver
 {
-    public void OnError(string message, ILambdaContext context, string errorDetails)
+    public void OnFailure(string message, ILambdaContext context, string errorDetails)
     {
     }
 
@@ -16,7 +16,12 @@ public class LambdaLoggerStub : ILoggerObserver
     {
     }
 
-    public void OnError(string message, ILambdaContext context, Exception ex)
+    public void OnFailure(string message, ILambdaContext context, Exception ex)
     {
+    }
+
+    public void OnWarning(string message, ILambdaContext context)
+    {
+        throw new NotImplementedException();
     }
 }

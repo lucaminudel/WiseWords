@@ -127,16 +127,16 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
         private static void ValidateConfigFileInfo(EnvironmentConfigDeserialisation cfg)
         {
             if (cfg.ApiBaseUrl == null)
-                throw new ArgumentNullException($"{nameof(ApiBaseUrl)} configuration value cannot be null.");
+                throw new ArgumentNullException($"{nameof(cfg.ApiBaseUrl)} configuration value cannot be null.");
 
             if (false == Uri.IsWellFormedUriString(cfg.ApiBaseUrl, UriKind.Absolute))
-                throw new ArgumentNullException($"{nameof(ApiBaseUrl)} configuration value nned to be a well formed Url.");
+                throw new ArgumentNullException($"{nameof(cfg.ApiBaseUrl)} configuration value nned to be a well formed Url.");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalUrl, UriKind.Absolute))
-                throw new ArgumentNullException($"{nameof(DynamoDbServiceLocalUrl)} configuration value nned to be either empty or a well formed Url.");
+                throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalUrl)} configuration value nned to be either empty or a well formed Url.");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalContainerUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalContainerUrl, UriKind.Absolute))
-                throw new ArgumentNullException($"{nameof(DynamoDbServiceLocalContainerUrl)} configuration value need to be either empty or a well formed Url.");
+                throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalContainerUrl)} configuration value need to be either empty or a well formed Url.");
 
             if (!string.IsNullOrEmpty(cfg.AWS.Region) && !Amazon.RegionEndpoint.EnumerableAllRegions.Any(region =>
                  region.SystemName.Equals(cfg.AWS.Region, StringComparison.OrdinalIgnoreCase)))
