@@ -73,17 +73,6 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
             ...options,
         });
 
-        // Handle 401 - authentication required
-        if (response.status === 401 && getAuthToken) {
-            // Clear any stored tokens
-            localStorage.removeItem('cognito_access_token');
-            localStorage.removeItem('cognito_id_token');
-            localStorage.removeItem('cognito_refresh_token');
-            localStorage.removeItem('cognito_username');
-            
-            throw new ConversationApiError('Authentication required. Please log in.', 401);
-        }
-
         if (!response.ok) {
             const errorText = await response.text();
             let errorMessage = `Failed to fetch ${endpoint}: ${response.status} ${response.statusText}`;
