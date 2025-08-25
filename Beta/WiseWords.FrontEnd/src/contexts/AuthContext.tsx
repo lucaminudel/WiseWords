@@ -174,7 +174,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         
     const redirectUri = encodeURIComponent(window.location.origin + '/callback');
     const cognitoUrl = `https://${cognitoConfig.Domain}/login?client_id=${cognitoConfig.ClientId}&response_type=code&scope=email+openid+profile&redirect_uri=${redirectUri}`;
-    window.location.href = cognitoUrl;
+    window.location.replace(cognitoUrl);
   };
 
 function clearAuthState() {
@@ -221,7 +221,7 @@ const logout = (logoutReturnUrl: string) => {
   const logoutUri = encodeURIComponent(window.location.origin + '/callback');
   const cognitoLogoutUrl = `https://${cognitoConfig.Domain}/logout?client_id=${cognitoConfig.ClientId}&logout_uri=${logoutUri}`;
 
-  window.location.href = cognitoLogoutUrl;
+  window.location.replace(cognitoLogoutUrl);
 };
 
   const getIdToken = async (): Promise<string | null> => {

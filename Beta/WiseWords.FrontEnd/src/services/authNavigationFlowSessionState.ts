@@ -41,8 +41,11 @@ export const authNavigationFlowSessionState = {
   },
   consumeLoginReturnUrl(): string | null {
     const url = getItem(KEYS.loginReturnUrl);
-    if (url) removeItem(KEYS.loginReturnUrl);
+    // Item not removed to implement idempotency for potential multiple re-mounts and redirects
     return url;
+  },
+  isLogIn(): boolean {
+    return getItem(KEYS.loginReturnUrl) !== null;
   },
 
   // Logout flow management
@@ -53,8 +56,11 @@ export const authNavigationFlowSessionState = {
   },
   consumeLogoutReturnUrl(): string | null {
     const url = getItem(KEYS.logoutReturnUrl);
-    if (url) removeItem(KEYS.logoutReturnUrl);
+    // Item not removed to implement idempotency for potential multiple re-mounts and redirects
     return url;
+  },
+  isLogOut(): boolean {
+    return getItem(KEYS.logoutReturnUrl) !== null;
   },
 
   // UX signalling for post-login actions
