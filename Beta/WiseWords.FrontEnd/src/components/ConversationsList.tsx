@@ -154,8 +154,8 @@ const ConversationsList: React.FC = () => {
   const handleLoginIfNeeded = (): boolean => {
     if (IsCognitoAuthEnabled && !isAuthenticated) {
       sessionStorage.setItem('loginInitiated', 'true');
-      const returnUrl = window.location.origin + window.location.pathname;
-      login(returnUrl);
+      const loginReturnUrl = window.location.origin + window.location.pathname;
+      login(loginReturnUrl);
       return true; // Indicates login flow was initiated
     }
     return false; // No login needed or already authenticated

@@ -6,8 +6,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   username: string | null;
   IsCognitoAuthEnabled: boolean;
-  login: (returnUrl: string) => void;
-  logout: (returnUrl: string) => void;
+  login: (loginReturnUrl: string) => void;
+  logout: (logoutReturnUrl: string) => void;
   getAccessToken: () => Promise<string | null>;
   authError: string | null; 
 }
@@ -105,8 +105,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (code) {
 
       // Prevent re-processing the same authorization code multiple times
-      const previousCode = sessionStorage.getItem('previousCode');
-      if (previousCode === code) {
+      const previousAuthTokenCode = sessionStorage.getItem('previousAuthTokenCode');
+      if (previousAuthTokenCode === code) {
         clearAuthState();
         
         setAuthError("Temporary login error (duplicated call).");
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Use the correct redirect URI that matches Cognito configuration
       const redirectUri = window.location.origin + '/callback';
       
-      sessionStorage.setItem('previousCode', code);
+      sessionStorage.setItem('previousAuthTokenCode', code);
 
       fetch(`https://${cognitoConfig.Domain}/oauth2/token`, {
         method: 'POST',
@@ -162,14 +162,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [userPool, cognitoConfig]);
 
-  const login = (returnUrl: string) => {
+  const login = (loginReturnUrl: string) => {
     
     if (!cognitoConfig) {
       return;
     }
     
     // Store provided return URL    
-    sessionStorage.setItem('returnUrl', returnUrl);
+    sessionStorage.setItem('loginReturnUrl', loginReturnUrl);
         
     const redirectUri = encodeURIComponent(window.location.origin + '/callback');
     const cognitoUrl = `https://${cognitoConfig.Domain}/login?client_id=${cognitoConfig.ClientId}&response_type=code&scope=email+openid+profile&redirect_uri=${redirectUri}`;
@@ -192,7 +192,7 @@ function clearAuthState() {
   }
 
   // Remove sessionStorage items related to auth/navigation
-  const sessionKeys = ['previousCode', 'returnUrl', 'loginInitiated'];
+  const sessionKeys = ['previousAuthTokenCode', 'loginReturnUrl', 'logoutReturnUrl', 'loginInitiated'];
   sessionKeys.forEach(item => {
     if (sessionStorage.getItem(item)) {
       sessionStorage.removeItem(item);
@@ -200,7 +200,7 @@ function clearAuthState() {
   });
 }
 
-const logout = (returnUrl: string) => {
+const logout = (logoutReturnUrl: string) => {
 
   if (!cognitoConfig) {
     return;
@@ -210,16 +210,17 @@ const logout = (returnUrl: string) => {
     return;
   }
 
+  // Clear all authentication state and storage
+  clearAuthState();
+
   // Store return URL for after logout
-  sessionStorage.setItem('logoutReturnUrl', returnUrl);
+  sessionStorage.setItem('logoutReturnUrl', logoutReturnUrl);
+
   const currentUser = userPool.getCurrentUser();
   if (currentUser) {
     currentUser.signOut();
   }
-
-  // Clear all authentication state and storage
-  clearAuthState();
-
+  
   // Use callback page as logout_uri
   const logoutUri = encodeURIComponent(window.location.origin + '/callback');
   const cognitoLogoutUrl = `https://${cognitoConfig.Domain}/logout?client_id=${cognitoConfig.ClientId}&logout_uri=${logoutUri}`;

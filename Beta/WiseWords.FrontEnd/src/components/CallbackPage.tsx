@@ -18,9 +18,9 @@ export default function CallbackPage() {
   }
   
   // This is a login callback
-  const returnUrl = sessionStorage.getItem('returnUrl');
+  const loginReturnUrl = sessionStorage.getItem('loginReturnUrl');
 
-  if (!returnUrl) {
+  if (!loginReturnUrl) {
     return null;
   }
   
@@ -28,10 +28,10 @@ export default function CallbackPage() {
   const urlParamsString = window.location.search;
   
   // Clear the stored return URL
-  sessionStorage.removeItem('returnUrl');
+  sessionStorage.removeItem('loginReturnUrl');
 
   // Redirect to return URL with all parameters
-  const redirectUrl = returnUrl + urlParamsString;
+  const redirectUrl = loginReturnUrl + urlParamsString;
   
   window.location.replace(redirectUrl);
 
