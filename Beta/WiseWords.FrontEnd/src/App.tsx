@@ -9,12 +9,12 @@ import { useAuth } from './contexts/AuthContext';
 import { setAuthTokenProvider } from './api/conversationApi';
 
 function App() {
-  const { getAccessToken } = useAuth();
+  const { getIdToken } = useAuth();
 
   useEffect(() => {
     // Set up auth token provider for API calls
-    setAuthTokenProvider(getAccessToken);
-  }, [getAccessToken]);
+    setAuthTokenProvider(getIdToken);
+  }, [getIdToken]);
 
   return (
     <div>

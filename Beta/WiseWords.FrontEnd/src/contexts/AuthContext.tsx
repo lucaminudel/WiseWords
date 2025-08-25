@@ -9,7 +9,7 @@ interface AuthContextType {
   IsCognitoAuthEnabled: boolean;
   login: (loginReturnUrl: string) => void;
   logout: (logoutReturnUrl: string) => void;
-  getAccessToken: () => Promise<string | null>;
+  getIdToken: () => Promise<string | null>;
   authError: string | null; 
 }
 
@@ -224,7 +224,7 @@ const logout = (logoutReturnUrl: string) => {
   window.location.href = cognitoLogoutUrl;
 };
 
-  const getAccessToken = async (): Promise<string | null> => {
+  const getIdToken = async (): Promise<string | null> => {
     if (!userPool || !isAuthenticated || !cognitoConfig) return null;
     
     return new Promise((resolve) => {
@@ -252,7 +252,7 @@ const logout = (logoutReturnUrl: string) => {
       IsCognitoAuthEnabled,
       login,
       logout,
-      getAccessToken,
+      getIdToken,
       authError
     }}>
       {children}
