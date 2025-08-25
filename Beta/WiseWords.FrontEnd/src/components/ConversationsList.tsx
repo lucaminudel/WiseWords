@@ -7,6 +7,7 @@ import { formatUnixTimestamp } from '../utils/dateUtils';
 import { ConversationResponse } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
 import { useAuth } from '../contexts/AuthContext';
+import { authNavigationFlowSessionState } from '../services/authNavigationFlowSessionState';
 
 // TypeScript interface for PageShowEvent
 interface PageShowEvent extends Event {
@@ -106,9 +107,9 @@ const ConversationsList: React.FC = () => {
 
   // Auto-show form after successful login
   useEffect(() => {
-    const loginInitiated = sessionStorage.getItem('loginInitiated') === 'true';
+    const loginInitiated = authNavigationFlowSessionState.consumeLoginInitiated();
     if (IsCognitoAuthEnabled && isAuthenticated && loginInitiated) {
-      sessionStorage.removeItem('loginInitiated');
+      
       setShowNewConversationForm(true);
       setTimeout(() => {
         window.location.hash = '#new-conversation-form';
@@ -153,7 +154,7 @@ const ConversationsList: React.FC = () => {
 
   const handleLoginIfNeeded = (): boolean => {
     if (IsCognitoAuthEnabled && !isAuthenticated) {
-      sessionStorage.setItem('loginInitiated', 'true');
+      authNavigationFlowSessionState.markLoginInitiated();
       const loginReturnUrl = window.location.origin + window.location.pathname;
       login(loginReturnUrl);
       return true; // Indicates login flow was initiated

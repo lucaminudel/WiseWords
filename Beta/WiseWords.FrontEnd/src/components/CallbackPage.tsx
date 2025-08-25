@@ -1,3 +1,5 @@
+import { authNavigationFlowSessionState } from '../services/authNavigationFlowSessionState';
+
 export default function CallbackPage() {
   
   // Check if this is a logout callback (no code parameter)
@@ -6,10 +8,10 @@ export default function CallbackPage() {
   
   if (!code) {
     // This is a logout callback
-    const logoutReturnUrl = sessionStorage.getItem('logoutReturnUrl');
+    const logoutReturnUrl = authNavigationFlowSessionState.consumeLogoutReturnUrl();
     
     if (logoutReturnUrl) {
-      sessionStorage.removeItem('logoutReturnUrl');
+      
       window.location.replace(logoutReturnUrl);
     } else {
     }
@@ -18,7 +20,7 @@ export default function CallbackPage() {
   }
   
   // This is a login callback
-  const loginReturnUrl = sessionStorage.getItem('loginReturnUrl');
+  const loginReturnUrl = authNavigationFlowSessionState.consumeLoginReturnUrl();
 
   if (!loginReturnUrl) {
     return null;
@@ -27,8 +29,7 @@ export default function CallbackPage() {
   // Get current URL parameters (code, state, error, etc.)
   const urlParamsString = window.location.search;
   
-  // Clear the stored return URL
-  sessionStorage.removeItem('loginReturnUrl');
+  // loginReturnUrl already consumed (read-and-removed) by service
 
   // Redirect to return URL with all parameters
   const redirectUrl = loginReturnUrl + urlParamsString;

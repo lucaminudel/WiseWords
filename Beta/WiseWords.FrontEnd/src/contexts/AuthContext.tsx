@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CognitoUserPool, CognitoUserSession } from 'amazon-cognito-identity-js';
 import { loadConfig, CognitoConfig } from '../config/environment';
+import { authNavigationFlowSessionState } from '../services/authNavigationFlowSessionState';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -105,7 +106,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (code) {
 
       // Prevent re-processing the same authorization code multiple times
-      const previousAuthTokenCode = sessionStorage.getItem('previousAuthTokenCode');
+            const previousAuthTokenCode = authNavigationFlowSessionState.getPreviousAuthTokenCode();
       if (previousAuthTokenCode === code) {
         clearAuthState();
         
@@ -117,7 +118,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Use the correct redirect URI that matches Cognito configuration
       const redirectUri = window.location.origin + '/callback';
       
-      sessionStorage.setItem('previousAuthTokenCode', code);
+      authNavigationFlowSessionState.setPreviousAuthTokenCode(code);
 
       fetch(`https://${cognitoConfig.Domain}/oauth2/token`, {
         method: 'POST',
@@ -169,7 +170,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     
     // Store provided return URL    
-    sessionStorage.setItem('loginReturnUrl', loginReturnUrl);
+    authNavigationFlowSessionState.setLoginReturnUrl(loginReturnUrl);
         
     const redirectUri = encodeURIComponent(window.location.origin + '/callback');
     const cognitoUrl = `https://${cognitoConfig.Domain}/login?client_id=${cognitoConfig.ClientId}&response_type=code&scope=email+openid+profile&redirect_uri=${redirectUri}`;
@@ -192,12 +193,7 @@ function clearAuthState() {
   }
 
   // Remove sessionStorage items related to auth/navigation
-  const sessionKeys = ['previousAuthTokenCode', 'loginReturnUrl', 'logoutReturnUrl', 'loginInitiated'];
-  sessionKeys.forEach(item => {
-    if (sessionStorage.getItem(item)) {
-      sessionStorage.removeItem(item);
-    }
-  });
+  authNavigationFlowSessionState.clearEphemeral();
 }
 
 const logout = (logoutReturnUrl: string) => {
@@ -214,7 +210,7 @@ const logout = (logoutReturnUrl: string) => {
   clearAuthState();
 
   // Store return URL for after logout
-  sessionStorage.setItem('logoutReturnUrl', logoutReturnUrl);
+  authNavigationFlowSessionState.setLogoutReturnUrl(logoutReturnUrl);
 
   const currentUser = userPool.getCurrentUser();
   if (currentUser) {
