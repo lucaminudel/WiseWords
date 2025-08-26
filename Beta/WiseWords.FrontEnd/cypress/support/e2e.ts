@@ -22,6 +22,11 @@ import './commands'
 import 'cyclope'; // Import the main cyclope module for type definitions and commands
 import { savePageIfTestFailed } from 'cyclope';
 
+// This hook will run before each test to ensure a clean state
+beforeEach(() => {
+  cy.clearLocalStorage();
+});
+
 // This hook will run after each test
 afterEach(() => {
     // By default, it saves the page only in non-interactive (cypress run) mode.
