@@ -7,7 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   username: string | null;
   IsCognitoAuthEnabled: boolean;
-  login: (loginReturnUrl: string) => void;
+  login: (loginReturnUrl: string, buttonId?: string) => void;
   logout: (logoutReturnUrl: string) => void;
   getIdToken: () => Promise<string | null>;
   authError: string | null; 
@@ -106,9 +106,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (code) {
 
       // Prevent re-processing the same authorization code multiple times
-            const previousAuthTokenCode = authNavigationFlowSessionState.getPreviousAuthTokenCode();
+      const previousAuthTokenCode = authNavigationFlowSessionState.getPreviousAuthTokenCode();
       if (previousAuthTokenCode === code) {
+        // Preserve triggering button id across cleanup so we can retry seamlessly
+        const preservedReturnUrl = authNavigationFlowSessionState.consumeLoginReturnUrl();
+        const preservedButtonId = authNavigationFlowSessionState.consumeLoginTriggeredButtonId();
         clearAuthState();
+        if (preservedButtonId) {
+          authNavigationFlowSessionState.setLoginReturnUrl(preservedReturnUrl!, preservedButtonId);
+        }
         
         setAuthError("Temporary login error (duplicated call).");
         return;
@@ -163,14 +169,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [userPool, cognitoConfig]);
 
-  const login = (loginReturnUrl: string) => {
+  const login = (loginReturnUrl: string, buttonId?: string) => {
     
     if (!cognitoConfig) {
       return;
     }
-    
-    // Store provided return URL    
-    authNavigationFlowSessionState.setLoginReturnUrl(loginReturnUrl);
+
+    // Store provided return URL and optional triggering button id
+    authNavigationFlowSessionState.setLoginReturnUrl(loginReturnUrl, buttonId);
+
+    // Mark flow initiated (used by CallbackPage and post-login UX)
+    authNavigationFlowSessionState.markLoginInitiated();
         
     const redirectUri = encodeURIComponent(window.location.origin + '/callback');
     const cognitoUrl = `https://${cognitoConfig.Domain}/login?client_id=${cognitoConfig.ClientId}&response_type=code&scope=email+openid+profile&redirect_uri=${redirectUri}`;

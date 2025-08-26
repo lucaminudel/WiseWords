@@ -154,7 +154,6 @@ const ConversationsList: React.FC = () => {
 
   const handleLoginIfNeeded = (): boolean => {
     if (IsCognitoAuthEnabled && !isAuthenticated) {
-      authNavigationFlowSessionState.markLoginInitiated();
       const loginReturnUrl = window.location.origin + window.location.pathname;
       login(loginReturnUrl);
       return true; // Indicates login flow was initiated

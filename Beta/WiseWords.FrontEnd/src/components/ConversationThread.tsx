@@ -9,6 +9,8 @@ import { getConversationTypeColor } from '../utils/conversationUtils';
 import { postTypeService } from '../utils/postType';
 import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
 import { Post } from '../types/conversation';
+import { useAuth } from '../contexts/AuthContext';
+import { authNavigationFlowSessionState } from '../services/authNavigationFlowSessionState';
 
 
 // Post interface moved to types/conversation.ts
@@ -25,6 +27,7 @@ interface FormContext {
 }
 
 const ConversationThread: React.FC = () => {
+  const { isAuthenticated, IsCognitoAuthEnabled, login, authError } = useAuth();
   const { conversationId: rawConversationId } = useParams<{ conversationId: string }>();
 
   const conversationId = rawConversationId?.toUpperCase().startsWith("CONVO#")
@@ -161,6 +164,50 @@ const isInitialLoadCompleted = useRef(false);
     setFormData({ author: '', messageBody: '' });
     setFormError(null);
   };
+
+  // If login is required, store buttonId and start login. Returns true if login started.
+  const handleLoginIfNeeded = (buttonId: string): boolean => {
+    if (IsCognitoAuthEnabled && !isAuthenticated) {
+      const loginReturnUrl = window.location.origin + window.location.pathname;
+      login(loginReturnUrl, buttonId);
+      return true;
+    }
+    return false;
+  };
+
+  // Restore post-click behavior after login/callback by re-clicking the stored button id
+  useEffect(() => {
+    if (!(IsCognitoAuthEnabled && isAuthenticated)) return;
+
+    const loginInitiated = authNavigationFlowSessionState.consumeLoginInitiated();
+    if (!loginInitiated) return;
+
+    const buttonId = authNavigationFlowSessionState.consumeLoginTriggeredButtonId();
+    if (!buttonId) return;
+
+    // Poll a few times to ensure content is rendered
+    let attempts = 0;
+    const maxAttempts = 3;
+    const interval = setInterval(() => {
+      attempts++;
+      const btn = document.getElementById(buttonId);
+      if (btn) {
+        clearInterval(interval);
+        btn.click();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(interval);
+      }
+    }, 100);
+  }, [IsCognitoAuthEnabled, isAuthenticated]);
+
+  // Retry login when a transient auth error is signaled (e.g., duplicated auth code)
+  useEffect(() => {
+    if (IsCognitoAuthEnabled && !isAuthenticated && authError) {
+      const preservedButtonId = authNavigationFlowSessionState.consumeLoginTriggeredButtonId();
+      const loginReturnUrl = window.location.origin + window.location.pathname;
+      login(loginReturnUrl, preservedButtonId || undefined);
+    }
+  }, [authError, IsCognitoAuthEnabled, isAuthenticated]);
 
   const handlePostForm = async () => {
     if (!activeForm || !conversationId) return;
@@ -446,29 +493,44 @@ const isInitialLoadCompleted = useRef(false);
           <span>by <strong>{conversation.Author}</strong> • {formatUnixTimestamp(conversation.UpdatedAt)}</span>
           <div style={{ marginLeft: 'auto' }}>
             <button 
+              id={`comment-button-${conversation.SK}`}
               data-testid="comment-button" 
               type="button" 
               style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
               disabled={!!activeForm}
-              onClick={() => handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })}
+              onClick={() => {
+                const buttonId = `comment-button-${conversation.SK}`;
+                if (handleLoginIfNeeded(buttonId)) return;
+                handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })
+              }}
             >
               Comment
             </button>
             <button 
+              id={`drill-down-button-${conversation.SK}`}
               data-testid="drill-down-button" 
               type="button" 
               style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
               disabled={!!activeForm}
-              onClick={() => handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })}
+              onClick={() => {
+                const buttonId = `drill-down-button-${conversation.SK}`;
+                if (handleLoginIfNeeded(buttonId)) return;
+                handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })
+              }}
             >
               {getAddSubActionButtonText(conversation.ConvoType)}
             </button>
             <button 
+              id={`propose-answer-button-${conversation.SK}`}
               data-testid="propose-answer-button" 
               type="button" 
               style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
               disabled={!!activeForm}
-              onClick={() => handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })}
+              onClick={() => {
+                const buttonId = `propose-answer-button-${conversation.SK}`;
+                if (handleLoginIfNeeded(buttonId)) return;
+                handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })
+              }}
             >
               {getProposeSolutionButtonText(conversation.ConvoType)}
             </button>
@@ -573,22 +635,36 @@ const isInitialLoadCompleted = useRef(false);
                     {post.SK === 'METADATA' && (
                       <>
                         <button 
+                          id={`comment-button-${post.SK}`}
                           data-testid="comment-button" 
                           style={buttonStyle}
-                          onClick={() => handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })}
+                          onClick={() => {
+                            const buttonId = `comment-button-${post.SK}`;
+                            if (handleLoginIfNeeded(buttonId)) return;
+                            handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })
+                          }}
                         >
                           Comment
                         </button>
                         <button 
+                          id={`drill-down-button-${post.SK}`}
                           data-testid="drill-down-button" 
                           style={{ ...buttonStyle, marginLeft: '8px' }}
-                          onClick={() => handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })}
+                          onClick={() => {
+                            const buttonId = `drill-down-button-${post.SK}`;
+                            if (handleLoginIfNeeded(buttonId)) return;
+                            handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })
+                          }}
                         >
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
-                        <button data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                        <button id={`propose-answer-button-${post.SK}`} data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
                           disabled={!!activeForm}
-                          onClick={() => handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })}>
+                          onClick={() => {
+                            const buttonId = `propose-answer-button-${post.SK}`;
+                            if (handleLoginIfNeeded(buttonId)) return;
+                            handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })
+                          }}>
                           {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
                       </>
@@ -598,10 +674,15 @@ const isInitialLoadCompleted = useRef(false);
                     {isComment && post.SK !== 'METADATA' && (
                       <button 
                         type="button" 
+                        id={`reply-quote-button-${post.SK}`}
                         data-testid="reply-quote-button" 
                         style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
                         disabled={!!activeForm}
-                        onClick={() => handleReplyWithQuoteClick(post)}
+                        onClick={() => {
+                          const buttonId = `reply-quote-button-${post.SK}`;
+                          if (handleLoginIfNeeded(buttonId)) return;
+                          handleReplyWithQuoteClick(post)
+                        }}
                       >
                         Reply with quote
                       </button>
@@ -612,28 +693,43 @@ const isInitialLoadCompleted = useRef(false);
                       <>
                         <button 
                           type="button" 
+                          id={`comment-button-${post.SK}`}
                           data-testid="comment-button" 
                           style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
                           disabled={!!activeForm}
-                          onClick={() => handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })}
+                          onClick={() => {
+                            const buttonId = `comment-button-${post.SK}`;
+                            if (handleLoginIfNeeded(buttonId)) return;
+                            handleOpenForm('comment', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })
+                          }}
                         >
                           Comment
                         </button>
                         <button 
                           type="button" 
+                          id={`drill-down-button-${post.SK}`}
                           data-testid="drill-down-button" 
                           style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
                           disabled={!!activeForm}
-                          onClick={() => handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })}
+                          onClick={() => {
+                            const buttonId = `drill-down-button-${post.SK}`;
+                            if (handleLoginIfNeeded(buttonId)) return;
+                            handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })
+                          }}
                         >
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
                         <button 
                           type="button" 
+                          id={`propose-answer-button-${post.SK}`}
                           data-testid="propose-answer-button" 
                           style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
                           disabled={!!activeForm}
-                          onClick={() => handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })}
+                          onClick={() => {
+                            const buttonId = `propose-answer-button-${post.SK}`;
+                            if (handleLoginIfNeeded(buttonId)) return;
+                            handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })
+                          }}
                         >
                           {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>

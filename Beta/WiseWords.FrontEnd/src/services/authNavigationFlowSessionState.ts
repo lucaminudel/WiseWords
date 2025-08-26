@@ -3,6 +3,7 @@ export type AuthNavKeys = {
   logoutReturnUrl: string;
   previousAuthTokenCode: string;
   loginInitiated: string;
+  loginTriggeredButtonId: string;
 };
 
 const KEYS: AuthNavKeys = {
@@ -10,6 +11,7 @@ const KEYS: AuthNavKeys = {
   logoutReturnUrl: 'logoutReturnUrl',
   previousAuthTokenCode: 'previousAuthTokenCode',
   loginInitiated: 'loginInitiated',
+  loginTriggeredButtonId: 'loginTriggeredButtonId',
 };
 
 function setItem(key: string, value: string) {
@@ -34,10 +36,18 @@ function removeItem(key: string) {
 
 export const authNavigationFlowSessionState = {
   // Login flow management
-  setLoginReturnUrl(url: string) {
+  setLoginReturnUrl(url: string, buttonId?: string) {
     // enforce mutual exclusion with logout
     removeItem(KEYS.logoutReturnUrl);
+    // clear previous button id 
+    removeItem(KEYS.loginTriggeredButtonId);
+
     setItem(KEYS.loginReturnUrl, url);
+
+    // optionally set triggering buttonId
+    if (buttonId) {
+      setItem(KEYS.loginTriggeredButtonId, buttonId);
+    }
   },
   consumeLoginReturnUrl(): string | null {
     const url = getItem(KEYS.loginReturnUrl);
@@ -52,6 +62,9 @@ export const authNavigationFlowSessionState = {
   setLogoutReturnUrl(url: string) {
     // enforce mutual exclusion with login
     removeItem(KEYS.loginReturnUrl);
+    // clear previous button id 
+    removeItem(KEYS.loginTriggeredButtonId);
+
     setItem(KEYS.logoutReturnUrl, url);
   },
   consumeLogoutReturnUrl(): string | null {
@@ -73,6 +86,12 @@ export const authNavigationFlowSessionState = {
     return v === 'true';
   },
 
+  // Track which UI button triggered login so we can re-trigger it after callback
+  consumeLoginTriggeredButtonId(): string | null {
+    const id = getItem(KEYS.loginTriggeredButtonId);
+    return id;
+  },
+
   // Authorization code deduplication
   getPreviousAuthTokenCode(): string | null {
     return getItem(KEYS.previousAuthTokenCode);
@@ -83,7 +102,7 @@ export const authNavigationFlowSessionState = {
 
   // Cleanup helpers
   clearEphemeral() {
-    [KEYS.previousAuthTokenCode, KEYS.loginReturnUrl, KEYS.logoutReturnUrl, KEYS.loginInitiated].forEach(removeItem);
+    [KEYS.previousAuthTokenCode, KEYS.loginReturnUrl, KEYS.logoutReturnUrl, KEYS.loginInitiated, KEYS.loginTriggeredButtonId].forEach(removeItem);
   },
 
   KEYS,
