@@ -22,14 +22,9 @@ describe('Full E2E Live API and DB Flow', () => {
     cy.contains(conversationTitle).should('be.visible');
     cy.contains(authorName).should('be.visible');
 
-    // Step 3: Start a new session and verify the conversation is still there
-    cy.log('--- Starting new session to verify persistence ---');
-    cy.visit('/conversations');
-
-    // Verify the conversation is present after reloading from the server
-    cy.contains(conversationTitle).should('be.visible');
-    cy.contains(authorName).should('be.visible');
-
+    // Step 3: No need to verify the conversation has been persisted beyond the cache
+    //         as the following operations would fail without a presited conversation
+    
     // Step 4: Visit the new created conversation
     cy.contains(conversationTitle).click();
 
@@ -118,10 +113,10 @@ describe('Full E2E Live API and DB Flow', () => {
     cy.get('[id^="conclusion-form-"]').contains('button', 'Post').click();
     cy.contains('Another Nested Conclusion').should('be.visible');
 
-    // Step 10: Start a new browser session and verify the new posts are still there
-    cy.log('--- Starting new session to verify posts persistence ---');
-    cy.visit('/conversations');
-    cy.contains(conversationTitle).click();
+    // Step 10: Verify the new posts have been persisted beyond the cache
+    cy.log('--- Verifying posts persistence beyond the cache ---');
+    cy.clearLocalStorage();
+    cy.reload();
 
     cy.contains('Drill Down 1').should('be.visible');
     cy.contains('Drill Down 2').should('be.visible');
