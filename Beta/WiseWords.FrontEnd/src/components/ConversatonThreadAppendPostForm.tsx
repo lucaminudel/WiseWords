@@ -11,7 +11,9 @@ export const ConversatonThreadAppendPostForm = ({
   formError,
   marginLeft,
   id,
-  dataTestId
+  dataTestId,
+  isAuthenticated,
+  isCognitoAuthEnabled
 }: {
   title: string;
   formData: { author: string; messageBody: string };
@@ -23,6 +25,8 @@ export const ConversatonThreadAppendPostForm = ({
   marginLeft: string;
   id: string;
   dataTestId: string;
+  isAuthenticated: boolean;
+  isCognitoAuthEnabled: boolean;
 }) => {
   return (
     <div
@@ -90,29 +94,31 @@ export const ConversatonThreadAppendPostForm = ({
           />
         </div>
 
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-            Author
-          </label>
-          <input
-            data-testid="post-editor-author"
-            type="text"
-            value={formData.author}
-            onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-            placeholder="Enter your name"
-            disabled={isSubmitting}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--color-background)',
-              color: 'var(--color-text-primary)',
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '1rem'
-            }}
-          />
-        </div>
+        {(!isAuthenticated || !isCognitoAuthEnabled) && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+              Author
+            </label>
+            <input
+              data-testid="post-editor-author"
+              type="text"
+              value={formData.author}
+              onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+              placeholder="Enter your name"
+              disabled={isSubmitting}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                backgroundColor: 'var(--color-background)',
+                color: 'var(--color-text-primary)',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
           <button
@@ -137,18 +143,18 @@ export const ConversatonThreadAppendPostForm = ({
           <button
             data-testid="post-button"
             onClick={onPost}
-            disabled={!formData.author.trim() || !formData.messageBody.trim() || isSubmitting}
+            disabled={(isAuthenticated ? !formData.messageBody.trim() : !formData.author.trim() || !formData.messageBody.trim()) || isSubmitting}
             style={{
               backgroundColor: 'var(--color-accent)',
               color: 'var(--color-text-primary)',
               border: 'none',
               padding: '0.75rem 1.5rem',
               borderRadius: '8px',
-              cursor: (!formData.author.trim() || !formData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
+              cursor: ((isAuthenticated ? !formData.messageBody.trim() : !formData.author.trim() || !formData.messageBody.trim()) || isSubmitting) ? 'not-allowed' : 'pointer',
               fontWeight: 700,
               fontFamily: 'Inter, sans-serif',
               fontSize: '1rem',
-              opacity: (!formData.author.trim() || !formData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
+              opacity: ((isAuthenticated ? !formData.messageBody.trim() : !formData.author.trim() || !formData.messageBody.trim()) || isSubmitting) ? 0.6 : 1,
               transition: 'all 0.2s ease'
             }}
           >

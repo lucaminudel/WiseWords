@@ -27,7 +27,7 @@ interface FormContext {
 }
 
 const ConversationThread: React.FC = () => {
-  const { isAuthenticated, IsCognitoAuthEnabled, login, authError } = useAuth();
+  const { isAuthenticated, IsCognitoAuthEnabled, login, authError, username } = useAuth();
   const { conversationId: rawConversationId } = useParams<{ conversationId: string }>();
 
   const conversationId = rawConversationId?.toUpperCase().startsWith("CONVO#")
@@ -44,7 +44,10 @@ const ConversationThread: React.FC = () => {
 
   // --- Refactored State ---
   const [activeForm, setActiveForm] = useState<{ type: FormType; context: FormContext } | null>(null);
-  const [formData, setFormData] = useState({ author: '', messageBody: '' });
+  const [formData, setFormData] = useState({ 
+    author: isAuthenticated && username ? username : '', 
+    messageBody: '' 
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -209,8 +212,19 @@ const isInitialLoadCompleted = useRef(false);
     }
   }, [authError, IsCognitoAuthEnabled, isAuthenticated]);
 
-  const handlePostForm = async () => {
+  const handleSubmit = async () => {
     if (!activeForm || !conversationId) return;
+
+    // Validate required fields
+    const requiredFields: { [key: string]: string } = {
+      messageBody: formData.messageBody.trim(),
+      ...(isAuthenticated ? {} : { author: formData.author.trim() })  // Only include author in validation if not authenticated
+    };
+
+    if (Object.values(requiredFields).some(field => !field)) {
+      setFormError('Please fill in all required fields');
+      return;
+    }
 
     setIsSubmitting(true);
     setFormError(null);
@@ -554,12 +568,14 @@ const isInitialLoadCompleted = useRef(false);
           formData={formData}
           setFormData={setFormData}
           onCancel={handleCancelForm}
-          onPost={handlePostForm}
+          onPost={handleSubmit}
           isSubmitting={isSubmitting}
           formError={formError}
           marginLeft={`${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`}
           id={`${activeForm.type}-form-${conversation?.SK || 'main'}`}
           dataTestId={`${activeForm.type}-form-${conversation.SK}`}
+          isAuthenticated={isAuthenticated}
+          isCognitoAuthEnabled={IsCognitoAuthEnabled}
         />
       )}
       
@@ -748,12 +764,14 @@ const isInitialLoadCompleted = useRef(false);
                   formData={formData}
                   setFormData={setFormData}
                   onCancel={handleCancelForm}
-                  onPost={handlePostForm}
+                  onPost={handleSubmit}
                   isSubmitting={isSubmitting}
                   formError={formError}
                   marginLeft={`${activeForm.type === 'comment' ? newCommentDepth * 48 : (depth + 1) * 48}px`}
                   id={`${activeForm.type}-form-${post.SK}`}
                   dataTestId={`${activeForm.type}-form-${post.SK}`}
+                  isAuthenticated={isAuthenticated}
+                  isCognitoAuthEnabled={IsCognitoAuthEnabled}
                 />
               )}
               </React.Fragment>
