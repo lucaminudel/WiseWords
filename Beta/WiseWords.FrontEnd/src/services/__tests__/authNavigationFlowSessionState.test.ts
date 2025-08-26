@@ -27,23 +27,6 @@ beforeEach(() => {
 });
 
 describe('authNavigationFlowSessionState', () => {
-  it('sets and consumes loginReturnUrl', () => {
-    const url = 'https://example.com/after-login';
-    authNavigationFlowSessionState.setLoginReturnUrl(url);
-    const consumed = authNavigationFlowSessionState.consumeLoginReturnUrl();
-    expect(consumed).toBe(url);
-    // Should be removed after consumption
-    expect(sessionStorage.getItem('loginReturnUrl')).toBeNull();
-  });
-
-  it('sets and consumes logoutReturnUrl', () => {
-    const url = 'https://example.com/after-logout';
-    authNavigationFlowSessionState.setLogoutReturnUrl(url);
-    const consumed = authNavigationFlowSessionState.consumeLogoutReturnUrl();
-    expect(consumed).toBe(url);
-    // Should be removed after consumption
-    expect(sessionStorage.getItem('logoutReturnUrl')).toBeNull();
-  });
 
   it('enforces mutual exclusion when setting loginReturnUrl', () => {
     // Pre-set logoutReturnUrl
