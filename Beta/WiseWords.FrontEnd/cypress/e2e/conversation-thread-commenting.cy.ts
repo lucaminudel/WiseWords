@@ -14,9 +14,7 @@ describe('Conversation Thread Commenting Workflow', () => {
       };
 
       // 1. Click the "Comment" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="comment-button"]').click();
-      });
+      cy.get('#comment-button-METADATA').click();
 
       // 2. Verify the comment form appears with the correct indentation (Level 1)
       // The form is attached to the root post, which has SK 'METADATA'
@@ -64,9 +62,7 @@ describe('Conversation Thread Commenting Workflow', () => {
 
     it('should cancel posting a new comment', () => {
       // 1. Click the "Comment" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="comment-button"]').click();
-      });
+      cy.get('#comment-button-METADATA').click();
 
       // 2. Get the form ID and verify it's visible
       const formId = '#comment-form-METADATA';
@@ -86,9 +82,7 @@ describe('Conversation Thread Commenting Workflow', () => {
       cy.contains('[data-testid="post-container"]', 'This comment should be cancelled.').should('not.exist');
 
       // 7. Re-open the form and assert that it is empty
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="comment-button"]').click();
-      });
+      cy.get('#comment-button-METADATA').click();
       cy.get(formId).find('textarea').should('have.value', '');
       cy.get(formId).find('input[type="text"]').should('have.value', '');
     });
@@ -100,9 +94,7 @@ describe('Conversation Thread Commenting Workflow', () => {
       };
 
       // 1. Click the "Comment" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="comment-button"]').click();
-      });
+      cy.get('#comment-button-METADATA').click();
 
       // 2. Get the form ID and verify it's visible
       const formId = '#comment-form-METADATA';
@@ -144,9 +136,7 @@ describe('Conversation Thread Commenting Workflow', () => {
       const parentPostSK = '#DD#1#DD#1';
 
       // 1. Click the "Comment" button on the nested drill-down post
-      cy.contains('[data-testid="post-container"]', parentPostText).within(() => {
-        cy.get('[data-testid="comment-button"]').click();
-      });
+      cy.get(`[id="comment-button-${parentPostSK}"]`).click();
 
       // 2. Verify the comment form appears with the correct, deeper indentation
       const formId = `[id="comment-form-${parentPostSK}"]`;
@@ -201,9 +191,7 @@ describe('Conversation Thread Commenting Workflow', () => {
       const newReplyAuthor = 'Reply User';
 
       // 1. Click the "Reply with quote" button on a nested comment
-      cy.contains('[data-testid="post-container"]', originalCommentText).within(() => {
-        cy.get('[data-testid="reply-quote-button"]').click();
-      });
+      cy.get(`[id="reply-quote-button-${originalCommentSK}"]`).click();
 
       // 2. Verify the comment form appears with the correct indentation (same as original comment)
       const formId = `[id="comment-form-${originalCommentSK}"]`;

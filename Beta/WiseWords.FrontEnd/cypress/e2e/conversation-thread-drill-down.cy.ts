@@ -14,9 +14,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
       };
 
       // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="drill-down-button"]').click();
-      });
+      cy.get('#drill-down-button-METADATA').click();
 
       // 2. Verify the drill down form appears with the correct indentation (Level 1)
       // The form is attached to the root post, which has SK 'METADATA'
@@ -64,9 +62,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
 
     it('should cancel posting a new drill down', () => {
       // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="drill-down-button"]').click();
-      });
+      cy.get('#drill-down-button-METADATA').click();
 
       // 2. Get the form ID and verify it's visible
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
@@ -86,9 +82,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
       cy.contains('[data-testid="post-container"]', 'This drill down should be cancelled.').should('not.exist');
 
       // 7. Re-open the form and assert that it is empty
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="drill-down-button"]').click();
-      });
+      cy.get('#drill-down-button-METADATA').click();
       cy.get(formSelector).find('textarea').should('have.value', '');
       cy.get(formSelector).find('input[type="text"]').should('have.value', '');
     });
@@ -100,9 +94,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
       };
 
       // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="drill-down-button"]').click();
-      });
+      cy.get('#drill-down-button-METADATA').click();
 
       // 2. Get the form ID and verify it's visible
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
@@ -144,9 +136,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
       const parentPostSK = '#DD#1#DD#1';
 
       // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the nested drill-down post
-      cy.contains('[data-testid="post-container"]', parentPostText).within(() => {
-        cy.get('[data-testid="drill-down-button"]').click();
-      });
+      cy.get(`[id="drill-down-button-${parentPostSK}"]`).click();
 
       // 2. Verify the drill down form appears with the correct, deeper indentation
       const formSelector = `[data-testid="drilldown-form-${parentPostSK}"]`;

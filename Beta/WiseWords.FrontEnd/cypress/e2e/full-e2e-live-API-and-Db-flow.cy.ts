@@ -30,9 +30,7 @@ describe('Full E2E Live API and DB Flow', () => {
 
     // Step 5: Add three drill-down posts to the main root conversation post.
     for (let i = 1; i <= 3; i++) {
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="drill-down-button"]').click();
-      });
+      cy.get('#drill-down-button-METADATA').click();
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
       cy.get(formSelector).find('textarea').type(`Drill Down ${i}`);
       cy.get(formSelector).find('input[type="text"]').type(authorName);
@@ -41,9 +39,7 @@ describe('Full E2E Live API and DB Flow', () => {
     }
 
     // Step 6: Add a comment to the main root conversation post.
-    cy.get('[data-testid="post-container"]').first().within(() => {
-      cy.get('[data-testid="comment-button"]').click();
-    });
+    cy.get('#comment-button-METADATA').click();
     const commentFormSelector = '#comment-form-METADATA';
     cy.get(commentFormSelector).find('textarea').type('Root Comment');
     cy.get(commentFormSelector).find('input[type="text"]').type(authorName);
@@ -51,9 +47,7 @@ describe('Full E2E Live API and DB Flow', () => {
     cy.contains('Root Comment').should('be.visible');
 
     // Step 7: Add a conclusion to the main root conversation post.
-    cy.get('[data-testid="post-container"]').first().within(() => {
-      cy.get('[data-testid="propose-answer-button"]').click();
-    });
+    cy.get('#propose-answer-button-METADATA').click();
     const conclusionFormSelector = '#conclusion-form-METADATA';
     cy.get(conclusionFormSelector).find('textarea').type('Root Conclusion');
     cy.get(conclusionFormSelector).find('input[type="text"]').type(authorName);
@@ -118,16 +112,16 @@ describe('Full E2E Live API and DB Flow', () => {
     cy.clearLocalStorage();
     cy.reload();
 
-    cy.contains('Drill Down 1').should('be.visible');
-    cy.contains('Drill Down 2').should('be.visible');
-    cy.contains('Drill Down 3').should('be.visible');
-    cy.contains('Root Comment').should('be.visible');
-    cy.contains('Root Conclusion').should('be.visible');
-    cy.contains('Nested Drill Down').should('be.visible');
-    cy.contains('Nested Comment').should('be.visible');
-    cy.contains('Nested Conclusion').should('be.visible');
-    cy.contains('Another Nested Drill Down').should('be.visible');
-    cy.contains('Another Nested Comment').should('be.visible');
-    cy.contains('Another Nested Conclusion').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Drill Down 1').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Drill Down 2').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Drill Down 3').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Root Comment').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Root Conclusion').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Nested Drill Down').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Nested Comment').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Nested Conclusion').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Another Nested Drill Down').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Another Nested Comment').should('be.visible');
+    cy.contains('[data-testid="post-container"]', 'Another Nested Conclusion').should('be.visible');
   });
 });

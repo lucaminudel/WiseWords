@@ -56,19 +56,19 @@ describe('ConversationThread Button Display Rules', () => {
     cy.wait('@getConversationPosts')
 
     // Check that buttons are actual button elements with proper accessibility
-    cy.get('[data-testid="comment-button"]').first().should(($btn) => {
+    cy.get('#comment-button-METADATA').should(($btn) => {
       expect($btn).to.have.prop('tagName', 'BUTTON')
       expect($btn).to.have.attr('type', 'button')
       expect($btn).to.not.be.disabled
     })
 
-    cy.get('[data-testid="drill-down-button"]').first().should(($btn) => {
+    cy.get('#drill-down-button-METADATA').should(($btn) => {
       expect($btn).to.have.prop('tagName', 'BUTTON')
       expect($btn).to.have.attr('type', 'button')
       expect($btn).to.not.be.disabled
     })
 
-    cy.get('[data-testid="propose-answer-button"]').first().should(($btn) => {
+    cy.get('#propose-answer-button-METADATA').should(($btn) => {
       expect($btn).to.have.prop('tagName', 'BUTTON')
       expect($btn).to.have.attr('type', 'button')
       expect($btn).to.not.be.disabled
@@ -80,8 +80,8 @@ describe('ConversationThread Button Display Rules', () => {
     cy.wait('@getConversationPosts')
 
     // For QUESTION type conversation, verify button text is contextual
-    cy.get('[data-testid="propose-answer-button"]').first().should('contain.text', 'Propose Answer')
-    cy.get('[data-testid="drill-down-button"]').first().should('contain.text', 'Sub-question')
+    cy.get('#propose-answer-button-METADATA').should('contain.text', 'Propose Answer')
+    cy.get('#drill-down-button-METADATA').should('contain.text', 'Sub-question')
   })
 
   it('should handle button interactions correctly', () => {
@@ -90,13 +90,13 @@ describe('ConversationThread Button Display Rules', () => {
 
     // Test that buttons are clickable (we're not testing the actual functionality, 
     // just that they respond to clicks without errors)
-    cy.get('[data-testid="comment-button"]').first().click()
+    cy.get('#comment-button-METADATA').click()
     cy.get('[data-testid="cancel-button"]').click(); // Close the form
     
-    cy.get('[data-testid="drill-down-button"]').first().click()
+    cy.get('#drill-down-button-METADATA').click()
     cy.get('[data-testid="cancel-button"]').click(); // Close the form
 
-    cy.get('[data-testid="propose-answer-button"]').first().click()
+    cy.get('#propose-answer-button-METADATA').click()
     cy.get('[data-testid="cancel-button"]').click(); // Close the form
   })
 })

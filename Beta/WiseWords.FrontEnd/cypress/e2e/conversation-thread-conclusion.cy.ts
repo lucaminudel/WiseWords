@@ -14,9 +14,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       };
 
       // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="propose-answer-button"]').click();
-      });
+      cy.get('#propose-answer-button-METADATA').click();
 
       // 2. Verify the conclusion form appears with the correct indentation (Level 1)
       // The form is attached to the root post, which has SK 'METADATA'
@@ -64,9 +62,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
 
     it('should cancel posting a new conclusion', () => {
       // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="propose-answer-button"]').click();
-      });
+      cy.get('#propose-answer-button-METADATA').click();
 
       // 2. Get the form ID and verify it's visible
       const formId = '#conclusion-form-METADATA';
@@ -86,9 +82,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       cy.contains('[data-testid="post-container"]', 'This conclusion should be cancelled.').should('not.exist');
 
       // 7. Re-open the form and assert that it is empty
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="propose-answer-button"]').click();
-      });
+      cy.get('#propose-answer-button-METADATA').click();
       cy.get(formId).find('textarea').should('have.value', '');
       cy.get(formId).find('input[type="text"]').should('have.value', '');
     });
@@ -100,9 +94,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       };
 
       // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="propose-answer-button"]').click();
-      });
+      cy.get('#propose-answer-button-METADATA').click();
 
       // 2. Get the form ID and verify it's visible
       const formId = '#conclusion-form-METADATA';
@@ -144,9 +136,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       const parentPostSK = '#DD#1#DD#1';
 
       // 1. Click the "Propose Answer/Solution/Choice" button on the nested drill-down post
-      cy.contains('[data-testid="post-container"]', parentPostText).within(() => {
-        cy.get('[data-testid="propose-answer-button"]').click();
-      });
+      cy.get(`[id="propose-answer-button-${parentPostSK}"]`).click();
 
       // 2. Verify the conclusion form appears with the correct, deeper indentation
       const formId = `[id="conclusion-form-${parentPostSK}"]`;
@@ -198,9 +188,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       };
 
       // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="propose-answer-button"]').click();
-      });
+      cy.get('#propose-answer-button-METADATA').click();
 
       // 2. Fill out and submit the conclusion form
       const formId = '#conclusion-form-METADATA';

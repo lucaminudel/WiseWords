@@ -105,9 +105,7 @@ describe('Conversation Thread Caching Behavior', () => {
       }).as('postComment');
 
       // 3. Add a new comment
-      cy.get('[data-testid="post-container"]').first().within(() => {
-        cy.get('[data-testid="comment-button"]').click();
-      });
+      cy.get('#comment-button-METADATA').click();
       const formId = '#comment-form-METADATA';
       cy.get(formId).find('textarea').type(newComment.message);
       cy.get(formId).find('input[type="text"]').type(newComment.author);
