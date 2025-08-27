@@ -198,44 +198,6 @@ describe('ConversationThread Component Rendering', () => {
     })
   })
 
-  it('should display posts in correct order: Comments then Solutions then Drill-downs', () => {
-    cy.mockConversationAPI('success')
-    cy.visitConversation('CONVO#123')
-    
-    cy.wait('@getConversationPosts')
-    
-    // Get all response post containers
-    cy.get('[data-testid="post-container"]').as('posts')
-    
-    // Debug: Log the actual content and order
-    cy.get('@posts').each(($el, index) => {
-      cy.wrap($el).invoke('text').then((text) => {
-        cy.log(`Post ${index}: ${text.substring(0, 50)}...`)
-      })
-    })
-    
-    // Verify we have the expected number of posts (1 main + 5 responses)
-    cy.get('@posts').should('have.length', 6)
-    
-    // Check the order based on our new sorting: Comments -> Solutions -> Drill-downs
-    // Note: The actual positions might be different due to tree structure
-    cy.get('@posts').eq(1).should('contain', 'Root level comment')      // #CM#1 should be first response
-    
-    // Find where the solution actually appears
-    cy.get('@posts').contains('Proposed solution').should('be.visible')
-    cy.get('@posts').contains('Root level sub-question').should('be.visible')
-    
-    // Verify solution comes after comment but before drill-down at root level
-    cy.get('@posts').then($posts => {
-      const commentIndex = Array.from($posts).findIndex(el => el.textContent.includes('Root level comment'))
-      const solutionIndex = Array.from($posts).findIndex(el => el.textContent.includes('Proposed solution'))
-      const drilldownIndex = Array.from($posts).findIndex(el => el.textContent.includes('Root level sub-question'))
-      
-      expect(commentIndex).to.be.lessThan(solutionIndex, 'Comment should come before solution')
-      expect(solutionIndex).to.be.lessThan(drilldownIndex, 'Solution should come before drill-down')
-    })
-  })
-
   it('should display posts in correct order and indentation', () => {
     cy.mockConversationAPI('success')
     cy.visitConversation('CONVO#123')

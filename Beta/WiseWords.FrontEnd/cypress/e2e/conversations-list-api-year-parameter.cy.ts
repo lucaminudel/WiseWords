@@ -6,57 +6,6 @@
 describe('Conversations List - API Year Parameter Test', () => {
   const currentYear = new Date().getFullYear();
 
-  it(`should call the conversations API with the current year (${currentYear})`, () => {
-    // Mock the conversations API and capture the request
-    cy.intercept('GET', `**/conversations?updatedAtYear=${currentYear}`, {
-      statusCode: 200,
-      body: [
-        {
-          PK: 'CONVO#test-conversation-1',
-          SK: 'METADATA',
-          Title: `Test Conversation ${currentYear}`,
-          Author: 'TestUser',
-          UpdatedAt: Math.floor(Date.now() / 1000).toString(), // Current timestamp
-          ConvoType: 'QUESTION'
-        },
-        {
-          PK: 'CONVO#test-conversation-2',
-          SK: 'METADATA',
-          Title: 'Another Test Conversation',
-          Author: 'AnotherUser',
-          UpdatedAt: Math.floor(Date.now() / 1000).toString(), // Current timestamp
-          ConvoType: 'PROBLEM'
-        }
-      ]
-    }).as('getConversationsCurrentYear');
-
-    
-    // Visit the conversations list page
-    cy.visit('/conversations');
-
-    // Verify the correct API call was made with current year
-    cy.wait('@getConversationsCurrentYear').then((interception) => {
-      // Verify the request URL contains the correct year parameter
-      expect(interception.request.url).to.include(`updatedAtYear=${currentYear}`);
-      
-      // Verify the query parameters
-      const url = new URL(interception.request.url);
-      expect(url.searchParams.get('updatedAtYear')).to.equal(currentYear.toString());
-      
-      // Log for debugging
-      cy.log(`API called with URL: ${interception.request.url}`);
-      cy.log(`Year parameter: ${url.searchParams.get('updatedAtYear')}`);
-      cy.log(`Expected current year: ${currentYear}`);
-    });
-
-    // Verify the conversations are displayed
-    cy.contains('h2', 'Conversations').should('be.visible');
-    cy.contains(`Test Conversation ${currentYear}`).should('be.visible');
-    cy.contains('Another Test Conversation').should('be.visible');
-
-  });
-
-
   it(`should use the current year ${currentYear} for API calls`, () => {
     // This test verifies that the app uses the current year for API calls
     cy.intercept('GET', '**/conversations?updatedAtYear=*', (req) => {
