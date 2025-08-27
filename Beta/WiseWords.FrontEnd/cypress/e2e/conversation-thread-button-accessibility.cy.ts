@@ -133,7 +133,6 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
 
     // Click cancel button for the drill-down form
     cy.get('[data-testid="cancel-button"]').click();
-    cy.wait(500); // Give some time for the form to disappear
     cy.get('[data-testid^="drilldown-form-"]').should('not.exist');
 
     // All buttons should be re-enabled

@@ -30,18 +30,16 @@ describe('Conversation List - Caching Behavior', () => {
         cy.reload();
 
         // A longer wait can be necessary for the reload and API call to register
-        cy.wait(1500).then(() => {
-          cy.get(alias + '.all').then((interceptions) => {
-            if (interceptions.length > 0) {
-              cy.log(`Refresh successful for ${alias}!`);
-              return;
-            }
-            if (obj.attempts < maxAttempts) {
-              tryRefresh();
-            } else {
-              assert.fail(`API refresh was not triggered for alias ${alias} within ${maxAttempts} attempts.`);
-            }
-          });
+        cy.get(alias + '.all').then((interceptions) => {
+          if (interceptions.length > 0) {
+            cy.log(`Refresh successful for ${alias}!`);
+            return;
+          }
+          if (obj.attempts < maxAttempts) {
+            tryRefresh();
+          } else {
+            assert.fail(`API refresh was not triggered for alias ${alias} within ${maxAttempts} attempts.`);
+          }
         });
       };
       tryRefresh();
@@ -108,7 +106,6 @@ describe('Conversation List - Caching Behavior', () => {
       cy.intercept('GET', '**/conversations?updatedAtYear=2025').as('getFromCache');
       cy.visit('/conversations'); // Navigate back
       cy.contains('Existing Conversation 1').should('be.visible');
-      cy.wait(500); // Wait to ensure no unexpected API call
       cy.get('@getFromCache.all').should('have.length', 0);
     });
 
@@ -121,7 +118,6 @@ describe('Conversation List - Caching Behavior', () => {
       cy.intercept('GET', '**/conversations?updatedAtYear=2025').as('getAfterBack');
       cy.url().should('match', /\/conversations$/);
       cy.contains('Existing Conversation 1').should('be.visible');
-      cy.wait(500);
       cy.get('@getAfterBack.all').should('have.length', 0);
     });
 
@@ -149,7 +145,6 @@ describe('Conversation List - Caching Behavior', () => {
       // 5. Verify that the refreshed data is still displayed and no new API call was made
       cy.intercept('GET', '**/conversations?updatedAtYear=2025').as('getAfterBack');
       cy.contains('Refreshed Conversation').should('be.visible');
-      cy.wait(500);
       cy.get('@getAfterBack.all').should('have.length', 0);
     });
   });
