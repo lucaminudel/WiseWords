@@ -90,7 +90,7 @@ These and the steps that remain to be carried out:
   - ~~deploy Api Gateway infrastructure~~
   - ~~deploy the front-end to S3~~ 
 - ~~Verify the current logging works and its integration with Amazon CloudWatch monitoring and observability~~
-- Implement users authentication with Amazon Cognito, including registratation and login 
+- ~~Implement users authentication with Amazon Cognito, including registratation and login~~ 
 - Automate infrastructure deploy with Terraform.
 - Finalise automatic deploy, CI/CD.
 

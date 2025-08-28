@@ -7,13 +7,20 @@ In short, *Wise Words* is a basic forum for finding answers to difficult questio
 **Wise Words** encourages having **one collaborative conversation at a time** by supporting simple linear comments - as opposed to nested comments that equate to multiple overlapping conversations and talking over each other.
 As the conversation unfolds, and the common understanding of the matter at hand grows, the forum allows consolidating the newfound understanding into **sub-questions, sub-problems, sub-dilemmas, and proposed conclusions** from which the conversation can proceed toward its destination. 
 
-### The anatomy of a Wise Words conversation
+## The latest Beta (soon to go live as a demo, link will follow)
+- Here is the Beta of *Wise Words*, still under development: follow the link [(link)](Beta/Readme.md) for the related details
+
+## What I’ve learned so far coding with an AI-agent AKA genie
+- Post coming soon
+- Here is an example (what works for you, your project and your context is not necessarily what works for me, here, now) of files with info I re-use to feed the genie, based on the task at hand: [MyAI-AgentCustomRules.md](./Beta/MyAI-AgentCustomRules.md)
+
+## Initial Spec: the anatomy of a Wise Words conversation
 
 Here the main conversation elements:
 - **Conversation**: Conversation post is the root of a conversation tree
 - **Comment**: Comment posts form a list of posts in a flat threading structure.
 - **Drill-Down**: Drill-Down posts are organised in a nested threading structure.
-- **Conclusion**: a Conlusion post is like a Drill-Down post but cannot be followed by any other post.
+- **Conclusion**: a Conclusion post is like a Drill-Down post but it cannot be followed by any other post.
 
 A **Conversation** root post can be followed by a flat list of Comment posts, a few nested Drill-Down posts, and a Conclusion Post. A **Drill Down** post can be followed by a flat list of Comment posts, a Conclusion post and a few nested Drill-Down posts.
 
@@ -33,13 +40,6 @@ In the user's language,
 - For a *Dilemma* type of Conversation
   - a Drill-Down post is called *Sub-dilemma*
   - a Conclusion post is called *Proposed choice*
-
-
-## The Spikes (Experiments and POC of the tech-stack components detailed below in the System design)
-- Here are the spikes, now completed: follow the [(link)](Spikes/Readme.md) for the related details
-
-## The latest Beta (still under development)
-- Here is the Beta of *Wise Words*, still under development: follow the link [(link)](Beta/Readme.md) for the related details
 
 ## Technical design
 
@@ -121,3 +121,6 @@ I have started the development of this side project in the local development env
 - [GUID Generator](https://guidgenerator.app/)
 - [Epoch & Unix Timestamp Conversion Tools](https://www.epochconverter.com/)
 - [JSON validator and formatter](https://jsonlint.com/)
+
+## The Spikes (Experiments and POC with the main components of the tech-stack)
+- Here are the spikes, now completed: follow the [(link)](Spikes/Readme.md) for the related details

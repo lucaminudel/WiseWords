@@ -28,20 +28,21 @@
 # WiseWords specific instructions for AI-Agent and AI coding assistant
 
 ## The architecture of the application
-- Always look at this information when starting a new session, from this local file [~/Code/WiseWords/Beta/KeyInfo2.md](KeyInfo2.md)
+- When starting a new session, always look at this instructions in this file [~/Code/WiseWords/Beta/KeyInfo2.md](KeyInfo2.md)
 
 ## How to generate and collect feedback in agentic mode, to generate feedback that helps diagnose problems or validate solutions
 - When you change the applicaiton code or the tests code use the build and test commands to verify that they succeed without error or to collect the error info so thare you can fix them; when you run Cypress end to end (e2e) tests and a test fails then use the commands to inspect the HTML of the page that failed and the screeshot of the page in order to find-out what needs fixing. Read all these commands from this local file: [~/Code/WiseWords/Beta/KeyInfo.md](KeyInfo.md)
+- Read the instructions in this file as soon as you make any chages to the code (add/remove/modify).
 
 ## React and TypeScript WiseWords.FrontEnds Web application important info
 - When working on WiseWords.FrontEnds read from this local file [~/Code/WiseWords/Beta/WiseWords.FrontEnd/KeyInfo.md](WiseWords.FrontEnd/KeyInfo.md) the following info:
  - the info about the sorting of the posts received by the API and presented on the page 
  - the buttons and related functions available on the posts of the conversation thread
-- When selecting an element with an ID in Cypress, especially one that contains special characters like #, use an Attribute Selector like this cy.get('[id="comment-form-#DD#1#DD#1"]').should('be.visible'); 
+- When selecting an element with an ID in Cypress, that contains special characters like #, use the Attribute Selector with ' and " like this string format: cy.get('[id="comment-form-#DD#1#DD#1"]')...
 
 ## RESTful API WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway important info
 - When using or working on the ApiGateway RESTful API read from this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway/KeyInfo.md) this info
- - The details of the API
- - Sort order of items returned by the API and the way the conversation tree is represented
-The API then calls the Lambda functions with a payload described in this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md)
+ - Read about the API
+ - Read about the sort order of items returned by the API and the way the conversation tree is represented
+The API calls the Lambda functions with a payload described in this local file [~/Code/WiseWords/Beta/WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md](WiseWords.ConversationsAndPosts.AWS.Lambdas/KeyInfo.md)
 
