@@ -183,41 +183,4 @@ describe('Conversation Thread Caching Behavior', () => {
     });
   });
 
-  context.skip('Refreshing the Page with URL hash', () => {
-    it('should use the cache when refreshing with a hash', () => {
-      // 1. Visit the page to populate the cache
-      cy.visitConversation(conversationId);
-      cy.wait('@getConversationPosts');
-
-      // 2. Get the initial number of API calls
-      let initialCallCount = 0;
-      cy.get('@getConversationPosts.all').then(interceptions => {
-        initialCallCount = interceptions.length;
-      });
-
-      // 3. Append hash and reload 3 times
-      cy.url().then(url => {
-        cy.visit(url);
-      });
-      cy.url().then(url => {
-        cy.visit(url + '#');
-      });
-      cy.url().then(url => {
-        cy.visit(url + '# ');
-      });
-      cy.reload();
-      cy.reload();
-      cy.reload();
-
-      // 4. Assert that NO new API call was made
-      cy.get('@getConversationPosts.all').then(interceptions => {
-        expect(interceptions.length).to.be.greaterThan(initialCallCount);
-      });
-
-      // 5. Verify the content is still displayed correctly
-      cy.get('[data-testid="post-container"]').should('be.visible');
-      cy.contains('h1', 'Test Question').should('be.visible');
-      cy.contains('div', 'Root question').should('be.visible');
-    });
-  });
 });
