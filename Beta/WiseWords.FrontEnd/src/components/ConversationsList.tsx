@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import '../styles/LandingPage.css';
 import { Logo } from './common/Logo';
 import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToNumber } from '../utils/conversationUtils';
 import { formatUnixTimestamp } from '../utils/dateUtils';
@@ -14,19 +13,25 @@ interface PageShowEvent extends Event {
   persisted: boolean;
 }
 
-// Duplicated logic moved to utils/conversationUtils.ts and types/conversation.ts
-
-// formatDate logic moved to utils/dateUtils.ts
-
 const ConversationsList: React.FC = () => {
-  const { isAuthenticated, IsCognitoAuthEnabled, login, username: authUsername } = useAuth();
+  const { isAuthenticated, IsCognitoAuthEnabled, login, authError, username: authUsername, processAuthCallbackIfPresent } = useAuth();
+
+  // Process Cognito callback (if any) once when auth is enabled
+  const processedAuthCallback = useRef(false);
+  useEffect(() => {
+    if (processedAuthCallback.current) return;
+    if (IsCognitoAuthEnabled && window.location.search.includes('code=')) {
+      processedAuthCallback.current = true;
+      void processAuthCallbackIfPresent();
+    }
+  }, [IsCognitoAuthEnabled]);
   
   const [conversations, setConversations] = useState<ConversationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewConversationForm, setShowNewConversationForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     type: 'QUESTION',
     title: '',
@@ -105,7 +110,8 @@ const ConversationsList: React.FC = () => {
     };
   }, []);
 
-  // Auto-show form after successful login
+  // Auto-show form after successful login YYY
+  /*
   useEffect(() => {
     const loginInitiated = authNavigationFlowSessionState.consumeLoginInitiated();
     if (IsCognitoAuthEnabled && isAuthenticated && loginInitiated) {
@@ -122,45 +128,86 @@ const ConversationsList: React.FC = () => {
       }, 100);
     }
   }, [isAuthenticated, IsCognitoAuthEnabled]);
-
-  const { authError } = useAuth();
+  */
   useEffect(() => {
-    if (authError) {
-      setFormError(authError + " Trying again. ");
-      handleLoginIfNeeded();
-    }
-  }, [authError]);
-
-  const handleNewConversation = () => {
-    
-    if (handleLoginIfNeeded()) {
-      return;
-    }
-    
-    setShowNewConversationForm(true);
-    // Use anchor navigation for reliable scrolling
-    setTimeout(() => {
-      // Navigate to the form anchor
-      window.location.hash = '#new-conversation-form';
-      // Focus on the first input field (Type dropdown)
-      if (formRef.current) {
-        const firstInput = formRef.current.querySelector('select, input, textarea') as HTMLElement;
-        if (firstInput) {
-          firstInput.focus();
+    if (showNewConversationForm) {
+      setTimeout(() => {
+        const formId = '#new-conversation-form';
+        const formElement = document.getElementById(formId);
+        
+        if (formElement) {
+          // Scroll so bottom of form aligns with bottom of viewport
+          formElement.scrollIntoView({
+            behavior: 'smooth', 
+            block: 'end'
+          });
+          
+          // Focus on the message textarea and position cursor
+          const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.focus();
+            
+            // If there's pre-filled content (quoted text), position cursor at the end
+            if (formData.messageBody) {
+              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+          }
         }
-      }
-    }, 100);
+      }, 200);
+    }
+  }, [showNewConversationForm]);
+
+  
+  const handleOpenForm = () => {  
+    setShowNewConversationForm(true);
+    setFormError(null);
   };
 
-  const handleLoginIfNeeded = (): boolean => {
+  const handleLoginIfNeeded = (buttonId: string): boolean => {
     if (IsCognitoAuthEnabled && !isAuthenticated) {
       const loginReturnUrl = window.location.origin + window.location.pathname;
-      login(loginReturnUrl);
+      login(loginReturnUrl, buttonId);
       return true; // Indicates login flow was initiated
     }
     return false; // No login needed or already authenticated
   };
 
+
+  // Restore post-click behavior after login/callback by re-clicking the stored button id XXX
+  useEffect(() => {
+    if (!(IsCognitoAuthEnabled && isAuthenticated)) return;
+
+    const loginInitiated = authNavigationFlowSessionState.consumeLoginInitiated();
+    if (!loginInitiated) return;
+
+    const buttonId = authNavigationFlowSessionState.consumeLoginTriggeredButtonId();
+    if (!buttonId) return;
+
+    // Poll a few times to ensure content is rendered
+    let attempts = 0;
+    const maxAttempts = 3;
+    const interval = setInterval(() => {
+      attempts++;
+      const btn = document.getElementById(buttonId);
+      if (btn) {
+        clearInterval(interval);
+        btn.click();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(interval);
+      }
+    }, 100);
+  }, [IsCognitoAuthEnabled, isAuthenticated]);
+
+    // Retry login when a transient auth error is signaled (e.g., duplicated auth code)
+    useEffect(() => {
+      if (IsCognitoAuthEnabled && !isAuthenticated && authError) {
+        const preservedButtonId = authNavigationFlowSessionState.consumeLoginTriggeredButtonId();
+        const loginReturnUrl = window.location.origin + window.location.pathname;
+        login(loginReturnUrl, preservedButtonId || undefined);
+      }
+    }, [authError, IsCognitoAuthEnabled, isAuthenticated]);
+
+    
   const handleCancel = () => {
     setShowNewConversationForm(false);
     setFormError(null);
@@ -178,7 +225,7 @@ const ConversationsList: React.FC = () => {
     });
   };
 
-  const handleCreate = async () => {
+  const handleSubmit = async () => {
     // Validate required fields
     const requiredFields: { [key: string]: string } = {
       type: formData.type.trim(),
@@ -192,7 +239,7 @@ const ConversationsList: React.FC = () => {
       return;
     }
 
-    setSubmitting(true);
+    setIsSubmitting(true);
     setFormError(null);
 
     try {
@@ -214,7 +261,7 @@ const ConversationsList: React.FC = () => {
     } catch (err: any) {
       setFormError(err.message || 'Failed to create conversation');
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -283,7 +330,12 @@ const ConversationsList: React.FC = () => {
         {!showNewConversationForm && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem', width: '100%' }}>
             <button 
-              onClick={handleNewConversation}
+              id='new-conversation-button'
+              onClick={() => {
+                const buttonId = 'new-conversation-button';
+                if (handleLoginIfNeeded(buttonId)) return;
+                handleOpenForm()
+              }}
               style={{
                 backgroundColor: 'var(--color-accent)',
                 color: 'var(--color-text-primary)',
@@ -460,7 +512,7 @@ const ConversationsList: React.FC = () => {
                 Cancel
               </button>
               <button 
-                onClick={handleCreate}
+                onClick={handleSubmit}
                 disabled={submitting}
                 style={{
                   backgroundColor: 'var(--color-accent)',

@@ -27,7 +27,7 @@ interface FormContext {
 }
 
 const ConversationThread: React.FC = () => {
-  const { isAuthenticated, IsCognitoAuthEnabled, login, authError, username } = useAuth();
+  const { isAuthenticated, IsCognitoAuthEnabled, login, authError, username, processAuthCallbackIfPresent } = useAuth();
   const { conversationId: rawConversationId } = useParams<{ conversationId: string }>();
 
   const conversationId = rawConversationId?.toUpperCase().startsWith("CONVO#")
@@ -36,6 +36,17 @@ const ConversationThread: React.FC = () => {
 
   const location = useLocation();
   const { title, type } = location.state || {};
+
+  // Process Cognito callback (if any) once when auth is enabled
+  const processedAuthCallback = useRef(false);
+  useEffect(() => {
+    if (processedAuthCallback.current) return;
+    if (IsCognitoAuthEnabled && window.location.search.includes('code=')) {
+      processedAuthCallback.current = true;
+      void processAuthCallbackIfPresent();
+    }
+  }, [IsCognitoAuthEnabled]);
+
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

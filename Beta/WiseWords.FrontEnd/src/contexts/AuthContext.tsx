@@ -4,6 +4,7 @@ import { loadConfig, CognitoConfig } from '../config/environment';
 import { authNavigationFlowSessionState } from '../services/authNavigationFlowSessionState';
 
 interface AuthContextType {
+  processAuthCallbackIfPresent: () => Promise<void>;
   isAuthenticated: boolean;
   username: string | null;
   IsCognitoAuthEnabled: boolean;
@@ -70,10 +71,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 // Extract username from stored ID token
                 const keyPrefix = `CognitoIdentityServiceProvider.${config.Cognito.ClientId}`;
                 const storedIdToken = localStorage.getItem(`${keyPrefix}.user.idToken`);
-                const extractedUsername = extractUsernameFromToken(storedIdToken || '');
-                
-                setIsAuthenticated(true);
-                setUsername(extractedUsername);
+                if (storedIdToken) {
+                  const extractedUsername = extractUsernameFromToken(storedIdToken);
+                  setIsAuthenticated(true);
+                  setUsername(extractedUsername);
+                } else {
+                  setIsAuthenticated(false);
+                  setUsername(null);
+                }
               } else {
                 setIsAuthenticated(false);
                 setUsername(null);
@@ -96,19 +101,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initAuth();
   }, []);
 
-  // Process Cognito callback code
-  useEffect(() => {
+  // Process Cognito callback code now exposed as a callable function
+  const processAuthCallbackIfPresent = async (): Promise<void> => {
+
     if (!userPool || !cognitoConfig) return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
 
+    // Check for uncomplete authentication
+    const keyPrefix = `CognitoIdentityServiceProvider.${cognitoConfig.ClientId}`;
+    const storedIdToken = localStorage.getItem(`${keyPrefix}.user.idToken`);
+    if (storedIdToken) {
+      const extractedUsername = extractUsernameFromToken(storedIdToken);
+      setIsAuthenticated(true);
+      setUsername(extractedUsername);
+
+      return;
+    }
+
     if (code) {
+      // Clear url to limit possibility of double navigation
+      window.history.replaceState({}, document.title, window.location.pathname);   
 
       // Prevent re-processing the same authorization code multiple times
       const previousAuthTokenCode = authNavigationFlowSessionState.getPreviousAuthTokenCode();
       if (previousAuthTokenCode === code) {
-        // Preserve triggering button id across cleanup so we can retry seamlessly
+
+        // Preserve returUrl and button id across cleanup so we can retry login seamlessly
         const preservedReturnUrl = authNavigationFlowSessionState.consumeLoginReturnUrl();
         const preservedButtonId = authNavigationFlowSessionState.consumeLoginTriggeredButtonId();
         clearAuthState();
@@ -148,26 +168,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .then(tokens => {
         
         // Store tokens in localStorage for Cognito SDK
-        const keyPrefix = `CognitoIdentityServiceProvider.${cognitoConfig.ClientId}`;
+        localStorage.setItem(`${keyPrefix}.user.idToken`, tokens.id_token);
         localStorage.setItem(`${keyPrefix}.LastAuthUser`, tokens.id_token ? 'user' : '');
         localStorage.setItem(`${keyPrefix}.user.accessToken`, tokens.access_token);
-        localStorage.setItem(`${keyPrefix}.user.idToken`, tokens.id_token);
         localStorage.setItem(`${keyPrefix}.user.refreshToken`, tokens.refresh_token);
         
         // Extract username from ID token
         const extractedUsername = extractUsernameFromToken(tokens.id_token);
-        
+
         // Update auth state
         setIsAuthenticated(true);
         setUsername(extractedUsername);
         
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
       })
-      .catch(() => {
+      .catch((error) => {
+
+            console.log('Fetch Congnito token error message:', error.message);
+            console.log('Fetch Congnito token error stack:', error.stack);
       });
     }
-  }, [userPool, cognitoConfig]);
+  };
 
   const login = (loginReturnUrl: string, buttonId?: string) => {
     
@@ -256,6 +276,7 @@ const logout = (logoutReturnUrl: string) => {
 
   return (
     <AuthContext.Provider value={{
+      processAuthCallbackIfPresent,
       isAuthenticated,
       username,
       IsCognitoAuthEnabled,
