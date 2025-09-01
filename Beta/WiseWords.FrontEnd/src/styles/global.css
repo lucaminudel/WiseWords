@@ -229,6 +229,14 @@ button:active {
   border-color: var(--color-accent);
 }
 
+.thread-meta-row { gap: 8px; }
+.thread-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 420px) {
+  .thread-meta-row { align-items: flex-start; }
+  .thread-actions { justify-content: flex-end; row-gap: 8px; }
+  .thread-actions button { padding: 0.25rem 0.6rem; }
+}
+
 /* Status Messages */
 .error {
   color: var(--color-danger);

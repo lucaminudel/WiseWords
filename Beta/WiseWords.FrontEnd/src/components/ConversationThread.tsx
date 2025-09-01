@@ -328,7 +328,7 @@ const isInitialLoadCompleted = useRef(false);
                 Loading Conversation...
               </div>
               
-              <div style={{ 
+              <div className="thread-meta-row" style={{ 
                 display: 'flex',
                 alignItems: 'center',
                 color: 'var(--color-text-secondary, #bbbbbb)',
@@ -344,7 +344,7 @@ const isInitialLoadCompleted = useRef(false);
                   fontWeight: 'normal',
                   fontStyle: 'normal'
                 }}>Loading...</span>
-                <div style={{ marginLeft: 'auto' }}>
+                <div className="thread-actions">
                   <button type="button" style={{ ...buttonStyle, opacity: 0.5, cursor: 'not-allowed' }} disabled>Comment</button>
                   <button type="button" style={{ ...buttonStyle, marginLeft: '8px', opacity: 0.5, cursor: 'not-allowed' }} disabled>
                     Add Sub-Action
@@ -506,7 +506,7 @@ const isInitialLoadCompleted = useRef(false);
           {conversation.MessageBody}
         </div>
         
-        <div style={{ 
+        <div className="thread-meta-row" style={{ 
           display: 'flex',
           alignItems: 'center',
           color: 'var(--color-text-secondary, #bbbbbb)',
@@ -516,7 +516,7 @@ const isInitialLoadCompleted = useRef(false);
           borderTop: '1px solid var(--color-border, #444)'
         }}>
           <span>by <strong>{conversation.Author}</strong> • {formatUnixTimestamp(conversation.UpdatedAt)}</span>
-          <div style={{ marginLeft: 'auto' }}>
+          <div className="thread-actions">
             <button 
               id={`comment-button-${conversation.SK}`}
               data-testid="comment-button" 
@@ -647,7 +647,7 @@ const isInitialLoadCompleted = useRef(false);
                   {post.MessageBody}
                 </div>
                 
-                <div style={{ 
+                <div className="thread-meta-row" style={{ 
                   fontSize: '0.85rem',
                   color: 'var(--color-text-secondary, #bbbbbb)',
                   display: 'flex',
