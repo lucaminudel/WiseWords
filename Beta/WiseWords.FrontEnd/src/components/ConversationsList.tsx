@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Logo } from './common/Logo';
 import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToNumber } from '../utils/conversationUtils';
-import { formatUnixTimestamp } from '../utils/dateUtils';
+import { formatUnixTimestampNoSeconds } from '../utils/dateUtils';
 import { ConversationResponse } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
 import { useAuth } from '../contexts/AuthContext';
@@ -318,7 +318,7 @@ const ConversationsList: React.FC = () => {
                     <td style={{ padding: '4px 8px' }} title={conv.Author.length > 13 ? conv.Author : undefined}>
                       {conv.Author.length > 13 ? conv.Author.substring(0, 12) + '…' : conv.Author}
                     </td>
-                    <td style={{ padding: '4px 8px' }}>{formatUnixTimestamp(conv.UpdatedAt)}</td>
+                    <td style={{ padding: '4px 8px' }}>{formatUnixTimestampNoSeconds(conv.UpdatedAt)}</td>
                   </tr>
                 );
               })}
