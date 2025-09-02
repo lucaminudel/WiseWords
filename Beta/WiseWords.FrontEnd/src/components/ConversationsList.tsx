@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Logo } from './common/Logo';
 import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToNumber } from '../utils/conversationUtils';
-import { formatUnixTimestampNoSeconds } from '../utils/dateUtils';
+import { formatUnixTimestampNoSeconds, formatUnixTimestampDayMonthSpaceYear } from '../utils/dateUtils';
 import { ConversationResponse } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
 import { useAuth } from '../contexts/AuthContext';
@@ -284,10 +284,16 @@ const ConversationsList: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--primary-color)', color: 'var(--text-color)' }}>
-                <th style={{ padding: '12px 8px', borderRadius: 8, textAlign: 'left' }}>Type</th>
-                <th style={{ padding: '12px 8px', borderRadius: 8, textAlign: 'left' }}>Title</th>
+                <th className="col-type" style={{ padding: '12px 8px', borderRadius: 8, textAlign: 'left' }}>Type</th>
+                <th style={{ padding: '12px 8px', borderRadius: 8, textAlign: 'left' }}>
+                  <span className="label-desktop-title">Title</span>
+                  <span className="label-mobile-title">Type/Title</span>
+                </th>
                 <th style={{ padding: '12px 8px', borderRadius: 8, textAlign: 'left' }}>Author</th>
-                <th style={{ padding: '12px 8px', borderRadius: 8, textAlign: 'left' }}>Creation Date</th>
+                <th style={{ padding: '12px 8px', borderRadius: 8, textAlign: 'left' }}>
+                  <span className="label-desktop-date">Creation Date</span>
+                  <span className="label-mobile-date">Date</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -298,8 +304,9 @@ const ConversationsList: React.FC = () => {
                 else if (conv.ConvoType === 'DILEMMA') typeColor = 'var(--color-dilemma)';
                 return (
                   <tr key={conv.PK} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{getConversationTypeLabel(typeof conv.ConvoType === 'string' ? conv.ConvoType : undefined)}</td>
+                    <td className="col-type" style={{ padding: '4px 8px', color: typeColor, fontWeight: 700 }}>{getConversationTypeLabel(typeof conv.ConvoType === 'string' ? conv.ConvoType : undefined)}</td>
                     <td style={{ padding: '4px 8px' }} title={conv.Title.length > 85 ? conv.Title : undefined}>
+                      <span className="type-inline-mobile" style={{ color: typeColor, fontWeight: 700 }}>{getConversationTypeLabel(typeof conv.ConvoType === 'string' ? conv.ConvoType : undefined)}</span>
                       <Link
                         to={`/conversations/${encodeURIComponent(conv.PK.replace('CONVO#', ''))}`}
                         state={{ title: conv.Title, type: conv.ConvoType }}
@@ -318,7 +325,10 @@ const ConversationsList: React.FC = () => {
                     <td style={{ padding: '4px 8px' }} title={conv.Author.length > 13 ? conv.Author : undefined}>
                       {conv.Author.length > 13 ? conv.Author.substring(0, 12) + '…' : conv.Author}
                     </td>
-                    <td style={{ padding: '4px 8px' }}>{formatUnixTimestampNoSeconds(conv.UpdatedAt)}</td>
+                    <td style={{ padding: '4px 8px' }}>
+                      <span className="date-desktop">{formatUnixTimestampNoSeconds(conv.UpdatedAt)}</span>
+                      <span className="date-compact">{formatUnixTimestampDayMonthSpaceYear(conv.UpdatedAt)}</span>
+                    </td>
                   </tr>
                 );
               })}

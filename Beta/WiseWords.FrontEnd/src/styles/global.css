@@ -231,10 +231,28 @@ button:active {
 
 .thread-meta-row { gap: 8px; }
 .thread-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
-@media (max-width: 420px) {
+/* Baseline visibility defaults for responsive swaps */
+.label-mobile-title, .label-mobile-date, .type-inline-mobile, .date-compact { display: none; }
+.label-desktop-title, .label-desktop-date, .date-desktop { display: inline; }
+
+@media (max-width: 650px) {
   .thread-meta-row { align-items: flex-start; }
   .thread-actions { justify-content: flex-end; row-gap: 8px; }
   .thread-actions button { padding: 0.25rem 0.6rem; }
+  /* ConversationsList date label/content swap at <=650px */
+  .label-desktop-date { display: none !important; }
+  .label-mobile-date { display: inline !important; }
+  .date-desktop { display: none !important; }
+  .date-compact { display: inline !important; }
+}
+
+/* Second breakpoint for ConversationsList (<=500px): merge type/title */
+@media (max-width: 500px) {
+  .col-type { display: none !important; }
+  .label-desktop-title { display: none !important; }
+  .label-mobile-title { display: inline !important; }
+  .type-inline-mobile { display: block !important; margin-bottom: 0; line-height: 0.9; }
+  tbody tr td { padding: 4px 8px 10px 8px !important; }
 }
 
 /* Status Messages */
