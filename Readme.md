@@ -58,7 +58,7 @@ These questions can be applied to various scenarios that may differ from this be
 - Long living and/or legacy product codebase maintenance and evolution.
 
 ## The Beta live. Try it!
-- Link coming soon
+- [https://doxsj8lfqq7dm.cloudfront.net/]{https://doxsj8lfqq7dm.cloudfront.net/}
 
 ## The latest Beta key info
 - Here is key info on the implementation and its progress of *Wise Words*: follow the link [(link)](Beta/Readme.md) 
