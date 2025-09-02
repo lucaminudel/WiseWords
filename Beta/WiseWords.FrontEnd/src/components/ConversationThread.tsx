@@ -657,7 +657,7 @@ const isInitialLoadCompleted = useRef(false);
                   borderTop: '1px solid var(--color-border, #333)'
                 }}>
                   <span>by <strong>{post.Author}</strong> • {formatUnixTimestamp(post.UpdatedAt)}</span>
-                  <div>
+                  <div className="thread-actions">
                     {/* Root conversation post */}
                     {post.SK === 'METADATA' && (
                       <>
@@ -676,7 +676,7 @@ const isInitialLoadCompleted = useRef(false);
                         <button 
                           id={`drill-down-button-${post.SK}`}
                           data-testid="drill-down-button" 
-                          style={{ ...buttonStyle, marginLeft: '8px' }}
+                          style={buttonStyle}
                           onClick={() => {
                             const buttonId = `drill-down-button-${post.SK}`;
                             if (handleLoginIfNeeded(buttonId)) return;
@@ -685,7 +685,7 @@ const isInitialLoadCompleted = useRef(false);
                         >
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
-                        <button id={`propose-answer-button-${post.SK}`} data-testid="propose-answer-button" style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                        <button id={`propose-answer-button-${post.SK}`} data-testid="propose-answer-button" style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
                           disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `propose-answer-button-${post.SK}`;
@@ -736,7 +736,7 @@ const isInitialLoadCompleted = useRef(false);
                           type="button" 
                           id={`drill-down-button-${post.SK}`}
                           data-testid="drill-down-button" 
-                          style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
                           disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `drill-down-button-${post.SK}`;
@@ -750,7 +750,7 @@ const isInitialLoadCompleted = useRef(false);
                           type="button" 
                           id={`propose-answer-button-${post.SK}`}
                           data-testid="propose-answer-button" 
-                          style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
                           disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `propose-answer-button-${post.SK}`;
