@@ -7,47 +7,47 @@ In short, *Wise Words* is a basic forum designed for finding answers to difficul
 **Wise Words** encourages having **one collaborative conversation at a time** by supporting simple linear comments - as opposed to nested comments that equate to multiple overlapping conversations and talking over each other.
 As the conversation unfolds, and the common understanding of the matter at hand grows, the forum allows consolidating the newfound understanding into **sub-questions, sub-problems, sub-dilemmas, and proposed conclusions** from which the conversation can proceed toward its destination. 
 
-## A quick overview of the end result: this Beta
+## A quick account of this Beta implementation work so far
 
 ### The type of work done with the help of several LLMs AKA AI-assistants AKA genies
 
-This is a greenfield project done with the intent of realising a specific idea and refreshing my tech skills, with coding, design, architecture and modern technologies.
+This project intent is to realise a well-defined product idea while refreshing my tech skills in coding, design, and architecture with a modern tech stack.
 
-As such, this project is potentially low-risk (no business revenue or existing clients impacted) and high-reward (from the learning , and from potential interest in the practical applications of this beta).
+This is a greenfield project, low-risk (no business revenue or existing clients impacted) and potentially medium/high-reward (from the learning, and from potential interest in the practical applications of this beta).
 
-For all these reasons, I used the AI-assistants exercising a  **high level of control** of the features produced, the **What**, and a **high level of attention** in the review of the solutions produced and their internal quality, the **How**.
+For all these reasons, I used the AI-assistants exercising a  **high level of control** of the features produced, the **What**, and a **high level of attention** in the review of the code and the solutions produced by the LLMs, the **How**. Therefore, in this project, I have adopted a Chat-Oriented Programming (ChOP) approach that emphasises high control over features, **the What**, and diligent review of code quality, **the How**.
 
-I followed a Chat-Oriented Programming (ChOP) approach that emphasises high control over features, **the What**, and diligent review of code quality, **the How**.
+I have invested about a month of part-time, flexible schedule work to explore the latest technologies with some Spikes/POC.
+I have invested a similar amount of time in implementing this beta. Half of this implementation time was dedicated to putting to test the new learning and to refreshing some skills. So under normal circumstances, this beta implementation time with LLMs would have taken approximately two weeks. This is more or less the size of the effort.
 
-It took a month of part-time, flexible schedule work to explore the latest technologies with some Spikes/POC.
-A similar amount of time was neede for implementating a beta. Half of this implementation time was dedicated to new learning and refreshing some skills. Under normal circumstances, this phase would have taken approximately two weeks. This is more or less the size of the effor.
-
-After exploring the various options, possibilities and trade-offs with the help of the LLMs, the available documentation and training, I personally made all the decisions related to the 
+After exploring the various tech/system-design/architecture options, possibilities and trade-offs with the help of the LLMs, the available documentation and training, I personally made all the final decisions in relation to the 
 - production infrastructure and system architecture (AWS)
 - the tech-stack
 - the design of the system and the data
-- the design of the code.
+- the architecture and high-level design of the code
 
-I made all these decisions on the beta with these goals 
+with these overarching goals:
 - minimising the cost of running it in production
 - starting with a simple solution
-- preserving the possibility of gradually scaling as needed.
+- while preserving the possibility of easily evolving and scaling the solutions as needed.
 
-On the backend (the NoSQL data store and related code, the lambdas and the API gateway code), the LLMs created about 70% of the code, and I contributed the the remaining  30% of the code ensuring a high standard of quality and maintainability.
-On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code and tests, and I created about 5% of the code and tests. Several prompts directed low level details of the implementation leaving the final responsibility of writing and changing the code to the LLMs. For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
+On the backend (the NoSQL data store and related code, the lambdas and the API gateway code), the LLMs created about 70% of the code, and I contributed the remaining  30% of the code ensuring a high standard of quality and maintainability.
 
-To bring the current Beta to the quality level of an enterprise application, only a few minor improvements are required:
-- replacing in the FrontEnd some defensive programming code produced by the LLMs
-- adding a more fine-grained run-time error management
-- improving some aspects of security
-- adding some configuration and some simple code to enable elastic scalability.
+On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code and tests, and I created about 5% of the code and tests. Several prompts directed low-level details of the implementation, leaving the final responsibility of writing and changing the code to the LLMs. For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
+
+To bring the current Beta up to the level of an enterprise application, only a few minor changes are needed:
+- strengthening some aspects of the security configuration, with a more fine-grained control
+- adding more run-time error management with retries for key operations
+- making some additional configuration and some code to enable the elastic scalability of the serverless architecture.
+- replacing in the FrontEnd some defensive programming code produced by the LLMs with some less forgiving error handling
+- with high-volume traffic and more features added to the application, asynchronous queues should be introduced 
 
 ## What I’ve learned so far coding with an AI-agent AKA genie
 This beta is a greenfield project, potentially low-risk and high-reward, that demanded a high level of control over the features and a diligent review of internal quality. In this context:
-- I've documented my key learnings from this, the link is coming soon
+- I've documented my key learnings from this; the link is coming soon
 -  I've shared some of the commands and context I used to guide the AI, which you can see here: [MyAI-AgentCustomRules.md](./Beta/MyAI-AgentCustomRules.md)
 
-When considering what worked well, it's essential to remember that all of this is context-specific, The value comes from asking follow-up questions like:
+When considering what worked well, it's essential to remember that all of this is context-specific. The value comes from asking follow-up questions like:
 - have you tried something similar and what were your results? 
 - what insights can we gain by comparing the similarities and differences in our contexts?
 - what else is working (or not working) for you?
@@ -64,11 +64,11 @@ These questions can be applied to various scenarios that may differ from this be
 
 ## Initial Specs: the anatomy of a Wise Words conversation
 
-Here the main conversation elements:
+Here are the main conversation elements:
 - **Conversation**: Conversation post is the root of a conversation tree
 - **Comment**: Comment posts form a list of posts in a flat threading structure.
 - **Drill-Down**: Drill-Down posts are organised in a nested threading structure.
-- **Conclusion**: a Conclusion post is like a Drill-Down post but it cannot be followed by any other post.
+- **Conclusion**: a Conclusion post is like a Drill-Down post, but it cannot be followed by any other post.
 
 A **Conversation** root post can be followed by a flat list of Comment posts, a few nested Drill-Down posts, and a Conclusion Post. A **Drill Down** post can be followed by a flat list of Comment posts, a Conclusion post and a few nested Drill-Down posts.
 
