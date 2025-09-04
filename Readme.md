@@ -2,7 +2,7 @@
 
 Wise Words is a side-project where I'm experimenting with **AI-assisted coding** (several LLMs and AI-native/AI-enhanced IDEs -  it is far too early to commit to only one tool and only one LLM), while refreshing my skills in **cloud-native development** (AWS), including Serverless development (AWS Lambdas), **containers** (Docker, Kubernetes), **NoSQL** (DynamoDB), automated testing, DevOps and CI/CD.
 
-In short, *Wise Words* is a basic forum for finding answers to difficult questions, exploring solutions to intractable problems, and discussing dilemmas to find suitable options collaboratively.
+In short, *Wise Words* is a basic forum designed for finding answers to difficult questions, exploring solutions to intractable problems, and discussing dilemmas to find suitable options collaboratively.
 
 **Wise Words** encourages having **one collaborative conversation at a time** by supporting simple linear comments - as opposed to nested comments that equate to multiple overlapping conversations and talking over each other.
 As the conversation unfolds, and the common understanding of the matter at hand grows, the forum allows consolidating the newfound understanding into **sub-questions, sub-problems, sub-dilemmas, and proposed conclusions** from which the conversation can proceed toward its destination. 
@@ -17,10 +17,10 @@ As such, this project is potentially low-risk (no business revenue or existing c
 
 For all these reasons, I used the AI-assistants exercising a  **high level of control** of the features produced, the **What**, and a **high level of attention** in the review of the solutions produced and their internal quality, the **How**.
 
-I followed a Chat-Oriented Programming (ChOP) approach that emphasises high control over features, **the What**, and diligent review of code quality, **the How**, rather than a less structured 'vibe coding' style.
+I followed a Chat-Oriented Programming (ChOP) approach that emphasises high control over features, **the What**, and diligent review of code quality, **the How**.
 
-The initial work done to explore the latest technologies with some Spikes/POC took a month of part-time, flexible schedule work.
-The following beta implementation work took the same amount of time. Half of it was dedicated to new learning and refreshing some skills. Under normal circumstances, this phase would take approximately two weeks. This is to give an idea of the size of the endeavour.
+It took a month of part-time, flexible schedule work to explore the latest technologies with some Spikes/POC.
+A similar amount of time was neede for implementating a beta. Half of this implementation time was dedicated to new learning and refreshing some skills. Under normal circumstances, this phase would have taken approximately two weeks. This is more or less the size of the effor.
 
 After exploring the various options, possibilities and trade-offs with the help of the LLMs, the available documentation and training, I personally made all the decisions related to the 
 - production infrastructure and system architecture (AWS)
@@ -28,17 +28,16 @@ After exploring the various options, possibilities and trade-offs with the help 
 - the design of the system and the data
 - the design of the code.
 
-On the backend (the NoSQL data store and related code, the lambdas and the API gateway code), the LLMs created about 70% of the code, and I contributed the the remaining  30% of the code ensuring a high standard of quality and maintainability.
-On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code, and I created about 5% of the code. While some of the prompts went into the details of the algorithm, and many other implementation details, always leaving the final responsibility of writing and changing the code to the LLMs.
-For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
-
-I implemented this beta with the goals of 
+I made all these decisions on the beta with these goals 
 - minimising the cost of running it in production
 - starting with a simple solution
 - preserving the possibility of gradually scaling as needed.
 
-To bring the current to the level of an enterprise application, only a few minor improvements are required:
-- replacing some abuse of defensive programming typical of LLMs with some more intentional programming
+On the backend (the NoSQL data store and related code, the lambdas and the API gateway code), the LLMs created about 70% of the code, and I contributed the the remaining  30% of the code ensuring a high standard of quality and maintainability.
+On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code and tests, and I created about 5% of the code and tests. Several prompts directed low level details of the implementation leaving the final responsibility of writing and changing the code to the LLMs. For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
+
+To bring the current Beta to the quality level of an enterprise application, only a few minor improvements are required:
+- replacing in the FrontEnd some defensive programming code produced by the LLMs
 - adding a more fine-grained run-time error management
 - improving some aspects of security
 - adding some configuration and some simple code to enable elastic scalability.
