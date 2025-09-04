@@ -1,13 +1,13 @@
 /**
  * Unit tests for the conversationCache service.
- * Mocks sessionStorage to test the caching logic in isolation.
+ * Mocks localStorage to test the caching logic in isolation.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { conversationCache } from '../conversationCache';
 import { ConversationResponse } from '../../types/conversation';
 
-// Mock sessionStorage
-const sessionStorageMock = (() => {
+// Mock localStorage
+const localStorageMock = (() => {
   let store: { [key: string]: string } = {};
   return {
     getItem: (key: string) => store[key] || null,
@@ -23,8 +23,8 @@ const sessionStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(window, 'sessionStorage', {
-  value: sessionStorageMock,
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
 });
 
 const mockConversations: ConversationResponse[] = [
@@ -35,7 +35,7 @@ const mockConversations: ConversationResponse[] = [
 describe('conversationCache', () => {
   beforeEach(() => {
     // Clear the mock storage before each test
-    sessionStorage.clear();
+    localStorage.clear();
   });
 
   it('should return null when cache is empty', () => {
@@ -57,10 +57,56 @@ describe('conversationCache', () => {
 
   it('should return null if JSON parsing fails', () => {
     // Manually set invalid JSON
-    sessionStorage.setItem('conversationListCache', 'invalid-json');
+    localStorage.setItem('conversationListCache', 'invalid-json');
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(conversationCache.get()).toBeNull();
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
+  });
+
+  it('should return null if cache version is different', () => {
+    // Set cache with old version
+    const oldVersionEntry = {
+      version: 0, // Different from current version (1)
+      data: mockConversations,
+      lastSaved: Date.now(),
+      size: 100
+    };
+    localStorage.setItem('conversationListCache', JSON.stringify(oldVersionEntry));
+    
+    // Should return null and clean up old cache
+    expect(conversationCache.get()).toBeNull();
+    expect(localStorage.getItem('conversationListCache')).toBeNull();
+  });
+
+  it('should check if cache is expired', () => {
+    // Set cache that's not expired
+    conversationCache.set(mockConversations);
+    expect(conversationCache.isExpired()).toBe(false);
+    
+    // Mock an expired cache
+    const expiredEntry = {
+      version: 1,
+      data: mockConversations,
+      lastSaved: Date.now() - (20 * 60 * 1000), // 20 minutes ago (older than 15 min limit)
+      size: 100
+    };
+    localStorage.setItem('conversationListCache', JSON.stringify(expiredEntry));
+    expect(conversationCache.isExpired()).toBe(true);
+  });
+
+  it('should return cache metadata', () => {
+    conversationCache.set(mockConversations);
+    const metadata = conversationCache.getMetadata();
+    
+    expect(metadata).not.toBeNull();
+    expect(metadata?.version).toBe(1);
+    expect(metadata?.size).toBeGreaterThan(0);
+    expect(metadata?.age).toBeGreaterThanOrEqual(0);
+    expect(metadata?.lastSaved).toBeCloseTo(Date.now(), -2); // Within 100ms
+  });
+
+  it('should return null metadata when cache is empty', () => {
+    expect(conversationCache.getMetadata()).toBeNull();
   });
 });

@@ -17,33 +17,81 @@ import { conversationThreadCache } from '../services/conversationThreadCache';
  */
 export class ConversationService {
     /**
-     * Fetch conversations for a specific year with business logic
+     * Fetch conversations for a specific year with business logic and background refresh
      * @param year - Optional year filter
      * @param forceRefresh - When true, bypasses cache and fetches from API
      */
     static async fetchConversationsViaCachedAPI(year?: number, forceRefresh: boolean = false): Promise<ConversationResponse[]> {
-        // If forceRefresh is false, try to get from cache first
-        if (!forceRefresh) {
-            const cachedConversations = conversationsCache.get();
-            if (cachedConversations) {
+        // If forceRefresh is true, bypass cache completely
+        if (forceRefresh) {
+            return this._fetchAndCacheConversations(year);
+        }
+
+        // Check if cache exists
+        const cachedConversations = conversationsCache.get();
+        
+        if (cachedConversations) {
+            // Cache exists - check if expired
+            if (conversationsCache.isExpired()) {
+                // Cache is expired: return stale data immediately AND refresh in background
+                this._refreshConversationsInBackground(year);
+                return cachedConversations;
+            } else {
+                // Cache is fresh - return it
                 return cachedConversations;
             }
         }
 
-        // Fetch from API and update cache
+        // No cache exists - fetch from API normally
+        return this._fetchAndCacheConversations(year);
+    }
+
+    /**
+     * Private helper to fetch conversations from API and update cache
+     */
+    private static async _fetchAndCacheConversations(year?: number): Promise<ConversationResponse[]> {
         const conversations = await conversationApi.fetchConversations(year);
 
         // Store in cache
         try {
             conversationsCache.set(conversations);
         } catch (err) {
-            
+            console.warn('Failed to cache conversations:', err);
             // Clear cache to ensure fresh data on next load
             conversationsCache.clear();
         }
 
-        // Return the conversations fetched from the API
         return conversations;
+    }
+
+    /**
+     * Private helper to refresh conversations in background with retry logic (fire and forget)
+     */
+    private static _refreshConversationsInBackground(year?: number): void {
+        const performBackgroundRefresh = async (attempt: number = 1): Promise<void> => {
+            try {
+                const conversations = await this._fetchAndCacheConversations(year);
+                console.log(`Background conversation refresh successful (attempt ${attempt}), cached ${conversations.length} conversations`);
+            } catch (error) {
+                if (attempt < 2) {
+                    // Retry once after a short delay
+                    console.warn(`Background conversation refresh failed (attempt ${attempt}), retrying...`, error);
+                    setTimeout(() => {
+                        performBackgroundRefresh(attempt + 1).catch(retryError => {
+                            console.warn(`Background conversation refresh failed after retry (attempt ${attempt + 1}):`, retryError);
+                        });
+                    }, 2000); // 2 second delay before retry
+                } else {
+                    console.warn(`Background conversation refresh failed after ${attempt} attempts:`, error);
+                }
+                // Don't throw - this is background operation
+            }
+        };
+
+        // Fire and forget - don't await this
+        performBackgroundRefresh().catch(error => {
+            console.warn('Background conversation refresh initialization failed:', error);
+        });
     }
 
     /**

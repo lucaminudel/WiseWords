@@ -50,7 +50,7 @@ describe('Conversation List - Caching Behavior', () => {
 
   beforeEach(() => {
     cy.window().then((win) => {
-      win.sessionStorage.clear();
+      win.localStorage.clear();
     });
   });
 
@@ -63,14 +63,19 @@ describe('Conversation List - Caching Behavior', () => {
       cy.wait('@getConversations');
       cy.contains('Existing Conversation 1').should('be.visible');
       cy.window().then((win) => {
-        expect(win.sessionStorage.getItem('conversationListCache')).to.not.be.null;
+        const cacheData = win.localStorage.getItem('conversationListCache');
+        expect(cacheData).to.not.be.null;
+        const parsed = JSON.parse(cacheData);
+        expect(parsed.version).to.equal(1);
+        expect(parsed.data).to.be.an('array');
+        expect(parsed.data.length).to.equal(2);
       });
     });
 
     it('should handle cache errors gracefully by falling back to API', () => {
       cy.intercept('GET', '**/conversations?updatedAtYear=2025', { statusCode: 200, body: mockConversations }).as('getFallback');
       cy.window().then((win) => {
-        win.sessionStorage.setItem('conversationListCache', 'invalid-json');
+        win.localStorage.setItem('conversationListCache', 'invalid-json');
       });
       cy.visit('/conversations');
       cy.wait('@getFallback');
@@ -132,8 +137,9 @@ describe('Conversation List - Caching Behavior', () => {
       // 3. Verify that the UI shows the new data
       cy.contains('Refreshed Conversation').should('be.visible');
       cy.window().then((win) => {
-        const parsed = JSON.parse(win.sessionStorage.getItem('conversationListCache'));
-        expect(parsed[0].Title).to.equal('Refreshed Conversation');
+        const cacheData = win.localStorage.getItem('conversationListCache');
+        const parsed = JSON.parse(cacheData);
+        expect(parsed.data[0].Title).to.equal('Refreshed Conversation');
       });
 
       // 4. Navigate to the new conversation thread and then back
@@ -166,8 +172,102 @@ describe('Conversation List - Caching Behavior', () => {
 
       cy.get('tbody tr').first().should('contain', 'New Conversation');
       cy.window().then((win) => {
-        const parsed = JSON.parse(win.sessionStorage.getItem('conversationListCache'));
-        expect(parsed[0].Title).to.equal('New Conversation');
+        const cacheData = win.localStorage.getItem('conversationListCache');
+        const parsed = JSON.parse(cacheData);
+        expect(parsed.data[0].Title).to.equal('New Conversation');
+      });
+    });
+  });
+
+  context('Background Cache Refresh Behavior', () => {
+    it('should show stale data immediately and refresh cache in background when expired', () => {
+      // 1. Set up an expired cache manually
+      const staleConversations = [mockConversations[0]]; // Only first conversation (stale)
+      const freshConversations = mockConversations; // Both conversations (fresh from API)
+      
+      cy.window().then((win) => {
+        // Create an expired cache entry (older than 15 minutes)
+        const expiredTimestamp = Date.now() - (20 * 60 * 1000); // 20 minutes ago
+        const expiredCacheEntry = {
+          version: 1,
+          data: staleConversations,
+          lastSaved: expiredTimestamp,
+          size: JSON.stringify(staleConversations).length
+        };
+        win.localStorage.setItem('conversationListCache', JSON.stringify(expiredCacheEntry));
+      });
+
+      // 2. Intercept background refresh API call
+      cy.intercept('GET', '**/conversations?updatedAtYear=2025', { 
+        statusCode: 200, 
+        body: freshConversations 
+      }).as('backgroundRefresh');
+
+      // 3. Visit page - should show stale data immediately
+      cy.visit('/conversations');
+      
+      // 4. Verify stale data is shown immediately (only first conversation)
+      cy.contains('Existing Conversation 1').should('be.visible');
+      cy.contains('Existing Conversation 2').should('not.exist');
+
+      // 5. Wait for background refresh to complete
+      cy.wait('@backgroundRefresh');
+
+      // 6. Verify cache was updated in background with fresh data
+      cy.window().then((win) => {
+        const cacheData = win.localStorage.getItem('conversationListCache');
+        const parsed = JSON.parse(cacheData);
+        expect(parsed.data).to.have.length(2);
+        expect(parsed.data[0].Title).to.equal('Existing Conversation 1');
+        expect(parsed.data[1].Title).to.equal('Existing Conversation 2');
+        // Verify timestamp was updated
+        expect(parsed.lastSaved).to.be.greaterThan(Date.now() - 5000); // Updated within last 5 seconds
+      });
+
+      // 7. Navigate away and back to verify fresh data is now used
+      cy.visit('/');
+      cy.intercept('GET', '**/conversations?updatedAtYear=2025').as('noNewApiCall');
+      cy.visit('/conversations');
+      
+      // Should now show fresh data from cache without API call
+      cy.contains('Existing Conversation 1').should('be.visible');
+      cy.contains('Existing Conversation 2').should('be.visible');
+      cy.get('@noNewApiCall.all').should('have.length', 0);
+    });
+
+    it('should handle background refresh failures gracefully', () => {
+      // 1. Set up expired cache
+      cy.window().then((win) => {
+        const expiredTimestamp = Date.now() - (20 * 60 * 1000);
+        const expiredCacheEntry = {
+          version: 1,
+          data: [mockConversations[0]],
+          lastSaved: expiredTimestamp,
+          size: 100
+        };
+        win.localStorage.setItem('conversationListCache', JSON.stringify(expiredCacheEntry));
+      });
+
+      // 2. Intercept and make background refresh fail
+      cy.intercept('GET', '**/conversations?updatedAtYear=2025', { 
+        statusCode: 500, 
+        body: { error: 'Server error' }
+      }).as('failedRefresh');
+
+      // 3. Visit page - should still show stale data
+      cy.visit('/conversations');
+      cy.contains('Existing Conversation 1').should('be.visible');
+
+      // 4. Wait for failed background refresh attempt
+      cy.wait('@failedRefresh');
+
+      // 5. Verify stale data is still shown and cache wasn't corrupted
+      cy.contains('Existing Conversation 1').should('be.visible');
+      cy.window().then((win) => {
+        const cacheData = win.localStorage.getItem('conversationListCache');
+        const parsed = JSON.parse(cacheData);
+        expect(parsed.data).to.have.length(1);
+        expect(parsed.data[0].Title).to.equal('Existing Conversation 1');
       });
     });
   });

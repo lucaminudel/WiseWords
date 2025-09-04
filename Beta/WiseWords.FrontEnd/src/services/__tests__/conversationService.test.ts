@@ -29,6 +29,8 @@ const mockConversationCache = conversationCache as {
   get: Mock;
   set: Mock;
   clear: Mock;
+  isExpired: Mock;
+  getMetadata: Mock;
 };
 
 const mockConversationThreadCache = conversationThreadCache as unknown as {
@@ -163,6 +165,128 @@ describe('ConversationService', () => {
       // Act & Assert
       await expect(ConversationService.fetchConversationsViaCachedAPI(2025)).rejects.toThrow('API Error');
       expect(mockConversationCache.set).not.toHaveBeenCalled();
+    });
+
+    it('should return fresh cached data when cache is not expired', async () => {
+      // Arrange
+      mockConversationCache.get.mockReturnValue(mockConversations);
+      mockConversationCache.isExpired.mockReturnValue(false); // Cache is fresh
+
+      // Act
+      const result = await ConversationService.fetchConversationsViaCachedAPI(2025, false);
+
+      // Assert
+      expect(result).toEqual(mockConversations);
+      expect(mockConversationCache.get).toHaveBeenCalledTimes(1);
+      expect(mockConversationCache.isExpired).toHaveBeenCalledTimes(1);
+      expect(mockConversationApi.fetchConversations).not.toHaveBeenCalled();
+      expect(mockConversationCache.set).not.toHaveBeenCalled();
+    });
+
+    it('should return stale data immediately and trigger background refresh when cache is expired', async () => {
+      // Arrange
+      const staleConversations = [mockConversations[0]]; // Stale cache with fewer items
+      const freshConversations = mockConversations; // Fresh data from API
+      
+      mockConversationCache.get.mockReturnValue(staleConversations);
+      mockConversationCache.isExpired.mockReturnValue(true); // Cache is expired
+      mockConversationApi.fetchConversations.mockResolvedValue(freshConversations);
+
+      // Spy on console.log to verify background refresh success logging
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Act
+      const result = await ConversationService.fetchConversationsViaCachedAPI(2025, false);
+
+      // Assert - Should return stale data immediately
+      expect(result).toEqual(staleConversations);
+      expect(mockConversationCache.get).toHaveBeenCalledTimes(1);
+      expect(mockConversationCache.isExpired).toHaveBeenCalledTimes(1);
+
+      // Background refresh should be triggered (give it a moment to execute)
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      expect(mockConversationApi.fetchConversations).toHaveBeenCalledWith(2025);
+      expect(mockConversationCache.set).toHaveBeenCalledWith(freshConversations);
+      
+      // Verify success logging
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Background conversation refresh successful')
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle background refresh failures gracefully and retry once', async () => {
+      // Arrange
+      const staleConversations = [mockConversations[0]];
+      
+      mockConversationCache.get.mockReturnValue(staleConversations);
+      mockConversationCache.isExpired.mockReturnValue(true);
+      
+      // First attempt fails, second succeeds
+      mockConversationApi.fetchConversations
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce(mockConversations);
+
+      // Spy on console to verify retry behavior
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Act
+      const result = await ConversationService.fetchConversationsViaCachedAPI(2025, false);
+
+      // Assert - Should return stale data immediately
+      expect(result).toEqual(staleConversations);
+
+      // Wait for background refresh and retry
+      await new Promise(resolve => setTimeout(resolve, 2100)); // Wait for retry delay + execution
+
+      // Verify retry behavior
+      expect(mockConversationApi.fetchConversations).toHaveBeenCalledTimes(2);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Background conversation refresh failed (attempt 1), retrying...'),
+        expect.any(Error)
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Background conversation refresh successful (attempt 2)')
+      );
+
+      consoleWarnSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should log final failure when background refresh fails after retry', async () => {
+      // Arrange
+      const staleConversations = [mockConversations[0]];
+      
+      mockConversationCache.get.mockReturnValue(staleConversations);
+      mockConversationCache.isExpired.mockReturnValue(true);
+      
+      // Both attempts fail
+      const networkError = new Error('Network error');
+      mockConversationApi.fetchConversations.mockRejectedValue(networkError);
+
+      // Spy on console to verify failure logging
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // Act
+      const result = await ConversationService.fetchConversationsViaCachedAPI(2025, false);
+
+      // Assert - Should return stale data immediately
+      expect(result).toEqual(staleConversations);
+
+      // Wait for background refresh and retry
+      await new Promise(resolve => setTimeout(resolve, 2100));
+
+      // Verify failure behavior
+      expect(mockConversationApi.fetchConversations).toHaveBeenCalledTimes(2);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Background conversation refresh failed after 2 attempts:'),
+        networkError
+      );
+
+      consoleWarnSpy.mockRestore();
     });
 
     it('fetchConversationPosts should call the API directly without using the cache', async () => {
