@@ -136,31 +136,79 @@ export class ConversationService {
     }
 
     /**
-     * Fetch conversation posts with ID normalization
+     * Fetch conversation posts with ID normalization and background refresh
      */
     static async fetchConversationPostsViaCachedAPI(conversationId: string, forceRefresh: boolean = false): Promise<Post[]> {
-        // If forceRefresh is false, try to get from cache first
-        if (!forceRefresh) {
-            const cachedPosts = conversationThreadCache.get(conversationId);
-            if (cachedPosts) {
+        // If forceRefresh is true, bypass cache completely
+        if (forceRefresh) {
+            return this._fetchAndCacheConversationPosts(conversationId);
+        }
+
+        // Check if cache exists
+        const cachedPosts = conversationThreadCache.get(conversationId);
+        
+        if (cachedPosts) {
+            // Cache exists - check if expired
+            if (conversationThreadCache.isExpired(conversationId)) {
+                // Cache is expired: return stale data immediately AND refresh in background
+                this._refreshConversationPostsInBackground(conversationId);
+                return cachedPosts;
+            } else {
+                // Cache is fresh - return it
                 return cachedPosts;
             }
         }
 
-        // Fetch from API and update cache
+        // No cache exists - fetch from API normally
+        return this._fetchAndCacheConversationPosts(conversationId);
+    }
+
+    /**
+     * Private helper to fetch conversation posts from API and update cache
+     */
+    private static async _fetchAndCacheConversationPosts(conversationId: string): Promise<Post[]> {
         const posts = await conversationApi.fetchConversationPosts(conversationId);
 
         // Store in cache
         try {
             conversationThreadCache.set(conversationId, posts);
         } catch (err) {
-
+            console.warn(`Failed to cache conversation posts for ${conversationId}:`, err);
             // Clear cache to ensure fresh data on next load
             conversationThreadCache.clear();
         }
 
-        // Return the posts fetched from the API
         return posts;
+    }
+
+    /**
+     * Private helper to refresh conversation posts in background with retry logic (fire and forget)
+     */
+    private static _refreshConversationPostsInBackground(conversationId: string): void {
+        const performBackgroundRefresh = async (attempt: number = 1): Promise<void> => {
+            try {
+                const posts = await this._fetchAndCacheConversationPosts(conversationId);
+                console.log(`Background conversation posts refresh successful (attempt ${attempt}), cached ${posts.length} posts for conversation ${conversationId}`);
+            } catch (error) {
+                if (attempt < 2) {
+                    // Retry once after a short delay
+                    console.warn(`Background conversation posts refresh failed (attempt ${attempt}) for ${conversationId}, retrying...`, error);
+                    setTimeout(() => {
+                        performBackgroundRefresh(attempt + 1).catch(retryError => {
+                            console.warn(`Background conversation posts refresh failed after retry (attempt ${attempt + 1}) for ${conversationId}:`, retryError);
+                        });
+                    }, 2000); // 2 second delay before retry
+                } else {
+                    console.warn(`Background conversation posts refresh failed after ${attempt} attempts for ${conversationId}:`, error);
+                }
+                // Don't throw - this is background operation
+            }
+        };
+
+        // Fire and forget - don't await this
+        performBackgroundRefresh().catch(error => {
+            console.warn(`Background conversation posts refresh initialization failed for ${conversationId}:`, error);
+        });
     }
 
     /**

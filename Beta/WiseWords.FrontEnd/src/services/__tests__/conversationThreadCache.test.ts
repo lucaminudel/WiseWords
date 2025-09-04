@@ -119,7 +119,7 @@ describe('conversationThreadCache', () => {
     const conversationId = 'convo1';
     const key = `conversationThread_${conversationId}`;
     const metadata = {
-      [key]: { key, size: 100, lastAccessed: Date.now() }
+      [key]: { key, size: 100, lastAccessed: Date.now(), lastSaved: Date.now(), version: 1 }
     };
     localStorage.setItem('conversationThreadCache_metadata', JSON.stringify(metadata));
     // Intentionally do not set the item data in localStorage
@@ -130,5 +130,110 @@ describe('conversationThreadCache', () => {
     // It should also clean up the stale metadata entry
     const updatedMetadata = JSON.parse(localStorage.getItem('conversationThreadCache_metadata') || '{}');
     expect(updatedMetadata[key]).toBeUndefined();
+  });
+
+  // New tests for Points 2-3: versioning, timestamps, and expiry
+  describe('versioning and expiry (Points 2-3)', () => {
+    it('should return null and clean up cache when version is different', () => {
+      const conversationId = 'convo1';
+      const data = [mockPost(conversationId, 'Version test')];
+      
+      // Set data with current version
+      conversationThreadCache.set(conversationId, data);
+      
+      // Manually update metadata to have old version
+      const key = `conversationThread_${conversationId}`;
+      const metadata = JSON.parse(localStorage.getItem('conversationThreadCache_metadata') || '{}');
+      metadata[key].version = 0; // Old version
+      localStorage.setItem('conversationThreadCache_metadata', JSON.stringify(metadata));
+      
+      // Should return null and clean up
+      const result = conversationThreadCache.get(conversationId);
+      expect(result).toBeNull();
+      
+      // Verify cleanup
+      const updatedMetadata = JSON.parse(localStorage.getItem('conversationThreadCache_metadata') || '{}');
+      expect(updatedMetadata[key]).toBeUndefined();
+      expect(localStorage.getItem(key)).toBeNull();
+    });
+
+    it('should track lastSaved timestamp when setting data', () => {
+      const conversationId = 'convo1';
+      const data = [mockPost(conversationId, 'Timestamp test')];
+      const beforeTime = Date.now();
+      
+      conversationThreadCache.set(conversationId, data);
+      
+      const metadata = conversationThreadCache.getCacheMetadata(conversationId);
+      expect(metadata).not.toBeNull();
+      expect(metadata!.lastSaved).toBeGreaterThanOrEqual(beforeTime);
+      expect(metadata!.version).toBe(1);
+    });
+
+    it('should check if cache is expired correctly', () => {
+      const conversationId = 'convo1';
+      const data = [mockPost(conversationId, 'Expiry test')];
+      
+      // Set fresh cache
+      conversationThreadCache.set(conversationId, data);
+      expect(conversationThreadCache.isExpired(conversationId)).toBe(false);
+      
+      // Manually set old lastSaved timestamp (older than 30 minutes)
+      const key = `conversationThread_${conversationId}`;
+      const metadata = JSON.parse(localStorage.getItem('conversationThreadCache_metadata') || '{}');
+      metadata[key].lastSaved = Date.now() - (35 * 60 * 1000); // 35 minutes ago
+      localStorage.setItem('conversationThreadCache_metadata', JSON.stringify(metadata));
+      
+      expect(conversationThreadCache.isExpired(conversationId)).toBe(true);
+    });
+
+    it('should return false for isExpired when conversation is not cached', () => {
+      expect(conversationThreadCache.isExpired('non-existent')).toBe(false);
+    });
+
+    it('should return cache metadata for existing conversation', () => {
+      const conversationId = 'convo1';
+      const data = [mockPost(conversationId, 'Metadata test')];
+      
+      conversationThreadCache.set(conversationId, data);
+      
+      const metadata = conversationThreadCache.getCacheMetadata(conversationId);
+      expect(metadata).not.toBeNull();
+      expect(metadata!.version).toBe(1);
+      expect(metadata!.size).toBeGreaterThan(0);
+      expect(metadata!.age).toBeGreaterThanOrEqual(0);
+      expect(metadata!.lastSaved).toBeCloseTo(Date.now(), -2); // Within 100ms
+      expect(metadata!.lastAccessed).toBeCloseTo(Date.now(), -2);
+    });
+
+    it('should return null metadata for non-existent conversation', () => {
+      const metadata = conversationThreadCache.getCacheMetadata('non-existent');
+      expect(metadata).toBeNull();
+    });
+
+    it('should return cache statistics', () => {
+      // Empty cache
+      let stats = conversationThreadCache.getCacheStats();
+      expect(stats.totalEntries).toBe(0);
+      expect(stats.totalSize).toBe(0);
+      expect(stats.oldestEntry).toBeNull();
+      expect(stats.newestEntry).toBeNull();
+      
+      // Add some conversations
+      const data1 = [mockPost('1', 'Test 1')];
+      const data2 = [mockPost('2', 'Test 2')];
+      
+      vi.setSystemTime(new Date('2025-01-01T00:00:01.000Z'));
+      conversationThreadCache.set('convo1', data1);
+      
+      vi.setSystemTime(new Date('2025-01-01T00:00:02.000Z'));
+      conversationThreadCache.set('convo2', data2);
+      
+      stats = conversationThreadCache.getCacheStats();
+      expect(stats.totalEntries).toBe(2);
+      expect(stats.totalSize).toBeGreaterThan(0);
+      expect(stats.oldestEntry).toBe(new Date('2025-01-01T00:00:01.000Z').getTime());
+      expect(stats.newestEntry).toBe(new Date('2025-01-01T00:00:02.000Z').getTime());
+    });
   });
 });

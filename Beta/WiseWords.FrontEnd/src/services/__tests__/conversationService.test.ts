@@ -37,6 +37,7 @@ const mockConversationThreadCache = conversationThreadCache as unknown as {
   get: Mock;
   set: Mock;
   clear: Mock;
+  isExpired: Mock;
 };
 
 const mockConversations: ConversationResponse[] = [
@@ -304,6 +305,176 @@ describe('ConversationService', () => {
       expect(mockConversationCache.set).not.toHaveBeenCalled();
     });
 
+  });
+
+  describe('fetchConversationPostsViaCachedAPI', () => {
+    const mockConversationId = 'CONVO#123';
+    const mockPosts: Post[] = [
+      { PK: mockConversationId, SK: 'METADATA', MessageBody: 'Root post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+      { PK: mockConversationId, SK: '#CM#1', MessageBody: 'Comment 1', Author: 'User1', UpdatedAt: '124', ConvoType: 'QUESTION' }
+    ];
+
+    it('should return cached posts when cache exists and is not expired', async () => {
+      // Arrange
+      mockConversationThreadCache.get.mockReturnValue(mockPosts);
+      mockConversationThreadCache.isExpired.mockReturnValue(false);
+
+      // Act
+      const result = await ConversationService.fetchConversationPostsViaCachedAPI(mockConversationId, false);
+
+      // Assert
+      expect(result).toEqual(mockPosts);
+      expect(mockConversationThreadCache.get).toHaveBeenCalledWith(mockConversationId);
+      expect(mockConversationThreadCache.isExpired).toHaveBeenCalledWith(mockConversationId);
+      expect(mockConversationApi.fetchConversationPosts).not.toHaveBeenCalled();
+    });
+
+    it('should fetch from API when no cache exists', async () => {
+      // Arrange
+      mockConversationThreadCache.get.mockReturnValue(null);
+      mockConversationApi.fetchConversationPosts.mockResolvedValue(mockPosts);
+
+      // Act
+      const result = await ConversationService.fetchConversationPostsViaCachedAPI(mockConversationId, false);
+
+      // Assert
+      expect(result).toEqual(mockPosts);
+      expect(mockConversationThreadCache.get).toHaveBeenCalledWith(mockConversationId);
+      expect(mockConversationApi.fetchConversationPosts).toHaveBeenCalledWith(mockConversationId);
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationId, mockPosts);
+    });
+
+    it('should bypass cache and fetch from API when forceRefresh is true', async () => {
+      // Arrange
+      mockConversationThreadCache.get.mockReturnValue(mockPosts); // Cache has data
+      mockConversationApi.fetchConversationPosts.mockResolvedValue(mockPosts);
+
+      // Act
+      const result = await ConversationService.fetchConversationPostsViaCachedAPI(mockConversationId, true);
+
+      // Assert
+      expect(result).toEqual(mockPosts);
+      expect(mockConversationThreadCache.get).not.toHaveBeenCalled(); // Cache should be bypassed
+      expect(mockConversationApi.fetchConversationPosts).toHaveBeenCalledWith(mockConversationId);
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationId, mockPosts);
+    });
+
+    it('should return stale data immediately and trigger background refresh when cache is expired', async () => {
+      // Arrange
+      const stalePosts = [mockPosts[0]]; // Stale cache with fewer posts
+      const freshPosts = mockPosts; // Fresh data from API
+      
+      mockConversationThreadCache.get.mockReturnValue(stalePosts);
+      mockConversationThreadCache.isExpired.mockReturnValue(true);
+      mockConversationApi.fetchConversationPosts.mockResolvedValue(freshPosts);
+
+      // Spy on console.log to verify background refresh success logging
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Act
+      const result = await ConversationService.fetchConversationPostsViaCachedAPI(mockConversationId, false);
+
+      // Assert - Should return stale data immediately
+      expect(result).toEqual(stalePosts);
+      expect(mockConversationThreadCache.get).toHaveBeenCalledWith(mockConversationId);
+      expect(mockConversationThreadCache.isExpired).toHaveBeenCalledWith(mockConversationId);
+
+      // Background refresh should be triggered (give it a moment to execute)
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      expect(mockConversationApi.fetchConversationPosts).toHaveBeenCalledWith(mockConversationId);
+      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationId, freshPosts);
+      
+      // Verify success logging
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`Background conversation posts refresh successful (attempt 1), cached ${freshPosts.length} posts for conversation ${mockConversationId}`)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle background refresh failures gracefully and retry once for conversation posts', async () => {
+      // Arrange
+      const stalePosts = [mockPosts[0]];
+      
+      mockConversationThreadCache.get.mockReturnValue(stalePosts);
+      mockConversationThreadCache.isExpired.mockReturnValue(true);
+      
+      // First attempt fails, second succeeds
+      mockConversationApi.fetchConversationPosts
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce(mockPosts);
+
+      // Spy on console to verify retry behavior
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Act
+      const result = await ConversationService.fetchConversationPostsViaCachedAPI(mockConversationId, false);
+
+      // Assert - Should return stale data immediately
+      expect(result).toEqual(stalePosts);
+
+      // Wait for background refresh and retry
+      await new Promise(resolve => setTimeout(resolve, 2100)); // Wait for retry delay + execution
+
+      // Verify retry behavior
+      expect(mockConversationApi.fetchConversationPosts).toHaveBeenCalledTimes(2);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`Background conversation posts refresh failed (attempt 1) for ${mockConversationId}, retrying...`),
+        expect.any(Error)
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`Background conversation posts refresh successful (attempt 2), cached ${mockPosts.length} posts for conversation ${mockConversationId}`)
+      );
+
+      consoleWarnSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should log final failure when background refresh fails after retry for conversation posts', async () => {
+      // Arrange
+      const stalePosts = [mockPosts[0]];
+      
+      mockConversationThreadCache.get.mockReturnValue(stalePosts);
+      mockConversationThreadCache.isExpired.mockReturnValue(true);
+      
+      // Both attempts fail
+      const networkError = new Error('Network error');
+      mockConversationApi.fetchConversationPosts.mockRejectedValue(networkError);
+
+      // Spy on console to verify failure logging
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // Act
+      const result = await ConversationService.fetchConversationPostsViaCachedAPI(mockConversationId, false);
+
+      // Assert - Should return stale data immediately
+      expect(result).toEqual(stalePosts);
+
+      // Wait for background refresh and retry
+      await new Promise(resolve => setTimeout(resolve, 2100));
+
+      // Verify failure behavior
+      expect(mockConversationApi.fetchConversationPosts).toHaveBeenCalledTimes(2);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`Background conversation posts refresh failed after 2 attempts for ${mockConversationId}:`),
+        networkError
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should handle API errors correctly when no cache exists', async () => {
+      // Arrange
+      mockConversationThreadCache.get.mockReturnValue(null);
+      const apiError = new Error('API Error');
+      mockConversationApi.fetchConversationPosts.mockRejectedValue(apiError);
+
+      // Act & Assert
+      await expect(ConversationService.fetchConversationPostsViaCachedAPI(mockConversationId)).rejects.toThrow('API Error');
+      expect(mockConversationThreadCache.set).not.toHaveBeenCalled();
+    });
   });
 
   describe('createConversationAndUpdateCache', () => {

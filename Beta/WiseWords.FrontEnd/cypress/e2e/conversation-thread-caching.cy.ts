@@ -6,6 +6,7 @@ describe('Conversation Thread Caching Behavior', () => {
   beforeEach(() => {
     // Clear cache before each test to ensure a clean state
     cy.clearLocalStorage();
+
     // Intercept the specific conversation posts API call
     cy.intercept('GET', `**/conversations/${encodeURIComponent(conversationId)}/posts`, {
       fixture: 'conversation-success.json'
@@ -135,50 +136,198 @@ describe('Conversation Thread Caching Behavior', () => {
     it('should evict the least recently used item when the cache is full', () => {
       const CACHE_KEY_PREFIX = 'conversationThread_';
       const METADATA_KEY = 'conversationThreadCache_metadata';
-      const MAX_CACHE_SIZE = 3 * 1024 * 1024; // 3 MB
-      const largeString = 'a'.repeat(1024 * 1024); // 1MB string
+      const CACHE_VERSION = 1;
+      const largeSize = 1024 * 1024; // Simulate 1MB
+      const placeholderData = JSON.stringify([{ data: 'placeholder' }]);
 
-      // 1. Programmatically fill the cache
+      // Clear any existing data first
+      cy.clearLocalStorage();
+
       const oldestConversationId = 'CONVO#oldest';
       const oldestKey = `${CACHE_KEY_PREFIX}${oldestConversationId}`;
+      
+      // Set up initial cache state
       cy.window().then((win) => {
-        // Item 1 (oldest)
-        win.localStorage.setItem(oldestKey, JSON.stringify([{ data: largeString }]));
-        // Item 2
-        win.localStorage.setItem(`${CACHE_KEY_PREFIX}CONVO#2`, JSON.stringify([{ data: largeString }]));
-        // Item 3 (almost full)
-        win.localStorage.setItem(`${CACHE_KEY_PREFIX}CONVO#3`, JSON.stringify([{ data: largeString }]));
+        // Store the test data
+        win.localStorage.setItem(oldestKey, placeholderData);
+        win.localStorage.setItem(`${CACHE_KEY_PREFIX}CONVO#2`, placeholderData);
+        win.localStorage.setItem(`${CACHE_KEY_PREFIX}CONVO#3`, placeholderData);
 
+        // Store metadata with lastAccessed times
+        const now = Date.now();
         const metadata = {
-          [oldestKey]: { key: oldestKey, size: largeString.length, lastAccessed: Date.now() - 3000 },
-          [`${CACHE_KEY_PREFIX}CONVO#2`]: { key: `${CACHE_KEY_PREFIX}CONVO#2`, size: largeString.length, lastAccessed: Date.now() - 2000 },
-          [`${CACHE_KEY_PREFIX}CONVO#3`]: { key: `${CACHE_KEY_PREFIX}CONVO#3`, size: largeString.length, lastAccessed: Date.now() - 1000 },
+          [oldestKey]: { 
+            key: oldestKey, 
+            size: largeSize, 
+            lastAccessed: now - 3000, 
+            version: CACHE_VERSION 
+          },
+          [`${CACHE_KEY_PREFIX}CONVO#2`]: { 
+            key: `${CACHE_KEY_PREFIX}CONVO#2`, 
+            size: largeSize, 
+            lastAccessed: now - 2000, 
+            version: CACHE_VERSION 
+          },
+          [`${CACHE_KEY_PREFIX}CONVO#3`]: { 
+            key: `${CACHE_KEY_PREFIX}CONVO#3`, 
+            size: largeSize, 
+            lastAccessed: now - 1000, 
+            version: CACHE_VERSION 
+          },
         };
         win.localStorage.setItem(METADATA_KEY, JSON.stringify(metadata));
       });
 
-      // 2. Visit a new conversation thread to trigger eviction
-      cy.visitConversation(conversationId);
-      cy.wait('@getConversationPosts');
-
-      // 3. Verify that the oldest item has been evicted
+      // Verify initial state
       cy.window().then((win) => {
+        expect(win.localStorage.getItem(oldestKey)).to.exist;
+      });
+
+      // Visit a new conversation to trigger eviction
+      cy.visitConversation(conversationId);
+      
+      // Wait for the API call to complete
+      cy.wait('@getConversationPosts');
+      
+      // Add a small delay to allow cache operations to complete
+      cy.wait(1000);
+
+      cy.window().then((win) => {
+        // The oldest item should be evicted
         const evictedItem = win.localStorage.getItem(oldestKey);
         expect(evictedItem).to.be.null;
 
+        // The metadata for the oldest item should be removed
         const metadataString = win.localStorage.getItem(METADATA_KEY);
         const metadata = JSON.parse(metadataString || '{}');
         expect(metadata[oldestKey]).to.be.undefined;
-      });
 
-      // 4. Verify that the new conversation data is cached
-      cy.window().then((win) => {
+        // The new item should be in the cache
         const newItem = win.localStorage.getItem(cacheKey);
         expect(newItem).to.not.be.null;
 
+        // The new item's metadata should exist
+        expect(metadata[cacheKey]).to.exist;
+        expect(metadata[cacheKey].version).to.equal(CACHE_VERSION);
+      });
+    });
+  });
+
+  context('Cache Invalidation', () => {
+    it('should invalidate cache and fetch from API when cache version is outdated', () => {
+      const METADATA_KEY = 'conversationThreadCache_metadata';
+      const outdatedVersion = 0;
+
+      // 1. Manually set a cache entry with an old version number
+      cy.fixture('conversation-success.json').then((staleData) => {
+        cy.window().then((win) => {
+          const dataString = JSON.stringify(staleData);
+          win.localStorage.setItem(cacheKey, dataString);
+          const metadata = {
+            [cacheKey]: { 
+              key: cacheKey, 
+              size: dataString.length, 
+              lastAccessed: Date.now(),
+              lastSaved: Date.now(),
+              version: outdatedVersion // Outdated version
+            },
+          };
+          win.localStorage.setItem(METADATA_KEY, JSON.stringify(metadata));
+        });
+      });
+
+      // 2. Visit the page and assert that an API call is made
+      cy.visitConversation(conversationId);
+      cy.wait('@getConversationPosts').its('response.statusCode').should('eq', 200);
+
+      // 3. Verify the UI shows the fresh data
+      cy.contains('h1', 'Test Question').should('be.visible');
+
+      // 4. Verify the cache in localStorage is updated with the correct version
+      cy.window().then((win) => {
         const metadataString = win.localStorage.getItem(METADATA_KEY);
         const metadata = JSON.parse(metadataString || '{}');
         expect(metadata[cacheKey]).to.exist;
+        expect(metadata[cacheKey].version).to.not.equal(outdatedVersion);
+      });
+    });
+  });
+
+  context('Background Cache Refresh Behavior', () => {
+    const METADATA_KEY = 'conversationThreadCache_metadata';
+
+    it('should show stale data immediately and refresh cache in background when expired', () => {
+      const stalePost = { PK: conversationId, SK: 'METADATA', Title: 'Stale Post Title', MessageBody: 'Stale post body', ConvoType: 'QUESTION', UpdatedAt: '123' };
+
+      // 1. Set up an expired cache
+      cy.window().then((win) => {
+        const expiredTimestamp = Date.now() - (20 * 60 * 1000);
+        const dataString = JSON.stringify([stalePost]);
+        win.localStorage.setItem(cacheKey, dataString);
+        const metadata = {
+          [cacheKey]: { key: cacheKey, size: dataString.length, lastAccessed: expiredTimestamp, lastSaved: expiredTimestamp, version: 1 }
+        };
+        win.localStorage.setItem(METADATA_KEY, JSON.stringify(metadata));
+      });
+
+      // 2. Visit page to trigger background refresh
+      cy.visitConversation(conversationId);
+      cy.contains('h1', 'Stale Post Title').should('be.visible');
+
+      // 3. Wait for the network call to complete
+      cy.wait('@getConversationPosts');
+
+      // 4. Poll the cache until it is updated, using Cypress's retry-ability
+      const getCachedMessageBody = () => {
+        return cy.window().then((win) => {
+          const item = win.localStorage.getItem(cacheKey);
+          // Return a value that allows the assertion to retry if the item is null or not parsed yet
+          if (!item) return null;
+          const parsed = JSON.parse(item);
+          return parsed.find(p => p.SK === 'METADATA')?.MessageBody;
+        });
+      };
+      getCachedMessageBody().should('equal', 'Root question');
+
+      // 5. Now that the cache is confirmed updated, test the rest
+      cy.reload();
+      cy.contains('h1', 'Test Question').should('be.visible');
+      cy.get('@getConversationPosts.all').should('have.length', 1);
+    });
+
+    it('should handle background refresh failures gracefully', () => {
+      const stalePost = { PK: conversationId, SK: 'METADATA', Title: 'Stale Post Title', MessageBody: 'Stale post body', ConvoType: 'QUESTION', UpdatedAt: '123' };
+
+      // 1. Set up expired cache
+      cy.window().then((win) => {
+        const expiredTimestamp = Date.now() - (20 * 60 * 1000);
+        const dataString = JSON.stringify([stalePost]);
+        win.localStorage.setItem(cacheKey, dataString);
+        const metadata = {
+          [cacheKey]: { key: cacheKey, size: dataString.length, lastAccessed: expiredTimestamp, lastSaved: expiredTimestamp, version: 1 }
+        };
+        win.localStorage.setItem(METADATA_KEY, JSON.stringify(metadata));
+      });
+
+      // 2. Intercept and make background refresh fail
+      cy.intercept('GET', `**/conversations/${encodeURIComponent(conversationId)}/posts`, { 
+        statusCode: 500, 
+        body: { error: 'Server error' }
+      }).as('failedRefresh');
+
+      // 3. Visit page - should still show stale data
+      cy.visitConversation(conversationId);
+      cy.contains('h1', 'Stale Post Title').should('be.visible');
+
+      // 4. Wait for failed background refresh attempt
+      cy.wait('@failedRefresh');
+
+      // 5. Verify stale data is still shown and cache wasn't corrupted
+      cy.contains('h1', 'Stale Post Title').should('be.visible');
+      cy.window().then((win) => {
+        const cachedData = win.localStorage.getItem(cacheKey);
+        const parsed = JSON.parse(cachedData);
+        expect(parsed[0].Title).to.equal('Stale Post Title');
       });
     });
   });

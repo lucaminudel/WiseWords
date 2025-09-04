@@ -3,11 +3,15 @@ import { Post } from '../types/conversation';
 const CACHE_KEY_PREFIX = 'conversationThread_';
 const METADATA_KEY = 'conversationThreadCache_metadata';
 const MAX_CACHE_SIZE = 3 * 1024 * 1024; // 3 MB
+const CACHE_VERSION = 1; // Point 3: Version control
+const MAX_LIFETIME = 15 * 60 * 1000; // Point 3: 15 minutes lifetime (same as conversations list)
 
 interface CacheEntry {
   key: string;
   size: number;
   lastAccessed: number;
+  lastSaved: number; // Point 2: When cache was last saved/refreshed
+  version: number;   // Point 3: Cache version for clean invalidation
 }
 
 interface CacheMetadata {
@@ -66,6 +70,18 @@ class ConversationThreadCache {
       return null;
     }
 
+    // Point 3: Check version - if different, delete and return null
+    if (entry.version !== CACHE_VERSION) {
+      try {
+        localStorage.removeItem(key);
+        delete metadata[key];
+        this.setMetadata(metadata);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      return null;
+    }
+
     try {
       const item = localStorage.getItem(key);
       if (!item) {
@@ -75,10 +91,19 @@ class ConversationThreadCache {
         return null;
       }
 
+      // Update last accessed time for LRU
       entry.lastAccessed = Date.now();
       this.setMetadata(metadata);
       return JSON.parse(item);
     } catch (e) {
+      // Clean up corrupted cache entry
+      delete metadata[key];
+      this.setMetadata(metadata);
+      try {
+        localStorage.removeItem(key);
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
       return null;
     }
   }
@@ -105,10 +130,13 @@ class ConversationThreadCache {
       metadata = this.evict(metadata, size);
 
       localStorage.setItem(key, dataString);
+      const now = Date.now();
       metadata[key] = {
         key,
         size,
-        lastAccessed: Date.now(),
+        lastAccessed: now,
+        lastSaved: now,      // Point 2: Track when cache was saved
+        version: CACHE_VERSION, // Point 3: Store current version
       };
       this.setMetadata(metadata);
     } catch (e) {
@@ -124,6 +152,107 @@ class ConversationThreadCache {
       }
     }
     localStorage.removeItem(METADATA_KEY);
+  }
+
+  /**
+   * Checks if a specific conversation's cache has expired.
+   * @param conversationId - The conversation ID to check
+   * @returns {boolean} True if cache exists and has expired
+   */
+  public isExpired(conversationId: string): boolean {
+    try {
+      const metadata = this.getMetadata();
+      const key = this.getCacheKey(conversationId);
+      const entry = metadata[key];
+
+      if (!entry) {
+        return false; // No cache means not expired
+      }
+
+      // Check version first
+      if (entry.version !== CACHE_VERSION) {
+        return true; // Different version is considered expired
+      }
+
+      return (Date.now() - entry.lastSaved) > MAX_LIFETIME;
+    } catch (error) {
+      return true; // Treat corrupted cache as expired
+    }
+  }
+
+  /**
+   * Gets cache metadata for a specific conversation for debugging/monitoring.
+   * @param conversationId - The conversation ID to get metadata for
+   * @returns {object | null} Cache metadata or null if no cache
+   */
+  public getCacheMetadata(conversationId: string): { 
+    version: number; 
+    lastSaved: number; 
+    lastAccessed: number; 
+    size: number; 
+    age: number 
+  } | null {
+    try {
+      const metadata = this.getMetadata();
+      const key = this.getCacheKey(conversationId);
+      const entry = metadata[key];
+
+      if (!entry) {
+        return null;
+      }
+
+      return {
+        version: entry.version,
+        lastSaved: entry.lastSaved,
+        lastAccessed: entry.lastAccessed,
+        size: entry.size,
+        age: Date.now() - entry.lastSaved
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Gets overall cache statistics for debugging/monitoring.
+   * @returns {object} Cache statistics
+   */
+  public getCacheStats(): {
+    totalEntries: number;
+    totalSize: number;
+    oldestEntry: number | null;
+    newestEntry: number | null;
+  } {
+    try {
+      const metadata = this.getMetadata();
+      const entries = Object.values(metadata);
+
+      if (entries.length === 0) {
+        return {
+          totalEntries: 0,
+          totalSize: 0,
+          oldestEntry: null,
+          newestEntry: null
+        };
+      }
+
+      const totalSize = entries.reduce((acc, entry) => acc + entry.size, 0);
+      const lastSavedTimes = entries.map(entry => entry.lastSaved);
+
+      return {
+        totalEntries: entries.length,
+        totalSize,
+        oldestEntry: Math.min(...lastSavedTimes),
+        newestEntry: Math.max(...lastSavedTimes)
+      };
+    } catch (error) {
+      return {
+        totalEntries: 0,
+        totalSize: 0,
+        oldestEntry: null,
+        newestEntry: null
+      };
+    }
   }
 }
 
