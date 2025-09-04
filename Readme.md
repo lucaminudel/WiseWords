@@ -31,7 +31,7 @@ with these overarching goals:
 - starting with a simple solution
 - while preserving the possibility of easily evolving and scaling the solutions as needed.
 
-On the backend (the NoSQL data store and related code, the lambdas and the API gateway code), the LLMs created about 70% of the code, and I contributed the remaining  30% of the code ensuring a high standard of quality and maintainability.
+On the backend (the NoSQL data store and related code, the lambdas and the API gateway code), the LLMs created about 70% of the code, and I contributed the remaining  30% of the code, ensuring a high standard of quality and maintainability.
 
 On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code and tests, and I created about 5% of the code and tests. Several prompts directed low-level details of the implementation, leaving the final responsibility of writing and changing the code to the LLMs. For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
 
@@ -40,7 +40,7 @@ To bring the current Beta up to the level of an enterprise application, only a f
 - adding more run-time error management with retries for key operations
 - making some additional configuration and some code to enable the elastic scalability of the serverless architecture.
 - replacing in the FrontEnd some defensive programming code produced by the LLMs with some less forgiving error handling
-- with high-volume traffic and more features added to the application, asynchronous queues should be introduced 
+- with more users, richer features and therefore a higher volume of data and traffic, asynchronous queues should be introduced 
 
 ## What I’ve learned so far coding with an AI-agent AKA genie
 This beta is a greenfield project, potentially low-risk and high-reward, that demanded a high level of control over the features and a diligent review of internal quality. In this context:
@@ -48,7 +48,7 @@ This beta is a greenfield project, potentially low-risk and high-reward, that de
 -  I've shared some of the commands and context I used to guide the AI, which you can see here: [MyAI-AgentCustomRules.md](./Beta/MyAI-AgentCustomRules.md)
 
 When considering what worked well, it's essential to remember that all of this is context-specific. The value comes from asking follow-up questions like:
-- have you tried something similar and what were your results? 
+- have you tried something similar, and what were your results? 
 - what insights can we gain by comparing the similarities and differences in our contexts?
 - what else is working (or not working) for you?
 
