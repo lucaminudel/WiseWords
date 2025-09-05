@@ -7,7 +7,7 @@ In short, *Wise Words* is a basic forum designed for finding answers to difficul
 **Wise Words** encourages having **one collaborative conversation at a time** by supporting simple linear comments - as opposed to nested comments that equate to multiple overlapping conversations and talking over each other.
 As the conversation unfolds, and the common understanding of the matter at hand grows, the forum allows consolidating the newfound understanding into **sub-questions, sub-problems, sub-dilemmas, and proposed conclusions** from which the conversation can proceed toward its destination. 
 
-## A quick account of this Beta implementation work
+## A quick account of this AI-Assisted Beta implementation work
 
 ### The type of work done with the help of several LLMs AKA AI-assistants AKA genies
 
