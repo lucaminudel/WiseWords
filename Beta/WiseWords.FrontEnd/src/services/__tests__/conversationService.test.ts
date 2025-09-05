@@ -2,7 +2,7 @@
  * Unit tests for the ConversationService with caching functionality.
  * Tests the smart caching logic for fetching and creating conversations.
  */
-import { describe, it, expect, beforeEach, vi, Mock, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ConversationService } from '../conversationService';
 import { conversationApi } from '../../api/conversationApi';
 import { conversationCache } from '../conversationCache';
@@ -14,34 +14,10 @@ vi.mock('../../api/conversationApi');
 vi.mock('../conversationCache');
 vi.mock('../conversationThreadCache');
 
-const mockConversationApi = conversationApi as {
-  fetchConversations: Mock;
-  createConversation: Mock;
-  fetchConversationPosts: Mock;
-  updateConversation: Mock;
-  deleteConversation: Mock;
-  appendComment: Mock;
-  appendDrillDown: Mock;
-  appendConclusion: Mock;
-};
-
-const mockConversationCache = conversationCache as {
-  get: Mock;
-  set: Mock;
-  clear: Mock;
-  isExpired: Mock;
-  getMetadata: Mock;
-  updateDataPreservingAge: Mock;
-};
-
-const mockConversationThreadCache = conversationThreadCache as unknown as {
-  get: Mock;
-  set: Mock;
-  clear: Mock;
-  isExpired: Mock;
-  getCacheMetadata: Mock;
-  updatePostsPreservingAge: Mock;
-};
+// Create mock implementations with proper typing using vi.mocked()
+const mockConversationApi = vi.mocked(conversationApi, true);
+const mockConversationCache = vi.mocked(conversationCache, true);
+const mockConversationThreadCache = vi.mocked(conversationThreadCache, true);
 
 const mockConversations: ConversationResponse[] = [
   {
