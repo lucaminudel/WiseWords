@@ -7,11 +7,11 @@ In short, *Wise Words* is a basic forum designed for finding answers to difficul
 **Wise Words** encourages having **one collaborative conversation at a time** by supporting simple linear comments - as opposed to nested comments that equate to multiple overlapping conversations and talking over each other.
 As the conversation unfolds, and the common understanding of the matter at hand grows, the forum allows consolidating the newfound understanding into **sub-questions, sub-problems, sub-dilemmas, and proposed conclusions** from which the conversation can proceed toward its destination. 
 
-## A quick account of this Beta implementation work so far
+## A quick account of this Beta implementation work
 
 ### The type of work done with the help of several LLMs AKA AI-assistants AKA genies
 
-This project intent is to realise a well-defined product idea while refreshing my tech skills in coding, design, and architecture with a modern tech stack.
+This project's intent is to realise a well-defined product idea while refreshing my tech skills in coding, design, and architecture with a modern tech stack.
 
 This is a greenfield project, low-risk (no business revenue or existing clients impacted) and potentially medium/high-reward (from the learning, and from potential interest in the practical applications of this beta).
 
@@ -35,6 +35,7 @@ On the backend (the NoSQL data store and related code, the lambdas and the API g
 
 On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code and tests, and I created about 5% of the code and tests. Several prompts directed low-level details of the implementation, leaving the final responsibility of writing and changing the code to the LLMs. For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
 
+### What is not in this Beta, what this Beta is ready for
 To bring the current Beta up to the level of an enterprise application, only a few minor changes are needed:
 - strengthening some aspects of the security configuration, with a more fine-grained control
 - adding more run-time error management with retries for key operations
@@ -42,7 +43,7 @@ To bring the current Beta up to the level of an enterprise application, only a f
 - replacing in the FrontEnd some defensive programming code produced by the LLMs with some less forgiving error handling
 - with more users, richer features and therefore a higher volume of data and traffic, asynchronous queues should be introduced 
 
-## What I’ve learned so far coding with an AI-agent AKA genie
+## What I’ve learned coding with an AI-agent AKA genie
 This beta is a greenfield project, potentially low-risk and high-reward, that demanded a high level of control over the features and a diligent review of internal quality. In this context:
 - I've documented my key learnings from this; the link is coming soon
 -  I've shared some of the commands and context I used to guide the AI, which you can see here: [MyAI-AgentCustomRules.md](./Beta/MyAI-AgentCustomRules.md)
@@ -56,7 +57,7 @@ These questions can be applied to various scenarios that may differ from this be
 - Throw away prototype, or for
 - Long living and/or legacy product codebase maintenance and evolution.
 
-## The Beta live. Try it!
+## The Beta is live. Give it a try!
 - [https://doxsj8lfqq7dm.cloudfront.net/](https://doxsj8lfqq7dm.cloudfront.net/)
 
 ## The latest Beta key info
