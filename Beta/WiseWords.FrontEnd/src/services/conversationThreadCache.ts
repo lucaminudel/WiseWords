@@ -254,6 +254,59 @@ class ConversationThreadCache {
       };
     }
   }
+
+  /**
+   * Updates conversation posts while preserving the original lastSaved timestamp.
+   * This prevents new posts from artificially "freshening" old conversation data.
+   * @param conversationId - The conversation ID to update
+   * @param posts - The updated posts data
+   */
+  public updatePostsPreservingAge(conversationId: string, posts: Post[]): void {
+    try {
+      // Get original metadata before updating
+      const originalMetadata = this.getCacheMetadata(conversationId);
+      
+      // Update cache with new data (this will set a new timestamp)
+      this.set(conversationId, posts);
+      
+      // Restore original timestamp if we had cached data before
+      if (originalMetadata) {
+        this._restoreOriginalTimestamp(conversationId, originalMetadata.lastSaved, originalMetadata.version);
+      }
+    } catch (error) {
+      console.error(`Error updating conversation thread cache while preserving age for ${conversationId}:`, error);
+      // Fallback to regular set if preservation fails
+      this.set(conversationId, posts);
+    }
+  }
+
+  /**
+   * Private helper to restore the original lastSaved timestamp for a specific conversation
+   * @param conversationId - The conversation ID
+   * @param originalLastSaved - The original timestamp to restore
+   * @param originalVersion - The original version to verify compatibility
+   */
+  private _restoreOriginalTimestamp(conversationId: string, originalLastSaved: number, originalVersion: number): void {
+    try {
+      const metadataKey = METADATA_KEY;
+      const allMetadata = localStorage.getItem(metadataKey);
+      
+      if (allMetadata) {
+        const metadata: CacheMetadata = JSON.parse(allMetadata);
+        const cacheKey = this.getCacheKey(conversationId);
+        const entry = metadata[cacheKey];
+        
+        // Only restore if entry exists and versions match
+        if (entry && entry.version === originalVersion) {
+          entry.lastSaved = originalLastSaved;
+          localStorage.setItem(metadataKey, JSON.stringify(metadata));
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to restore original cache timestamp for ${conversationId}:`, error);
+      // Don't throw - this is a non-critical optimization
+    }
+  }
 }
 
 export const conversationThreadCache = new ConversationThreadCache();

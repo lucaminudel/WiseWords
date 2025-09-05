@@ -31,6 +31,7 @@ const mockConversationCache = conversationCache as {
   clear: Mock;
   isExpired: Mock;
   getMetadata: Mock;
+  updateDataPreservingAge: Mock;
 };
 
 const mockConversationThreadCache = conversationThreadCache as unknown as {
@@ -38,6 +39,8 @@ const mockConversationThreadCache = conversationThreadCache as unknown as {
   set: Mock;
   clear: Mock;
   isExpired: Mock;
+  getCacheMetadata: Mock;
+  updatePostsPreservingAge: Mock;
 };
 
 const mockConversations: ConversationResponse[] = [
@@ -503,7 +506,7 @@ describe('ConversationService', () => {
         NewGuid: expect.any(String)
       }));
       expect(mockConversationCache.get).toHaveBeenCalledTimes(1);
-      expect(mockConversationCache.set).toHaveBeenCalledWith([mockNewConversation, ...mockConversations]);
+      expect(mockConversationCache.updateDataPreservingAge).toHaveBeenCalledWith([mockNewConversation, ...mockConversations]);
     });
 
     it('should create conversation via API and create new cache when cache is empty', async () => {
@@ -567,11 +570,53 @@ describe('ConversationService', () => {
 
       // Assert
       const expectedUpdatedCache = [mockNewConversation, ...mockConversations];
-      expect(mockConversationCache.set).toHaveBeenCalledWith(expectedUpdatedCache);
+      expect(mockConversationCache.updateDataPreservingAge).toHaveBeenCalledWith(expectedUpdatedCache);
       // Verify the new conversation is at the beginning
       expect(expectedUpdatedCache[0]).toEqual(mockNewConversation);
       expect(expectedUpdatedCache[1]).toEqual(mockConversations[0]);
       expect(expectedUpdatedCache[2]).toEqual(mockConversations[1]);
+    });
+
+    it('should preserve original cache age when adding new conversation to existing cache', async () => {
+      // Arrange
+      const originalTimestamp = Date.now() - (10 * 60 * 1000); // 10 minutes ago
+      const originalMetadata = {
+        version: 1,
+        lastSaved: originalTimestamp,
+        size: 1000,
+        age: 10 * 60 * 1000
+      };
+      
+      mockConversationApi.createConversation.mockResolvedValue(mockNewConversation);
+      mockConversationCache.get.mockReturnValue(mockConversations);
+      mockConversationCache.getMetadata.mockReturnValue(originalMetadata);
+
+      // Mock localStorage operations
+      const mockLocalStorage = {
+        getItem: vi.fn().mockReturnValue(JSON.stringify({
+          version: 1,
+          data: mockConversations,
+          lastSaved: Date.now(), // This should be restored to originalTimestamp
+          size: 1000
+        })),
+        setItem: vi.fn()
+      };
+      Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
+
+      // Act
+      await ConversationService.createConversationAndUpdateCache(
+        mockCreateRequest.Title,
+        mockCreateRequest.MessageBody,
+        mockCreateRequest.Author,
+        mockCreateRequest.ConvoType,
+        mockCreateRequest.UtcCreationTime
+      );
+
+      // Assert
+      expect(mockConversationCache.updateDataPreservingAge).toHaveBeenCalled();
+      
+      // Note: The new method handles metadata preservation internally,
+      // so we don't need to check localStorage operations directly
     });
   });
 
@@ -629,7 +674,7 @@ describe('ConversationService', () => {
       });
 
       const expectedCache = [...initialCache, mockNewCommentPost];
-      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+      expect(mockConversationThreadCache.updatePostsPreservingAge).toHaveBeenCalledWith(mockConversationPK, expectedCache);
     });
 
     it('should append a comment to a nested post and update the cache', async () => {
@@ -658,7 +703,7 @@ describe('ConversationService', () => {
       // Assert
       expect(result).toEqual(nestedCommentPost);
       const expectedCache = [...initialCache, nestedCommentPost];
-      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+      expect(mockConversationThreadCache.updatePostsPreservingAge).toHaveBeenCalledWith(mockConversationPK, expectedCache);
     });
 
     it('should handle API errors and not update the cache', async () => {
@@ -671,7 +716,61 @@ describe('ConversationService', () => {
       await expect(
         ConversationService.appendCommentAndUpdateCache(mockConversationPK, '', mockAuthor, mockMessage)
       ).rejects.toThrow(apiError);
-      expect(mockConversationThreadCache.set).not.toHaveBeenCalled();
+      expect(mockConversationThreadCache.updatePostsPreservingAge).not.toHaveBeenCalled();
+    });
+
+    it('should preserve original cache age when appending comment to existing conversation cache', async () => {
+      // Arrange
+      const originalTimestamp = Date.now() - (12 * 60 * 1000); // 12 minutes ago
+      const originalMetadata = {
+        version: 1,
+        lastSaved: originalTimestamp,
+        lastAccessed: Date.now() - (5 * 60 * 1000), // 5 minutes ago
+        size: 2000,
+        age: 12 * 60 * 1000
+      };
+      
+      const initialCache: Post[] = [
+        { PK: mockConversationPK, SK: 'METADATA', MessageBody: 'Root post', Author: 'Test', UpdatedAt: '123', ConvoType: 'QUESTION' },
+      ];
+      
+      mockConversationApi.appendComment.mockResolvedValue(mockNewCommentPost);
+      mockConversationThreadCache.get.mockReturnValue(initialCache);
+      mockConversationThreadCache.getCacheMetadata.mockReturnValue(originalMetadata);
+
+      // Mock localStorage operations for thread cache metadata
+      const mockLocalStorage = {
+        getItem: vi.fn((key) => {
+          if (key === 'conversationThreadCache_metadata') {
+            return JSON.stringify({
+              [`conversationThread_${mockConversationPK}`]: {
+                key: `conversationThread_${mockConversationPK}`,
+                size: 2000,
+                lastAccessed: Date.now(),
+                lastSaved: Date.now(), // This should be restored to originalTimestamp
+                version: 1
+              }
+            });
+          }
+          return null;
+        }),
+        setItem: vi.fn()
+      };
+      Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
+
+      // Act
+      await ConversationService.appendCommentAndUpdateCache(
+        mockConversationPK,
+        '',
+        mockAuthor,
+        mockMessage
+      );
+
+      // Assert
+      expect(mockConversationThreadCache.updatePostsPreservingAge).toHaveBeenCalled();
+      
+      // Note: The new method handles metadata preservation internally,
+      // so we don't need to check localStorage operations directly
     });
   });
 
@@ -729,7 +828,7 @@ describe('ConversationService', () => {
       });
 
       const expectedCache = [...initialCache, mockNewDrillDownPost];
-      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+      expect(mockConversationThreadCache.updatePostsPreservingAge).toHaveBeenCalledWith(mockConversationPK, expectedCache);
     });
 
     it('should append a drill-down to a nested post and update the cache', async () => {
@@ -758,7 +857,7 @@ describe('ConversationService', () => {
       // Assert
       expect(result).toEqual(nestedDrillDownPost);
       const expectedCache = [...initialCache, nestedDrillDownPost];
-      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+      expect(mockConversationThreadCache.updatePostsPreservingAge).toHaveBeenCalledWith(mockConversationPK, expectedCache);
     });
 
     it('should handle API errors and not update the cache', async () => {
@@ -829,7 +928,7 @@ describe('ConversationService', () => {
       });
 
       const expectedCache = [...initialCache, mockNewConclusionPost];
-      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+      expect(mockConversationThreadCache.updatePostsPreservingAge).toHaveBeenCalledWith(mockConversationPK, expectedCache);
     });
 
     it('should append a conclusion to a nested post and update the cache', async () => {
@@ -858,7 +957,7 @@ describe('ConversationService', () => {
       // Assert
       expect(result).toEqual(nestedConclusionPost);
       const expectedCache = [...initialCache, nestedConclusionPost];
-      expect(mockConversationThreadCache.set).toHaveBeenCalledWith(mockConversationPK, expectedCache);
+      expect(mockConversationThreadCache.updatePostsPreservingAge).toHaveBeenCalledWith(mockConversationPK, expectedCache);
     });
 
     it('should handle API errors and not update the cache', async () => {

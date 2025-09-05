@@ -115,5 +115,52 @@ export const conversationCache = {
     } catch (error) {
       return null;
     }
+  },
+
+  /**
+   * Updates cache data while preserving the original lastSaved timestamp.
+   * This prevents new content from artificially "freshening" old cache data.
+   * @param {ConversationResponse[]} conversations - The updated conversation list
+   */
+  updateDataPreservingAge: (conversations: ConversationResponse[]): void => {
+    try {
+      // Get original metadata before updating
+      const originalMetadata = conversationCache.getMetadata();
+      
+      // Update cache with new data (this will set a new timestamp)
+      conversationCache.set(conversations);
+      
+      // Restore original timestamp if we had cached data before
+      if (originalMetadata) {
+        conversationCache._restoreOriginalTimestamp(originalMetadata.lastSaved, originalMetadata.version);
+      }
+    } catch (error) {
+      console.error('Error updating conversation cache while preserving age:', error);
+      // Fallback to regular set if preservation fails
+      conversationCache.set(conversations);
+    }
+  },
+
+  /**
+   * Private helper to restore the original lastSaved timestamp
+   * @param {number} originalLastSaved - The original timestamp to restore
+   * @param {number} originalVersion - The original version to verify compatibility
+   */
+  _restoreOriginalTimestamp: (originalLastSaved: number, originalVersion: number): void => {
+    try {
+      const currentEntry = localStorage.getItem(CACHE_KEY);
+      if (currentEntry) {
+        const entry: CacheEntry = JSON.parse(currentEntry);
+        
+        // Only restore if versions match (ensure we're modifying the right data)
+        if (entry.version === originalVersion) {
+          entry.lastSaved = originalLastSaved;
+          localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore original cache timestamp:', error);
+      // Don't throw - this is a non-critical optimization
+    }
   }
 };

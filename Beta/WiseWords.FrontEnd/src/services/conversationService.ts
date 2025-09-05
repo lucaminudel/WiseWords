@@ -116,19 +116,19 @@ export class ConversationService {
         
         const newConversation = await conversationApi.createConversation(createConversationRequest);
         
-        // Update cache with the new conversation
+        // Update cache with the new conversation (preserve original cache age)
         const cachedConversations = conversationsCache.get();
         if (cachedConversations) {
-            // Add the new conversation to the existing cache
+            // Add the new conversation to the existing cache, preserving original cache age
             const updatedConversations = [newConversation, ...cachedConversations];
             try {
-                conversationsCache.set(updatedConversations);
+                conversationsCache.updateDataPreservingAge(updatedConversations);
             } catch (err) {
                 // Clear cache to ensure fresh data on next load
                 conversationsCache.clear();
             }
         } else {
-            // If no cache exists, create one with just the new conversation
+            // If no cache exists, create one with just the new conversation (fresh timestamp is correct)
             conversationsCache.set([newConversation]);
         }
         
@@ -304,7 +304,7 @@ export class ConversationService {
 
         const conversationId: string = request.ConversationPK;
 
-        // Update cache with the new post
+        // Update cache with the new post (preserve original cache age)
         const cachedPosts = conversationThreadCache.get(conversationId);
 
         const conversationRootCachedItem = cachedPosts?.find((item: Post) => item.SK === 'METADATA');
@@ -319,7 +319,8 @@ export class ConversationService {
         const updatedCacheData = [conversationRootCachedItem, ...updatedPosts];
 
         try {
-            conversationThreadCache.set(conversationId, updatedCacheData);
+            // Update cache with new post while preserving original cache age
+            conversationThreadCache.updatePostsPreservingAge(conversationId, updatedCacheData);
         } catch (err) {
             // Clear cache to ensure fresh data on next load
             conversationThreadCache.clear();
