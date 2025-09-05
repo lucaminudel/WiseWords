@@ -18,7 +18,7 @@ This is a greenfield project, low-risk (no business revenue or existing clients 
 For all these reasons, I used the AI-assistants exercising a  **high level of control** of the features produced, the **What**, and a **high level of attention** in the review of the code and the solutions produced by the LLMs, the **How**. Therefore, in this project, I have adopted a Chat-Oriented Programming (ChOP) approach that emphasises high control over features, **the What**, and diligent review of code quality, **the How**.
 
 I have invested about a month of part-time, flexible schedule work to explore the latest technologies with some Spikes/POC.
-I have invested a similar amount of time in implementing this beta. Half of this implementation time was dedicated to putting to test the new learning and to refreshing some skills. So under normal circumstances, this beta implementation time with LLMs would have taken approximately two weeks. This is more or less the size of the effort.
+I have invested a similar amount of time in implementing this beta. Half of this implementation time was dedicated to putting to the test the new learning and refreshing some skills. So under normal circumstances, this beta implementation time with LLMs would have taken approximately two weeks. This is more or less the size of the effort.
 
 After exploring the various tech/system-design/architecture options, possibilities and trade-offs with the help of the LLMs, the available documentation and training, I personally made all the final decisions in relation to the 
 - production infrastructure and system architecture (AWS)
@@ -36,12 +36,12 @@ On the backend (the NoSQL data store and related code, the lambdas and the API g
 On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code and tests, and I created about 5% of the code and tests. Several prompts directed low-level details of the implementation, leaving the final responsibility of writing and changing the code to the LLMs. For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
 
 ### What is not in this Beta, what this Beta is ready for
-To bring the current Beta up to the level of an enterprise application, only a few minor changes are needed:
+To bring the current Beta up to the level of an enterprise application, only a few gradual, evolutionary changes are needed:
 - strengthening some aspects of the security configuration, with a more fine-grained control
-- adding more run-time error management with retries for key operations
-- making some additional configuration and some code to enable the elastic scalability of the serverless architecture.
+- adding for a few key operations explicit run-time error management with retries 
+- making some additional configuration and adding some code to enable the elastic scalability of the serverless architecture.
 - replacing in the FrontEnd some defensive programming code produced by the LLMs with some less forgiving error handling
-- with more users, richer features and therefore a higher volume of data and traffic, asynchronous queues should be introduced 
+- with many more users, richer features and therefore a higher volume of data and traffic, asynchronous queues should be introduced 
 
 ## What I’ve learned coding with an AI-agent AKA genie
 This beta is a greenfield project, potentially low-risk and high-reward, that demanded a high level of control over the features and a diligent review of internal quality. In this context:
@@ -60,7 +60,7 @@ These questions can be applied to various scenarios that may differ from this be
 ## The Beta is live. Give it a try!
 - [https://doxsj8lfqq7dm.cloudfront.net/](https://doxsj8lfqq7dm.cloudfront.net/)
 
-## The latest Beta key info
+## Internal implementation details of this Beta
 - Here is key info on the implementation and its progress of *Wise Words*: follow the link [(link)](Beta/Readme.md) 
 
 ## Initial Specs: the anatomy of a Wise Words conversation
