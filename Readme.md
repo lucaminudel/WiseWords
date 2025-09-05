@@ -35,7 +35,7 @@ On the backend (the NoSQL data store and related code, the lambdas and the API g
 
 On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code and tests, and I created about 5% of the code and tests. Several prompts directed low-level details of the implementation, leaving the final responsibility of writing and changing the code to the LLMs. For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
 
-### What is not in this Beta, what this Beta is ready for
+### What is not in this Beta, what is this Beta ready for
 To bring the current Beta up to the level of an enterprise application, only a few gradual, evolutionary changes are needed:
 - strengthening some aspects of the security configuration, with a more fine-grained control
 - adding for a few key operations explicit run-time error management with retries 
