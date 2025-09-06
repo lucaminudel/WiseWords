@@ -35,12 +35,13 @@ On the backend (the NoSQL data store and related code, the lambdas and the API g
 
 On the frontend (React, TypeScript, CSS), the LLMs created about 95% of the code and tests, and I created about 5% of the code and tests. Several prompts directed low-level details of the implementation, leaving the final responsibility of writing and changing the code to the LLMs. For the configuration scripts of AWS, DynamoDB, and the local dev environment, the code written by the LLM was even closer to 100%.
 
-### What is not in this Beta, what is this Beta ready for
+### What is this Beta ready for
+The current codebase is a solid foundation to add many new features with a limited effort.
 To bring the current Beta up to the level of an enterprise application, only a few gradual, evolutionary changes are needed:
 - strengthening some aspects of the security configuration, with a more fine-grained control
-- adding for a few key operations explicit run-time error management with retries 
-- making some additional configuration and adding some code to enable the elastic scalability of the serverless architecture.
-- replacing in the FrontEnd some defensive programming code produced by the LLMs with some less forgiving error handling
+- adding, for a few operations, explicit run-time error management with retries 
+- adding some additional configuration and some code to enable the elastic scalability of the serverless architecture.
+- replacing, in the FrontEnd, some defensive programming code produced by the LLMs with some less forgiving error handling
 - with many more users, richer features and therefore a higher volume of data and traffic, asynchronous queues should be introduced 
 
 ## What I’ve learned coding with an AI-agent AKA genie
