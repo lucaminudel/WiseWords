@@ -46,7 +46,10 @@ To bring the current Beta up to the level of an enterprise application, only a f
 
 ## What I’ve learned coding with an AI-agent AKA genie
 This beta is a greenfield project, potentially low-risk and high-reward, that demanded a high level of control over the features and a diligent review of internal quality. In this context:
-- I've documented my key learnings from this; the link is coming soon
+- I've documented my key learnings from this experience;
+  - [What I’ve learned so far coding with an LLM genie](https://www.smharter.com/blog/2025/08/18/what-ive-learned-so-far-coding-with-an-llm-genie/)
+  - [Organisational strategy for AI-Assisted coding adoption](https://www.smharter.com/blog/2025/08/25/organisational-strategy-for-ai-assisted-coding-adoption/)
+  - [AI-assisted coding: how to ensure real productivity gains?](https://www.smharter.com/blog/2025/09/01/ai-assisted-coding-how-to-ensure-real-productivity-gains/)
 -  I've shared some of the commands and context I used to guide the AI, which you can see here: [MyAI-AgentCustomRules.md](./Beta/MyAI-AgentCustomRules.md)
 
 When considering what worked well, it's essential to remember that all of this is context-specific. The value comes from asking follow-up questions like:
