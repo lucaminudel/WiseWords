@@ -212,7 +212,7 @@ curl -i -X DELETE http://localhost:3000/conversations/CONVO%2381b481e0-c1fe-42fb
 ```
 ## Memo, all AI assistants' default command files
 - ~/.gemini/GEMINI.md
+- ~/.codeium/windsurf/memories/global_rules.md
 - ~/Code/WiseWords/Beta/.agent.md
 - ~/Code/WiseWords/Beta/.github/copilot-instructions.md
-- ~/.codeium/windsurf/memories/global_rules.md
 - ~/Code/WiseWords/Beta/.amazonq/rules/agent.md
