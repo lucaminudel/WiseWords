@@ -130,26 +130,26 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
                 throw new ArgumentNullException($"{nameof(cfg.ApiBaseUrl)} configuration value cannot be null.");
 
             if (false == Uri.IsWellFormedUriString(cfg.ApiBaseUrl, UriKind.Absolute))
-                throw new ArgumentNullException($"{nameof(cfg.ApiBaseUrl)} configuration value nned to be a well formed Url.");
+                throw new ArgumentNullException($"{nameof(cfg.ApiBaseUrl)} configuration value need to be a well formed Url ('{cfg.ApiBaseUrl}').");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalUrl, UriKind.Absolute))
-                throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalUrl)} configuration value nned to be either empty or a well formed Url.");
+                throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalUrl)} configuration value nned to be either empty or a well formed Url. But is: '{cfg.DynamoDbServiceLocalUrl}'.");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalContainerUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalContainerUrl, UriKind.Absolute))
-                throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalContainerUrl)} configuration value need to be either empty or a well formed Url.");
+                throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalContainerUrl)} configuration value need to be either empty or a well formed Url. But is: '{cfg.DynamoDbServiceLocalContainerUrl}'.");
 
             if (!string.IsNullOrEmpty(cfg.AWS.Region) && !Amazon.RegionEndpoint.EnumerableAllRegions.Any(region =>
                  region.SystemName.Equals(cfg.AWS.Region, StringComparison.OrdinalIgnoreCase)))
-                throw new ArgumentException($"{nameof(cfg.AWS.Region)} configuration value must be empty or valid AWS Region.");
+                throw new ArgumentException($"{nameof(cfg.AWS.Region)} configuration value must be empty or valid AWS Region. But is: '{cfg.AWS.Region}'.");
 
             if (string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && string.IsNullOrEmpty(cfg.AWS.Region))
                 throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.AWS.Region)} cannot be both emmpty.");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && !string.IsNullOrEmpty(cfg.AWS.Region))
-                throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.AWS.Region)} cannot be both specified.");
+                throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.AWS.Region)} cannot be both specified. But are: '{cfg.DynamoDbServiceLocalUrl}' and '{cfg.AWS.Region}'.");
 
             if (string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) != string.IsNullOrEmpty(cfg.DynamoDbServiceLocalContainerUrl))
-                throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.DynamoDbServiceLocalContainerUrl)} cannot be both empty or botth specified.");
+                throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.DynamoDbServiceLocalContainerUrl)} cannot be both empty or botth specified. But are: '{cfg.DynamoDbServiceLocalUrl}' and '{cfg.DynamoDbServiceLocalContainerUrl}'.");
         }
 
         public Uri? ApiBaseUrl { get; internal set; } = null;
