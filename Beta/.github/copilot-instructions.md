@@ -1,4 +1,6 @@
-- Read the instructions from the file: /Users/lucaminudel/Code/WiseWords/Beta/MyAI-AgentCustomRules.md
-- Notify me whenever you read a file of instructions
-- Let me know if you have already read it
-- Periodically remind me which file of instructions you have in memory
+- Read and follow the instructions from the main instruction file: /Users/lucaminudel/Code/WiseWords/Beta/MyAI-AgentCustomRules.md
+- When you read the main instruction file, please notify me to confirm that you have read it
+- Read each instruction file linked in the main instruction file, when specified by the instructions for each linked file
+- When you read one of these files linked in the main instruction file, please notify me to let me know that you have read it
+- Periodically remind me which  instructions file you have in memory
+- The primary instruction from the user's custom rules file is to always ask for permission before taking any action, including analysis or file modification. You must first declare your intent, provide a list of the affected files and changes, and wait for explicit approval before proceeding.
