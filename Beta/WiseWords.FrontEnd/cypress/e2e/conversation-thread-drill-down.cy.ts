@@ -6,6 +6,14 @@ describe('Conversation Thread Drill Down Workflow', () => {
     cy.wait('@getConversationPosts');
   });
 
+  afterEach(() => {
+    cy.get('body').then(($body) => {
+      if ($body.find('#logout-button').length > 0) {
+        cy.get('#logout-button').click();
+      }
+    });
+  });
+
   context('Drilling down on the Root Conversation Post', () => {
     it('should post a new drill down on the Conversation root post successfully', () => {
       const newDrillDown = {
@@ -13,18 +21,22 @@ describe('Conversation Thread Drill Down Workflow', () => {
         message: 'This is a brand new drill down on the root post.'
       };
 
-      // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newDrillDown.author);
+      });
+
+      // 2. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
       cy.get('#drill-down-button-METADATA').click();
 
-      // 2. Verify the drill down form appears with the correct indentation (Level 1)
+      // 3. Verify the drill down form appears with the correct indentation (Level 1)
       // The form is attached to the root post, which has SK 'METADATA'
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
       cy.get(formSelector).should('be.visible');
       cy.get(formSelector).should('have.css', 'margin-left', '48px');
 
-      // 3. Fill out the author and message fields
+      // 4. Fill out the message field
       cy.get(formSelector).find('textarea').type(newDrillDown.message);
-      cy.get(formSelector).find('input[type="text"]').type(newDrillDown.author);
 
       // 4. Set up intercept for the API call and click "Post"
       cy.intercept('POST', '/conversations/drilldown', {
@@ -61,30 +73,33 @@ describe('Conversation Thread Drill Down Workflow', () => {
     });
 
     it('should cancel posting a new drill down', () => {
-      // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('A. User');
+      });
+
+      // 2. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
       cy.get('#drill-down-button-METADATA').click();
 
-      // 2. Get the form ID and verify it's visible
+      // 3. Get the form ID and verify it's visible
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
       cy.get(formSelector).should('be.visible');
 
-      // 3. Fill out the form
+      // 4. Fill out the form
       cy.get(formSelector).find('textarea').type('This drill down should be cancelled.');
-      cy.get(formSelector).find('input[type="text"]').type('A. User');
 
-      // 4. Click the "Cancel" button
+      // 5. Click the "Cancel" button
       cy.get(formSelector).contains('button', 'Cancel').click();
 
-      // 5. Assert that the form is now hidden
+      // 6. Assert that the form is now hidden
       cy.get(formSelector).should('not.exist');
 
-      // 6. Assert that no new drill down was added to the thread
+      // 7. Assert that no new drill down was added to the thread
       cy.contains('[data-testid="post-container"]', 'This drill down should be cancelled.').should('not.exist');
 
-      // 7. Re-open the form and assert that it is empty
+      // 8. Re-open the form and assert that it is empty
       cy.get('#drill-down-button-METADATA').click();
       cy.get(formSelector).find('textarea').should('have.value', '');
-      cy.get(formSelector).find('input[type="text"]').should('have.value', '');
     });
 
     it('should display an error message and keep form content on API error', () => {
@@ -93,36 +108,39 @@ describe('Conversation Thread Drill Down Workflow', () => {
         message: 'This drill down should fail to post.'
       };
 
-      // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newDrillDown.author);
+      });
+
+      // 2. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
       cy.get('#drill-down-button-METADATA').click();
 
-      // 2. Get the form ID and verify it's visible
+      // 3. Get the form ID and verify it's visible
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
       cy.get(formSelector).should('be.visible');
 
-      // 3. Fill out the form
+      // 4. Fill out the form
       cy.get(formSelector).find('textarea').type(newDrillDown.message);
-      cy.get(formSelector).find('input[type="text"]').type(newDrillDown.author);
 
-      // 4. Set up intercept for the API call to return an error
+      // 5. Set up intercept for the API call to return an error
       cy.intercept('POST', '/conversations/drilldown', {
         statusCode: 500,
         body: { error: 'Internal Server Error' }
       }).as('postDrillDownError');
 
-      // 5. Click the "Post" button
+      // 6. Click the "Post" button
       cy.get(formSelector).contains('button', 'Post').click();
 
-      // 6. Assert that the API call was made
+      // 7. Assert that the API call was made
       cy.wait('@postDrillDownError');
 
-      // 7. Assert that a user-friendly error message is displayed within the form
+      // 8. Assert that a user-friendly error message is displayed within the form
       cy.get(formSelector).contains('Failed to post drilldown.').should('be.visible');
 
-      // 8. Assert that the form remains visible and its content is preserved
+      // 9. Assert that the form remains visible and its content is preserved
       cy.get(formSelector).should('be.visible');
       cy.get(formSelector).find('textarea').should('have.value', newDrillDown.message);
-      cy.get(formSelector).find('input[type="text"]').should('have.value', newDrillDown.author);
     });
   });
 
@@ -135,18 +153,22 @@ describe('Conversation Thread Drill Down Workflow', () => {
       const parentPostText = 'Nested sub-question';
       const parentPostSK = '#DD#1#DD#1';
 
-      // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the nested drill-down post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newDrillDown.author);
+      });
+
+      // 2. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the nested drill-down post
       cy.get(`[id="drill-down-button-${parentPostSK}"]`).click();
 
-      // 2. Verify the drill down form appears with the correct, deeper indentation
+      // 3. Verify the drill down form appears with the correct, deeper indentation
       const formSelector = `[data-testid="drilldown-form-${parentPostSK}"]`;
       
       cy.get(formSelector).should('be.visible');
       cy.get(formSelector).should('have.css', 'margin-left', '144px'); // Depth 2 (parent) + 1 = 3 * 48px
 
-      // 3. Fill out the form and set up the API intercept
+      // 4. Fill out the form and set up the API intercept
       cy.get(formSelector).find('textarea').type(newDrillDown.message);
-      cy.get(formSelector).find('input[type="text"]').type(newDrillDown.author);
 
       cy.intercept('POST', '/conversations/drilldown', {
         statusCode: 201,

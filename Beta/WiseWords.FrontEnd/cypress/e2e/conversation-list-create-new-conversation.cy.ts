@@ -16,6 +16,14 @@ describe('New Conversation Form - Complete Integration', () => {
     cy.wait('@getEmptyConversations');
   });
 
+  afterEach(() => {
+    cy.get('button[title="Logout"]').then(($btn) => {
+      if ($btn.is(':visible')) {
+        cy.wrap($btn).click();
+      }
+    });
+  });
+
   it('should successfully create a QUESTION conversation with all required fields', () => {
     // Mock successful conversation creation
     cy.intercept('POST', '**/conversations', {
@@ -35,6 +43,9 @@ describe('New Conversation Form - Complete Integration', () => {
     // The conversation is added directly to the cache and local state
 
     // Open the new conversation form
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('DevUser');
+    });
     cy.contains('button', 'New Conversation').click();
     cy.get('#new-conversation-form').should('be.visible');
 
@@ -42,7 +53,6 @@ describe('New Conversation Form - Complete Integration', () => {
     cy.get('select').select('QUESTION');
     cy.get('textarea[placeholder*="Provide a short summary"]').type('I\'m getting strange TypeScript compilation errors in my React project.');
     cy.get('input[placeholder*="Provide a short title"]').type('How to fix TypeScript errors?');
-    cy.get('input[placeholder="Enter your name"]').type('DevUser');
 
     // Submit the form
     cy.contains('button', 'Create').click();
@@ -97,11 +107,13 @@ describe('New Conversation Form - Complete Integration', () => {
       }
     }).as('createProblemConversation');
 
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('SysAdmin');
+    });
     cy.contains('button', 'New Conversation').click();
     cy.get('select').select('PROBLEM');
     cy.get('textarea[placeholder*="Provide a short summary"]').type('Our production database keeps timing out during peak hours.');
     cy.get('input[placeholder*="Provide a short title"]').type('Database connection issues');
-    cy.get('input[placeholder="Enter your name"]').type('SysAdmin');
     cy.contains('button', 'Create').click();
 
     cy.wait('@createProblemConversation').then((interception) => {
@@ -130,11 +142,13 @@ describe('New Conversation Form - Complete Integration', () => {
       }
     }).as('createDilemmaConversation');
 
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('TechLead');
+    });
     cy.contains('button', 'New Conversation').click();
     cy.get('select').select('DILEMMA');
     cy.get('textarea[placeholder*="Provide a short summary"]').type('We need to decide on our frontend framework for the new project.');
     cy.get('input[placeholder*="Provide a short title"]').type('Choose between React or Vue');
-    cy.get('input[placeholder="Enter your name"]').type('TechLead');
     cy.contains('button', 'Create').click();
 
     cy.wait('@createDilemmaConversation').then((interception) => {
@@ -150,6 +164,9 @@ describe('New Conversation Form - Complete Integration', () => {
   });
 
   it('should handle form validation and prevent submission with empty fields', () => {
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('TestUser');
+    });
     cy.contains('button', 'New Conversation').click();
     
     // Try to submit with empty fields
@@ -176,11 +193,13 @@ describe('New Conversation Form - Complete Integration', () => {
       }
     }).as('createConversationError');
 
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('TestUser');
+    });
     cy.contains('button', 'New Conversation').click();
     cy.get('select').select('QUESTION');
     cy.get('textarea[placeholder*="Provide a short summary"]').type('Test message');
     cy.get('input[placeholder*="Provide a short title"]').type('Test Question');
-    cy.get('input[placeholder="Enter your name"]').type('TestUser');
     cy.contains('button', 'Create').click();
 
     cy.wait('@createConversationError');
@@ -227,11 +246,13 @@ describe('New Conversation Form - Complete Integration', () => {
       }
     }).as('createConversationRegressionTest');
 
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('TestUser');
+    });
     cy.contains('button', 'New Conversation').click();
     cy.get('select').select('QUESTION');
     cy.get('textarea[placeholder*="Provide a short summary"]').type('Testing for ConvoType regression');
     cy.get('input[placeholder*="Provide a short title"]').type('Regression Test');
-    cy.get('input[placeholder="Enter your name"]').type('TestUser');
     cy.contains('button', 'Create').click();
 
     cy.wait('@createConversationRegressionTest').then((interception) => {
@@ -263,11 +284,13 @@ describe('New Conversation Form - Complete Integration', () => {
       delay: 500
     }).as('createSlowConversation');
 
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('TestUser');
+    });
     cy.contains('button', 'New Conversation').click();
     cy.get('select').select('QUESTION');
     cy.get('textarea[placeholder*="Provide a short summary"]').type('Testing slow response handling');
     cy.get('input[placeholder*="Provide a short title"]').type('Slow Response Test');
-    cy.get('input[placeholder="Enter your name"]').type('TestUser');
     
     cy.contains('button', 'Create').click();
     

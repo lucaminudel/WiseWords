@@ -33,6 +33,14 @@ describe('Conversations List Page', () => {
     cy.visit('/conversations');
   });
 
+  afterEach(() => {
+    cy.get('body').then(($body) => {
+      if ($body.find('#logout-button').length > 0) {
+        cy.get('#logout-button').click();
+      }
+    });
+  });
+
   it('should display a list of conversations and allow navigation to a thread', () => {
     // Wait for the API call to complete
     cy.wait('@getConversations');
@@ -55,6 +63,11 @@ describe('Conversations List Page', () => {
   it('should show and hide the new conversation form on button clicks', () => {
     // The form should not be visible initially
     cy.get('#new-conversation-form').should('not.exist');
+
+    // Stub the prompt before clicking the button
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('Test Author');
+    });
 
     // Click the "New Conversation" button
     cy.contains('button', 'New Conversation').click();

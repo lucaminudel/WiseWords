@@ -1,11 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthHeader() {
-  const { isAuthenticated, username, IsCognitoAuthEnabled, logout } = useAuth();
-
-  if (!IsCognitoAuthEnabled) {
-    return null; // No auth UI in local mode
-  }
+  const { isAuthenticated, username, logout } = useAuth();
 
   return (
     <div style={{ 

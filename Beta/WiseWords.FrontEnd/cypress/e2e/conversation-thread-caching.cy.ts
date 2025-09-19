@@ -18,6 +18,14 @@ describe('Conversation Thread Caching Behavior', () => {
     }).as('getConversations');
   });
 
+  afterEach(() => {
+    cy.get('body').then(($body) => {
+      if ($body.find('#logout-button').length > 0) {
+        cy.get('#logout-button').click();
+      }
+    });
+  });
+
   context('Initial Load and Cache Population', () => {
     it('should fetch from API on first visit and populate the cache', () => {
       // 1. Visit the conversation page for the first time
@@ -106,10 +114,12 @@ describe('Conversation Thread Caching Behavior', () => {
       }).as('postComment');
 
       // 3. Add a new comment
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newComment.author);
+      });
       cy.get('#comment-button-METADATA').click();
       const formId = '#comment-form-METADATA';
       cy.get(formId).find('textarea').type(newComment.message);
-      cy.get(formId).find('input[type="text"]').type(newComment.author);
       cy.get(formId).contains('button', 'Post').click();
 
       // 4. Wait for the API call and verify the new comment is in the UI

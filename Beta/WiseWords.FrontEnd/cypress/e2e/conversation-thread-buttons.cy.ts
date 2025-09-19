@@ -4,6 +4,14 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
     cy.mockConversationAPI('success')
   })
 
+  afterEach(() => {
+    cy.get('body').then(($body) => {
+      if ($body.find('#logout-button').length > 0) {
+        cy.get('#logout-button').click();
+      }
+    });
+  });
+
   it('should display correct buttons for each post type regardless of nesting level', () => {
     // Visit the conversation thread
     cy.visitConversation('CONVO#123')
@@ -92,6 +100,10 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
     cy.visitConversation('CONVO#123')
     cy.wait('@getConversationPosts')
 
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('TestAuthor');
+    });
+
     // Test that buttons are clickable when not disabled
     cy.get('#comment-button-METADATA').click()
     cy.get('[data-testid="cancel-button"]').click(); // Close the form
@@ -156,6 +168,10 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
 
     // Initially, all buttons should be enabled
     checkButtonsEnabled();
+
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns('TestAuthor');
+    });
 
     // Click the comment button to open the edit form
     cy.get('#comment-button-METADATA').click();

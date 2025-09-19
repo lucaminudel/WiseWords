@@ -3,17 +3,28 @@ describe('Full E2E Live API and DB Flow', () => {
   const conversationTitle = `Live API Test: ${uniqueId}`;
   const authorName = 'TestDeleteMe';
 
+  afterEach(() => {
+    cy.get('body').then(($body) => {
+      if ($body.find('#logout-button').length > 0) {
+        cy.get('#logout-button').click();
+      }
+    });
+  });
+
   it('should create a new conversation, add posts, and verify persistence', () => {
     // Step 1: Create a new conversation
     cy.visit('/conversations');
     
+    cy.window().then((win) => {
+      cy.stub(win, 'prompt').returns(authorName);
+    });
+
     cy.contains('button', 'New Conversation').click();
     cy.get('#new-conversation-form').should('be.visible');
 
     cy.get('select').select('QUESTION');
     cy.get('textarea[placeholder*="Provide a short summary"]').type('This is a test conversation created by an automated E2E test.');
     cy.get('input[placeholder*="Provide a short title"]').type(conversationTitle);
-    cy.get('input[placeholder="Enter your name"]').type(authorName);
 
     cy.contains('button', 'Create').click();
 
@@ -33,7 +44,6 @@ describe('Full E2E Live API and DB Flow', () => {
       cy.get('#drill-down-button-METADATA').click();
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
       cy.get(formSelector).find('textarea').type(`Drill Down ${i}`);
-      cy.get(formSelector).find('input[type="text"]').type(authorName);
       cy.get(formSelector).contains('button', 'Post').click();
       cy.contains(`Drill Down ${i}`).should('be.visible');
     }
@@ -42,7 +52,6 @@ describe('Full E2E Live API and DB Flow', () => {
     cy.get('#comment-button-METADATA').click();
     const commentFormSelector = '#comment-form-METADATA';
     cy.get(commentFormSelector).find('textarea').type('Root Comment');
-    cy.get(commentFormSelector).find('input[type="text"]').type(authorName);
     cy.get(commentFormSelector).contains('button', 'Post').click();
     cy.contains('Root Comment').should('be.visible');
 
@@ -50,7 +59,6 @@ describe('Full E2E Live API and DB Flow', () => {
     cy.get('#propose-answer-button-METADATA').click();
     const conclusionFormSelector = '#conclusion-form-METADATA';
     cy.get(conclusionFormSelector).find('textarea').type('Root Conclusion');
-    cy.get(conclusionFormSelector).find('input[type="text"]').type(authorName);
     cy.get(conclusionFormSelector).contains('button', 'Post').click();
     cy.contains('Root Conclusion').should('be.visible');
 
@@ -61,7 +69,6 @@ describe('Full E2E Live API and DB Flow', () => {
     });
     
     cy.get('[data-testid^="drilldown-form-"]').find('textarea').type('Nested Drill Down');
-    cy.get('[data-testid^="drilldown-form-"]').find('input[type="text"]').type(authorName);
     cy.get('[data-testid^="drilldown-form-"]').contains('button', 'Post').click();
     cy.contains('Nested Drill Down').should('be.visible');
 
@@ -69,7 +76,6 @@ describe('Full E2E Live API and DB Flow', () => {
       cy.get('[data-testid="comment-button"]').click();
     });
     cy.get('[id^="comment-form-"]').find('textarea').type('Nested Comment');
-    cy.get('[id^="comment-form-"]').find('input[type="text"]').type(authorName);
     cy.get('[id^="comment-form-"]').contains('button', 'Post').click();
     cy.contains('Nested Comment').should('be.visible');
 
@@ -77,7 +83,6 @@ describe('Full E2E Live API and DB Flow', () => {
       cy.get('[data-testid="propose-answer-button"]').click();
     });
     cy.get('[id^="conclusion-form-"]').find('textarea').type('Nested Conclusion');
-    cy.get('[id^="conclusion-form-"]').find('input[type="text"]').type(authorName);
     cy.get('[id^="conclusion-form-"]').contains('button', 'Post').click();
     cy.contains('Nested Conclusion').should('be.visible');
 
@@ -87,7 +92,6 @@ describe('Full E2E Live API and DB Flow', () => {
       cy.get('[data-testid="drill-down-button"]').click();
     });
     cy.get('[data-testid^="drilldown-form-"]').find('textarea').type('Another Nested Drill Down');
-    cy.get('[data-testid^="drilldown-form-"]').find('input[type="text"]').type(authorName);
     cy.get('[data-testid^="drilldown-form-"]').contains('button', 'Post').click();
     cy.contains('Another Nested Drill Down').should('be.visible');
 
@@ -95,7 +99,6 @@ describe('Full E2E Live API and DB Flow', () => {
       cy.get('[data-testid="comment-button"]').click();
     });
     cy.get('[id^="comment-form-"]').find('textarea').type('Another Nested Comment');
-    cy.get('[id^="comment-form-"]').find('input[type="text"]').type(authorName);
     cy.get('[id^="comment-form-"]').contains('button', 'Post').click();
     cy.contains('Another Nested Comment').should('be.visible');
 
@@ -103,7 +106,6 @@ describe('Full E2E Live API and DB Flow', () => {
       cy.get('[data-testid="propose-answer-button"]').click();
     });
     cy.get('[id^="conclusion-form-"]').find('textarea').type('Another Nested Conclusion');
-    cy.get('[id^="conclusion-form-"]').find('input[type="text"]').type(authorName);
     cy.get('[id^="conclusion-form-"]').contains('button', 'Post').click();
     cy.contains('Another Nested Conclusion').should('be.visible');
 

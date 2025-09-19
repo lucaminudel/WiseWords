@@ -6,6 +6,14 @@ describe('Conversation Thread Commenting Workflow', () => {
     cy.wait('@getConversationPosts');
   });
 
+  afterEach(() => {
+    cy.get('body').then(($body) => {
+      if ($body.find('#logout-button').length > 0) {
+        cy.get('#logout-button').click();
+      }
+    });
+  });
+
   context('Replying to the Root Conversation Post', () => {
     it('should post a new comment successfully', () => {
       const newComment = {
@@ -13,18 +21,22 @@ describe('Conversation Thread Commenting Workflow', () => {
         message: 'This is a brand new comment on the root post.'
       };
 
-      // 1. Click the "Comment" button on the main conversation post
+      // 1. Stub the window prompt before clicking the comment button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newComment.author);
+      });
+
+      // 2. Click the "Comment" button on the main conversation post
       cy.get('#comment-button-METADATA').click();
 
-      // 2. Verify the comment form appears with the correct indentation (Level 1)
+      // 3. Verify the comment form appears with the correct indentation (Level 1)
       // The form is attached to the root post, which has SK 'METADATA'
       const formId = '#comment-form-METADATA';
       cy.get(formId).should('be.visible');
       cy.get(formId).should('have.css', 'margin-left', '48px');
 
-      // 3. Fill out the author and message fields
+      // 4. Fill out the message field
       cy.get(formId).find('textarea').type(newComment.message);
-      cy.get(formId).find('input[type="text"]').type(newComment.author);
 
       // 4. Set up intercept for the API call and click "Post"
       cy.intercept('POST', '/conversations/comment', {
@@ -61,16 +73,20 @@ describe('Conversation Thread Commenting Workflow', () => {
     });
 
     it('should cancel posting a new comment', () => {
-      // 1. Click the "Comment" button on the main conversation post
+      // 1. Stub the window prompt before clicking the comment button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('A. User');
+      });
+
+      // 2. Click the "Comment" button on the main conversation post
       cy.get('#comment-button-METADATA').click();
 
-      // 2. Get the form ID and verify it's visible
+      // 3. Get the form ID and verify it's visible
       const formId = '#comment-form-METADATA';
       cy.get(formId).should('be.visible');
 
-      // 3. Fill out the form
+      // 4. Fill out the form
       cy.get(formId).find('textarea').type('This comment should be cancelled.');
-      cy.get(formId).find('input[type="text"]').type('A. User');
 
       // 4. Click the "Cancel" button
       cy.get(formId).contains('button', 'Cancel').click();
@@ -84,7 +100,6 @@ describe('Conversation Thread Commenting Workflow', () => {
       // 7. Re-open the form and assert that it is empty
       cy.get('#comment-button-METADATA').click();
       cy.get(formId).find('textarea').should('have.value', '');
-      cy.get(formId).find('input[type="text"]').should('have.value', '');
     });
 
     it('should display an error message and keep form content on API error', () => {
@@ -93,36 +108,39 @@ describe('Conversation Thread Commenting Workflow', () => {
         message: 'This comment should fail to post.'
       };
 
-      // 1. Click the "Comment" button on the main conversation post
+      // 1. Stub the window prompt before clicking the comment button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newComment.author);
+      });
+
+      // 2. Click the "Comment" button on the main conversation post
       cy.get('#comment-button-METADATA').click();
 
-      // 2. Get the form ID and verify it's visible
+      // 3. Get the form ID and verify it's visible
       const formId = '#comment-form-METADATA';
       cy.get(formId).should('be.visible');
 
-      // 3. Fill out the form
+      // 4. Fill out the form
       cy.get(formId).find('textarea').type(newComment.message);
-      cy.get(formId).find('input[type="text"]').type(newComment.author);
 
-      // 4. Set up intercept for the API call to return an error
+      // 5. Set up intercept for the API call to return an error
       cy.intercept('POST', '/conversations/comment', {
         statusCode: 500,
         body: { error: 'Internal Server Error' }
       }).as('postCommentError');
 
-      // 5. Click the "Post" button
+      // 6. Click the "Post" button
       cy.get(formId).contains('button', 'Post').click();
 
-      // 6. Assert that the API call was made
+      // 7. Assert that the API call was made
       cy.wait('@postCommentError');
 
-      // 7. Assert that a user-friendly error message is displayed within the form
+      // 8. Assert that a user-friendly error message is displayed within the form
       cy.get(formId).contains('Failed to post comment.').should('be.visible');
 
-      // 8. Assert that the form remains visible and its content is preserved
+      // 9. Assert that the form remains visible and its content is preserved
       cy.get(formId).should('be.visible');
       cy.get(formId).find('textarea').should('have.value', newComment.message);
-      cy.get(formId).find('input[type="text"]').should('have.value', newComment.author);
     });
   });
 
@@ -135,18 +153,22 @@ describe('Conversation Thread Commenting Workflow', () => {
       const parentPostText = 'Nested sub-question';
       const parentPostSK = '#DD#1#DD#1';
 
-      // 1. Click the "Comment" button on the nested drill-down post
+      // 1. Stub the window prompt before clicking the comment button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newComment.author);
+      });
+
+      // 2. Click the "Comment" button on the nested drill-down post
       cy.get(`[id="comment-button-${parentPostSK}"]`).click();
 
-      // 2. Verify the comment form appears with the correct, deeper indentation
+      // 3. Verify the comment form appears with the correct, deeper indentation
       const formId = `[id="comment-form-${parentPostSK}"]`;
       
       cy.get(formId).should('be.visible');
       cy.get(formId).should('have.css', 'margin-left', '144px'); // Depth 2 (parent) + 1 = 3 * 48px
 
-      // 3. Fill out the form and set up the API intercept
+      // 4. Fill out the form and set up the API intercept
       cy.get(formId).find('textarea').type(newComment.message);
-      cy.get(formId).find('input[type="text"]').type(newComment.author);
 
       cy.intercept('POST', '/conversations/comment', {
         statusCode: 201,
@@ -190,21 +212,25 @@ describe('Conversation Thread Commenting Workflow', () => {
       const newReplyMessage = 'My reply to the nested comment.';
       const newReplyAuthor = 'Reply User';
 
-      // 1. Click the "Reply with quote" button on a nested comment
+      // 1. Stub the window prompt before clicking the reply button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newReplyAuthor);
+      });
+
+      // 2. Click the "Reply with quote" button on a nested comment
       cy.get(`[id="reply-quote-button-${originalCommentSK}"]`).click();
 
-      // 2. Verify the comment form appears with the correct indentation (same as original comment)
+      // 3. Verify the comment form appears with the correct indentation (same as original comment)
       const formId = `[id="comment-form-${originalCommentSK}"]`;
       cy.get(formId).should('be.visible');
       cy.get(formId).should('have.css', 'margin-left', '96px'); // Depth 2 (original comment) = 2 * 48px
 
-      // 3. Assert that the textarea is pre-filled with the correctly formatted quoted text
+      // 4. Assert that the textarea is pre-filled with the correctly formatted quoted text
       const expectedQuotedText = `> Original post by ${originalCommentAuthor}:\n> ${originalCommentMessageBody.replace(/\n/g, '\n> ')}\n\n`;
       cy.get(formId).find('textarea').should('have.value', expectedQuotedText);
 
-      // 4. Add a new message below the quote and fill out the author field
+      // 5. Add a new message below the quote
       cy.get(formId).find('textarea').type(newReplyMessage);
-      cy.get(formId).find('input[type="text"]').type(newReplyAuthor);
 
       // 5. Set up intercept for the API call and click "Post"
       cy.intercept('POST', '/conversations/comment', {

@@ -35,7 +35,6 @@ const ConversationsList: React.FC = () => {
   const [formData, setFormData] = useState({
     type: 'QUESTION',
     title: '',
-    author: isAuthenticated && authUsername ? authUsername : '',
     messageBody: ''
   });
   const formRef = useRef<HTMLDivElement>(null);
@@ -110,25 +109,6 @@ const ConversationsList: React.FC = () => {
     };
   }, []);
 
-  // Auto-show form after successful login YYY
-  /*
-  useEffect(() => {
-    const loginInitiated = authNavigationFlowSessionState.consumeLoginInitiated();
-    if (IsCognitoAuthEnabled && isAuthenticated && loginInitiated) {
-      
-      setShowNewConversationForm(true);
-      setTimeout(() => {
-        window.location.hash = '#new-conversation-form';
-        if (formRef.current) {
-          const firstInput = formRef.current.querySelector('select, input, textarea') as HTMLElement;
-          if (firstInput) {
-            firstInput.focus();
-          }
-        }
-      }, 100);
-    }
-  }, [isAuthenticated, IsCognitoAuthEnabled]);
-  */
   useEffect(() => {
     if (showNewConversationForm) {
       setTimeout(() => {
@@ -164,7 +144,7 @@ const ConversationsList: React.FC = () => {
   };
 
   const handleLoginIfNeeded = (buttonId: string): boolean => {
-    if (IsCognitoAuthEnabled && !isAuthenticated) {
+    if (!isAuthenticated) {
       const loginReturnUrl = window.location.origin + window.location.pathname;
       login(loginReturnUrl, buttonId);
       return true; // Indicates login flow was initiated
@@ -173,9 +153,9 @@ const ConversationsList: React.FC = () => {
   };
 
 
-  // Restore post-click behavior after login/callback by re-clicking the stored button id XXX
+  // Restore post-click behavior after login/callback by re-clicking the stored button id
   useEffect(() => {
-    if (!(IsCognitoAuthEnabled && isAuthenticated)) return;
+    if (!isAuthenticated) return;
 
     const loginInitiated = authNavigationFlowSessionState.consumeLoginInitiated();
     if (!loginInitiated) return;
@@ -196,7 +176,7 @@ const ConversationsList: React.FC = () => {
         clearInterval(interval);
       }
     }, 100);
-  }, [IsCognitoAuthEnabled, isAuthenticated]);
+  }, [isAuthenticated]);
 
     // Retry login when a transient auth error is signaled (e.g., duplicated auth code)
     useEffect(() => {
@@ -214,7 +194,6 @@ const ConversationsList: React.FC = () => {
     setFormData({
       type: 'QUESTION',
       title: '',
-      author: '',
       messageBody: ''
     });
     // Clear hash and scroll to top to show logo/header
@@ -230,8 +209,7 @@ const ConversationsList: React.FC = () => {
     const requiredFields: { [key: string]: string } = {
       type: formData.type.trim(),
       title: formData.title.trim(),
-      messageBody: formData.messageBody.trim(),
-      ...(isAuthenticated ? {} : { author: formData.author.trim() })
+      messageBody: formData.messageBody.trim()
     };
 
     if (Object.values(requiredFields).some(field => !field)) {
@@ -249,7 +227,7 @@ const ConversationsList: React.FC = () => {
       const newConversation = await ConversationService.createConversationAndUpdateCache(
         formData.title,
         formData.messageBody,
-        isAuthenticated && authUsername ? authUsername : formData.author,
+        authUsername!,
         convoTypeNumber
       );
 
@@ -405,7 +383,7 @@ const ConversationsList: React.FC = () => {
             </div>
           )}
           
-          {/* Form Fields - ordered: Type, Title, Message, Author */}
+          {/* Form Fields - ordered: Type, Title, Message */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Type Field */}
             <div className="form-group">
@@ -475,31 +453,6 @@ const ConversationsList: React.FC = () => {
               />
             </div>
 
-            {/* Author Field - Only show when not authenticated */}
-            {!isAuthenticated && (
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                  Author
-                </label>
-                <input 
-                  type="text"
-                  value={formData.author}
-                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                  placeholder="Enter your name"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--color-background)',
-                    color: 'var(--color-text-primary)',
-                    fontFamily: 'Orbitron, Inter, sans-serif',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-            )}
-            
             {/* Form Buttons */}
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
               <button 
@@ -549,3 +502,4 @@ const ConversationsList: React.FC = () => {
 };
 
 export default ConversationsList;
+;

@@ -54,6 +54,14 @@ describe('Conversation List - Caching Behavior', () => {
     });
   });
 
+  afterEach(() => {
+    cy.get('body').then(($body) => {
+      if ($body.find('#logout-button').length > 0) {
+        cy.get('#logout-button').click();
+      }
+    });
+  });
+
   // --- Test Cases ---
 
   context('Initial Load and Basic Caching', () => {
@@ -162,11 +170,14 @@ describe('Conversation List - Caching Behavior', () => {
       cy.visit('/conversations');
       cy.wait('@getInitial');
 
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newConversation.Author);
+      });
       cy.contains('button', 'New Conversation').click();
+
       cy.get('select').select('DILEMMA');
       cy.get('textarea[placeholder*="Provide a short summary"]').type(newConversation.MessageBody);
       cy.get('input[placeholder*="Provide a short title"]').type(newConversation.Title);
-      cy.get('input[placeholder="Enter your name"]').type(newConversation.Author);
       cy.contains('button', 'Create').click();
       cy.wait('@createConversation');
 

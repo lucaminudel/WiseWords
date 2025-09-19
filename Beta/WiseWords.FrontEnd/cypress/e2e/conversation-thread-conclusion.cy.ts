@@ -6,6 +6,14 @@ describe('Conversation Thread Conclusion Workflow', () => {
     cy.wait('@getConversationPosts');
   });
 
+  afterEach(() => {
+    cy.get('body').then(($body) => {
+      if ($body.find('#logout-button').length > 0) {
+        cy.get('#logout-button').click();
+      }
+    });
+  });
+
   context('Adding Conclusion to the Root Conversation Post', () => {
     it('should post a new conclusion on the Conversation root post successfully', () => {
       const newConclusion = {
@@ -13,18 +21,22 @@ describe('Conversation Thread Conclusion Workflow', () => {
         message: 'This is a brand new conclusion on the root post.'
       };
 
-      // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newConclusion.author);
+      });
+
+      // 2. Click the "Propose Answer/Solution/Choice" button on the main conversation post
       cy.get('#propose-answer-button-METADATA').click();
 
-      // 2. Verify the conclusion form appears with the correct indentation (Level 1)
+      // 3. Verify the conclusion form appears with the correct indentation (Level 1)
       // The form is attached to the root post, which has SK 'METADATA'
       const formId = '#conclusion-form-METADATA';
       cy.get(formId).should('be.visible');
       cy.get(formId).should('have.css', 'margin-left', '48px');
 
-      // 3. Fill out the author and message fields
+      // 4. Fill out the message field
       cy.get(formId).find('textarea').type(newConclusion.message);
-      cy.get(formId).find('input[type="text"]').type(newConclusion.author);
 
       // 4. Set up intercept for the API call and click "Post"
       cy.intercept('POST', '/conversations/conclusion', {
@@ -61,30 +73,33 @@ describe('Conversation Thread Conclusion Workflow', () => {
     });
 
     it('should cancel posting a new conclusion', () => {
-      // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('A. User');
+      });
+
+      // 2. Click the "Propose Answer/Solution/Choice" button on the main conversation post
       cy.get('#propose-answer-button-METADATA').click();
 
-      // 2. Get the form ID and verify it's visible
+      // 3. Get the form ID and verify it's visible
       const formId = '#conclusion-form-METADATA';
       cy.get(formId).should('be.visible');
 
-      // 3. Fill out the form
+      // 4. Fill out the form
       cy.get(formId).find('textarea').type('This conclusion should be cancelled.');
-      cy.get(formId).find('input[type="text"]').type('A. User');
 
-      // 4. Click the "Cancel" button
+      // 5. Click the "Cancel" button
       cy.get(formId).contains('button', 'Cancel').click();
 
-      // 5. Assert that the form is now hidden
+      // 6. Assert that the form is now hidden
       cy.get(formId).should('not.exist');
 
-      // 6. Assert that no new conclusion was added to the thread
+      // 7. Assert that no new conclusion was added to the thread
       cy.contains('[data-testid="post-container"]', 'This conclusion should be cancelled.').should('not.exist');
 
-      // 7. Re-open the form and assert that it is empty
+      // 8. Re-open the form and assert that it is empty
       cy.get('#propose-answer-button-METADATA').click();
       cy.get(formId).find('textarea').should('have.value', '');
-      cy.get(formId).find('input[type="text"]').should('have.value', '');
     });
 
     it('should display an error message and keep form content on API error', () => {
@@ -93,36 +108,39 @@ describe('Conversation Thread Conclusion Workflow', () => {
         message: 'This conclusion should fail to post.'
       };
 
-      // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newConclusion.author);
+      });
+
+      // 2. Click the "Propose Answer/Solution/Choice" button on the main conversation post
       cy.get('#propose-answer-button-METADATA').click();
 
-      // 2. Get the form ID and verify it's visible
+      // 3. Get the form ID and verify it's visible
       const formId = '#conclusion-form-METADATA';
       cy.get(formId).should('be.visible');
 
-      // 3. Fill out the form
+      // 4. Fill out the form
       cy.get(formId).find('textarea').type(newConclusion.message);
-      cy.get(formId).find('input[type="text"]').type(newConclusion.author);
 
-      // 4. Set up intercept for the API call to return an error
+      // 5. Set up intercept for the API call to return an error
       cy.intercept('POST', '/conversations/conclusion', {
         statusCode: 500,
         body: { error: 'Internal Server Error' }
       }).as('postConclusionError');
 
-      // 5. Click the "Post" button
+      // 6. Click the "Post" button
       cy.get(formId).contains('button', 'Post').click();
 
-      // 6. Assert that the API call was made
+      // 7. Assert that the API call was made
       cy.wait('@postConclusionError');
 
-      // 7. Assert that a user-friendly error message is displayed within the form
+      // 8. Assert that a user-friendly error message is displayed within the form
       cy.get(formId).contains('Failed to post conclusion.').should('be.visible');
 
-      // 8. Assert that the form remains visible and its content is preserved
+      // 9. Assert that the form remains visible and its content is preserved
       cy.get(formId).should('be.visible');
       cy.get(formId).find('textarea').should('have.value', newConclusion.message);
-      cy.get(formId).find('input[type="text"]').should('have.value', newConclusion.author);
     });
   });
 
@@ -135,18 +153,22 @@ describe('Conversation Thread Conclusion Workflow', () => {
       const parentPostText = 'Nested sub-question';
       const parentPostSK = '#DD#1#DD#1';
 
-      // 1. Click the "Propose Answer/Solution/Choice" button on the nested drill-down post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newConclusion.author);
+      });
+
+      // 2. Click the "Propose Answer/Solution/Choice" button on the nested drill-down post
       cy.get(`[id="propose-answer-button-${parentPostSK}"]`).click();
 
-      // 2. Verify the conclusion form appears with the correct, deeper indentation
+      // 3. Verify the conclusion form appears with the correct, deeper indentation
       const formId = `[id="conclusion-form-${parentPostSK}"]`;
       
       cy.get(formId).should('be.visible');
       cy.get(formId).should('have.css', 'margin-left', '144px'); // Depth 2 (parent) + 1 = 3 * 48px
 
-      // 3. Fill out the form and set up the API intercept
+      // 4. Fill out the form and set up the API intercept
       cy.get(formId).find('textarea').type(newConclusion.message);
-      cy.get(formId).find('input[type="text"]').type(newConclusion.author);
 
       cy.intercept('POST', '/conversations/conclusion', {
         statusCode: 201,
@@ -187,14 +209,18 @@ describe('Conversation Thread Conclusion Workflow', () => {
         message: 'This conclusion should persist after page reload.'
       };
 
-      // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
+      // 1. Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns(newConclusion.author);
+      });
+
+      // 2. Click the "Propose Answer/Solution/Choice" button on the main conversation post
       cy.get('#propose-answer-button-METADATA').click();
 
-      // 2. Fill out and submit the conclusion form
+      // 3. Fill out and submit the conclusion form
       const formId = '#conclusion-form-METADATA';
       cy.get(formId).should('be.visible');
       cy.get(formId).find('textarea').type(newConclusion.message);
-      cy.get(formId).find('input[type="text"]').type(newConclusion.author);
 
       // 3. Set up intercept for the API call
       cy.intercept('POST', '/conversations/conclusion', {

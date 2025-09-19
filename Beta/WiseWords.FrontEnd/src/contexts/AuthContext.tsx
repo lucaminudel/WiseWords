@@ -35,7 +35,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [userPool, setUserPool] = useState<CognitoUserPool | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   
-  const IsCognitoAuthEnabled = cognitoConfig !== null;
+  const IsCognitoAuthEnabled = cognitoConfig !== null && cognitoConfig.ClientId !== '';
 
   // Extract username from ID token
   const extractUsernameFromToken = (idToken: string): string => {
@@ -89,8 +89,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setUsername(null);
           }
         } else {
-          setIsAuthenticated(false);
-          setUsername(null);
+          // Check for mock auth
+          const mockAuth = localStorage.getItem('mockAuth');
+          if (mockAuth) {
+            try {
+              const { username } = JSON.parse(mockAuth);
+              setIsAuthenticated(true);
+              setUsername(username);
+            } catch (e) {
+              console.error('Error parsing mock auth data', e);
+            }
+          } else {
+            setIsAuthenticated(false);
+            setUsername(null);
+          }
         }
       } catch (error) {
         setIsAuthenticated(false);
@@ -189,17 +201,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const mockLogin = (username: string) => {
+    // Store mock tokens
+    const mockIdToken = btoa(JSON.stringify({
+      'cognito:username': username,
+      email: `${username}@example.com`,
+      preferred_username: username,
+      sub: `mock-${Date.now()}`,
+      exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+    }));
+
+    // Store in localStorage similar to Cognito
+    const keyPrefix = `CognitoIdentityServiceProvider.mock`;
+    localStorage.setItem(`${keyPrefix}.user.idToken`, mockIdToken);
+    localStorage.setItem(`${keyPrefix}.LastAuthUser`, username);
+    localStorage.setItem(`${keyPrefix}.${username}.idToken`, mockIdToken);
+    localStorage.setItem(`${keyPrefix}.${username}.idToken.exp`, (Math.floor(Date.now() / 1000) + 3600).toString());
+
+    // Update state
+    setIsAuthenticated(true);
+    setUsername(username);
+    
+    // Store in our custom location for consistency
+    localStorage.setItem('mockAuth', JSON.stringify({
+      idToken: mockIdToken,
+      username
+    }));
+  };
+
   const login = (loginReturnUrl: string, buttonId?: string) => {
     
-    if (!cognitoConfig) {
-      return;
-    }
-
     // Store provided return URL and optional triggering button id
     authNavigationFlowSessionState.setLoginReturnUrl(loginReturnUrl, buttonId);
 
     // Mark flow initiated (used by CallbackPage and post-login UX)
     authNavigationFlowSessionState.markLoginInitiated();
+
+    if (!cognitoConfig || !cognitoConfig.ClientId) {
+      const username = window.prompt('Enter your username for local development:');
+      if (username) {
+        mockLogin(username);
+      }
+      return;
+    }
         
     const redirectUri = encodeURIComponent(window.location.origin + '/callback');
     const cognitoUrl = `https://${cognitoConfig.Domain}/login?client_id=${cognitoConfig.ClientId}&response_type=code&scope=email+openid+profile&redirect_uri=${redirectUri}`;
@@ -226,6 +270,18 @@ function clearAuthState() {
 }
 
 const logout = (logoutReturnUrl: string) => {
+
+  // Clear mock auth if it exists
+  const mockAuth = localStorage.getItem('mockAuth');
+  if (mockAuth) {
+    localStorage.removeItem('mockAuth');
+    setIsAuthenticated(false);
+    setUsername(null);
+    
+    // Reload the page to reset the application state
+    window.location.href = logoutReturnUrl || '/';
+    return;
+  }
 
   if (!cognitoConfig) {
     return;
@@ -254,6 +310,18 @@ const logout = (logoutReturnUrl: string) => {
 };
 
   const getIdToken = async (): Promise<string | null> => {
+    // Check for mock auth first
+    const mockAuth = localStorage.getItem('mockAuth');
+    if (mockAuth) {
+      try {
+        const { idToken } = JSON.parse(mockAuth);
+        return idToken || null;
+      } catch (e) {
+        console.error('Error parsing mock auth data', e);
+        return null;
+      }
+    }
+
     if (!userPool || !isAuthenticated || !cognitoConfig) return null;
     
     return new Promise((resolve) => {

@@ -56,7 +56,6 @@ const ConversationThread: React.FC = () => {
   // --- Refactored State ---
   const [activeForm, setActiveForm] = useState<{ type: FormType; context: FormContext } | null>(null);
   const [formData, setFormData] = useState({ 
-    author: isAuthenticated && username ? username : '', 
     messageBody: '' 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -169,19 +168,19 @@ const isInitialLoadCompleted = useRef(false);
 
   const handleOpenForm = (type: FormType, context: FormContext, initialMessage: string = '') => {
     setActiveForm({ type, context });
-    setFormData({ author: '', messageBody: initialMessage });
+    setFormData({ messageBody: initialMessage });
     setFormError(null);
   };
 
   const handleCancelForm = () => {
     setActiveForm(null);
-    setFormData({ author: '', messageBody: '' });
+    setFormData({ messageBody: '' });
     setFormError(null);
   };
 
   // If login is required, store buttonId and start login. Returns true if login started.
   const handleLoginIfNeeded = (buttonId: string): boolean => {
-    if (IsCognitoAuthEnabled && !isAuthenticated) {
+    if (!isAuthenticated) {
       const loginReturnUrl = window.location.origin + window.location.pathname;
       login(loginReturnUrl, buttonId);
       return true;
@@ -191,7 +190,7 @@ const isInitialLoadCompleted = useRef(false);
 
   // Restore post-click behavior after login/callback by re-clicking the stored button id
   useEffect(() => {
-    if (!(IsCognitoAuthEnabled && isAuthenticated)) return;
+    if (!isAuthenticated) return;
 
     const loginInitiated = authNavigationFlowSessionState.consumeLoginInitiated();
     if (!loginInitiated) return;
@@ -212,7 +211,7 @@ const isInitialLoadCompleted = useRef(false);
         clearInterval(interval);
       }
     }, 100);
-  }, [IsCognitoAuthEnabled, isAuthenticated]);
+  }, [isAuthenticated]);
 
   // Retry login when a transient auth error is signaled (e.g., duplicated auth code)
   useEffect(() => {
@@ -228,8 +227,7 @@ const isInitialLoadCompleted = useRef(false);
 
     // Validate required fields
     const requiredFields: { [key: string]: string } = {
-      messageBody: formData.messageBody.trim(),
-      ...(isAuthenticated ? {} : { author: formData.author.trim() })  // Only include author in validation if not authenticated
+      messageBody: formData.messageBody.trim()
     };
 
     if (Object.values(requiredFields).some(field => !field)) {
@@ -242,19 +240,20 @@ const isInitialLoadCompleted = useRef(false);
 
     const { type, context } = activeForm;
     const { conversationPK, parentPostSK } = context;
-    const { author, messageBody } = formData;
+    const { messageBody } = formData;
 
     try {
       let newPost: Post;
+      const finalAuthor = username!.trim();
       switch (type) {
         case 'comment':
-          newPost = await ConversationService.appendCommentAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
+          newPost = await ConversationService.appendCommentAndUpdateCache(conversationPK, parentPostSK, finalAuthor, messageBody.trim());
           break;
         case 'drilldown':
-          newPost = await ConversationService.appendDrillDownAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
+          newPost = await ConversationService.appendDrillDownAndUpdateCache(conversationPK, parentPostSK, finalAuthor, messageBody.trim());
           break;
         case 'conclusion':
-          newPost = await ConversationService.appendConclusionAndUpdateCache(conversationPK, parentPostSK, author.trim(), messageBody.trim());
+          newPost = await ConversationService.appendConclusionAndUpdateCache(conversationPK, parentPostSK, finalAuthor, messageBody.trim());
           break;
       }
 
@@ -585,9 +584,7 @@ const isInitialLoadCompleted = useRef(false);
           marginLeft={`${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`}
           id={`${activeForm.type}-form-${conversation?.SK || 'main'}`}
           dataTestId={`${activeForm.type}-form-${conversation.SK}`}
-          isAuthenticated={isAuthenticated}
-          isCognitoAuthEnabled={IsCognitoAuthEnabled}
-        />
+           />
       )}
       
       {posts.length === 0 ? (
@@ -781,9 +778,7 @@ const isInitialLoadCompleted = useRef(false);
                   marginLeft={`${activeForm.type === 'comment' ? newCommentDepth * 48 : (depth + 1) * 48}px`}
                   id={`${activeForm.type}-form-${post.SK}`}
                   dataTestId={`${activeForm.type}-form-${post.SK}`}
-                  isAuthenticated={isAuthenticated}
-                  isCognitoAuthEnabled={IsCognitoAuthEnabled}
-                />
+                   />
               )}
               </React.Fragment>
             );
