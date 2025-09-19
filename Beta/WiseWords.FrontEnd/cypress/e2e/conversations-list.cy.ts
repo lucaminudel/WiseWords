@@ -82,4 +82,47 @@ describe('Conversations List Page', () => {
     // The form should be hidden again
     cy.get('#new-conversation-form').should('not.exist');
   });
+
+  it('should scroll down to the new conversation form when it appears', () => {
+    // 1. Setup: Create enough mock data to make the page scrollable.
+    const mockConversations = Array.from({ length: 30 }, (_, i) => ({
+      PK: `CONVO#test-${i}`,
+      SK: 'METADATA',
+      Title: `Test Conversation to Induce Scrolling ${i + 1}`,
+      Author: 'Tester',
+      UpdatedAt: '1690000000',
+      ConvoType: 'QUESTION'
+    }));
+
+    // Override the default intercept to use our large mock dataset.
+    cy.intercept('GET', '**/conversations?updatedAtYear=2025', {
+      statusCode: 200,
+      body: mockConversations
+    }).as('getManyConversations');
+
+    // 2. Visit the page and wait for it to be populated.
+    cy.visit('/conversations');
+    cy.wait('@getManyConversations');
+
+    // 3. Scroll the "New Conversation" button into view.
+    cy.contains('button', 'New Conversation').scrollIntoView();
+
+    // 4. Get the scroll position *before* the click.
+    cy.window().its('scrollY').then((scrollYBefore) => {
+      // Stub the prompt that may appear in the test environment's login flow.
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('Test Author');
+      });
+
+      // 5. Click the button to show the form.
+      cy.contains('button', 'New Conversation').click();
+
+      // 6. Assert the form is now visible.
+      cy.get('#new-conversation-form').should('be.visible');
+
+      // 7. Assert the page has scrolled further down.
+      // This is the key assertion that will fail due to the bug.
+      cy.window().its('scrollY').should('be.greaterThan', scrollYBefore);
+    });
+  });
 });

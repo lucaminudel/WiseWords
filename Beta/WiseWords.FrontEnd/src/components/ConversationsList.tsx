@@ -112,7 +112,7 @@ const ConversationsList: React.FC = () => {
   useEffect(() => {
     if (showNewConversationForm) {
       setTimeout(() => {
-        const formId = '#new-conversation-form';
+        const formId = 'new-conversation-form';
         const formElement = document.getElementById(formId);
         
         if (formElement) {
