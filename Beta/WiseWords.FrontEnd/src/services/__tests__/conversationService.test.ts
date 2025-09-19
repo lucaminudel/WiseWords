@@ -482,7 +482,7 @@ describe('ConversationService', () => {
         NewGuid: expect.any(String)
       }));
       expect(mockConversationCache.get).toHaveBeenCalledTimes(1);
-      expect(mockConversationCache.updateDataPreservingAge).toHaveBeenCalledWith([mockNewConversation, ...mockConversations]);
+      expect(mockConversationCache.updateDataPreservingAge).toHaveBeenCalledWith([...mockConversations, mockNewConversation]);
     });
 
     it('should create conversation via API and create new cache when cache is empty', async () => {
@@ -530,8 +530,9 @@ describe('ConversationService', () => {
       expect(mockConversationCache.set).not.toHaveBeenCalled();
     });
 
-    it('should add new conversation to the beginning of the cached list', async () => {
+    it('should add new conversation to the end of the cached list to preserve sort order', async () => {
       // Arrange
+      // The mockConversations are sorted oldest-to-newest by their UpdatedAt timestamp.
       mockConversationApi.createConversation.mockResolvedValue(mockNewConversation);
       mockConversationCache.get.mockReturnValue(mockConversations);
 
@@ -545,12 +546,12 @@ describe('ConversationService', () => {
       );
 
       // Assert
-      const expectedUpdatedCache = [mockNewConversation, ...mockConversations];
+      // The new conversation should be appended to maintain the oldest-to-newest sort order.
+      const expectedUpdatedCache = [...mockConversations, mockNewConversation];
       expect(mockConversationCache.updateDataPreservingAge).toHaveBeenCalledWith(expectedUpdatedCache);
-      // Verify the new conversation is at the beginning
-      expect(expectedUpdatedCache[0]).toEqual(mockNewConversation);
-      expect(expectedUpdatedCache[1]).toEqual(mockConversations[0]);
-      expect(expectedUpdatedCache[2]).toEqual(mockConversations[1]);
+      
+      // Verify the new conversation is at the end
+      expect(expectedUpdatedCache[expectedUpdatedCache.length - 1]).toEqual(mockNewConversation);
     });
 
     it('should preserve original cache age when adding new conversation to existing cache', async () => {

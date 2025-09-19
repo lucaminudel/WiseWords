@@ -184,8 +184,8 @@ describe('Conversation List - Caching Behavior', () => {
       cy.get('tbody tr').first().should('contain', 'New Conversation');
       cy.window().then((win) => {
         const cacheData = win.localStorage.getItem('conversationListCache');
-        const parsed = JSON.parse(cacheData);
-        expect(parsed.data[0].Title).to.equal('New Conversation');
+        const uiListData = JSON.parse(cacheData).data.reverse(); // Reverse to match UI order
+        expect(uiListData[0].Title).to.equal('New Conversation');
       });
     });
   });

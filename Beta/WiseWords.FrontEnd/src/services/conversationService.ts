@@ -119,8 +119,8 @@ export class ConversationService {
         // Update cache with the new conversation (preserve original cache age)
         const cachedConversations = conversationsCache.get();
         if (cachedConversations) {
-            // Add the new conversation to the existing cache, preserving original cache age
-            const updatedConversations = [newConversation, ...cachedConversations];
+            // Add the new conversation to the end of the existing cache to maintain oldest-to-newest order
+            const updatedConversations = [...cachedConversations, newConversation];
             try {
                 conversationsCache.updateDataPreservingAge(updatedConversations);
             } catch (err) {
