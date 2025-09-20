@@ -106,7 +106,15 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                     .Build();
                 var search = table.Query(queryConfig);
 
-                conversations = await search.GetNextSetAsync();
+                var allConversations = new List<Document>();
+                do
+                {
+                    var page = await search.GetNextSetAsync();
+                    if (page != null && page.Count > 0)
+                        allConversations.AddRange(page);
+                } while (!search.IsDone);
+
+                conversations = allConversations;
 
             });
 
@@ -142,7 +150,15 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                     .Build();
                 var search = table.Query(queryConfig);
 
-                conversationPosts = await search.GetNextSetAsync();
+                var allPosts = new List<Document>();
+                do
+                {
+                    var page = await search.GetNextSetAsync();
+                    if (page != null && page.Count > 0)
+                        allPosts.AddRange(page);
+                } while (!search.IsDone);
+
+                conversationPosts = allPosts;
             });
 
             var objectResults = conversationPosts

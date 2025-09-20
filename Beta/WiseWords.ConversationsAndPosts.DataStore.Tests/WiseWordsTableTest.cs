@@ -777,6 +777,74 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             }
         }
 
+        [Fact]
+        public async Task RetrieveConversations_PaginatesAcrossPages()
+        {
+            // Arrange: create multiple large conversations in the same year and by the same author
+            var uniqueAuthor = "PaginationAuthor-" + Guid.NewGuid();
+            var year = 1970;
+            int conversationsToCreate = 7; // Enough large items to exceed a single 1MB page
+            var created = new List<Dictionary<string, string>>();
+
+            for (int i = 0; i < conversationsToCreate; i++)
+            {
+                var guid = GetNewConversationGuid();
+                var timestamp = DateTimeOffset.Parse("1970-01-01T00:00:01Z").AddSeconds(i + 1);
+
+                var convo = await AConversation()
+                    .WithGuid(guid)
+                    .WithType(WiseWordsTable.ConvoTypeEnum.QUESTION)
+                    .WithTitle($"Paginated Conversation #{i + 1}")
+                    .WithMessageBody(new string('A', 200_000)) // ~200k chars per item, under 400KB item limit
+                    .WithAuthor(uniqueAuthor)
+                    .WithTimestamp(timestamp)
+                    .CreateAsync(_db);
+
+                created.Add(convo);
+            }
+
+            // Act
+            var retrieved = await _db.RetrieveConversations(year, uniqueAuthor);
+
+            // Assert: expect all created conversations to be returned
+            retrieved.Should().HaveCount(conversationsToCreate);
+        }
+
+        [Fact]
+        public async Task RetrieveConversationPosts_PaginatesAcrossPages()
+        {
+            // Arrange: a conversation with many large drill-down posts
+            var conversationGuid = GetNewConversationGuid();
+            var author = "PaginationPostsAuthor-" + Guid.NewGuid();
+            var conversation = await AConversation()
+                .WithGuid(conversationGuid)
+                .WithType(WiseWordsTable.ConvoTypeEnum.PROBLEM)
+                .WithTitle("Conversation With Many Posts For Pagination")
+                .WithMessageBody(new string('B', 200_000))
+                .WithAuthor(author)
+                .WithTimestamp(DateTimeOffset.Parse("1970-01-01T00:00:01Z"))
+                .CreateAsync(_db);
+
+            int postsToCreate = 7; // Enough to exceed a single 1MB page with ~200k char message bodies
+            for (int i = 0; i < postsToCreate; i++)
+            {
+                var postGuid = Guid.NewGuid();
+                await APostWithTitle()
+                    .WithGuid(postGuid)
+                    .WithAuthor(author + "-DD")
+                    .WithTitle($"DD Title {i + 1}")
+                    .WithMessageBody(new string('C', 200_000))
+                    .WithTimestamp(DateTimeOffset.Parse("1970-01-01T00:00:02Z").AddSeconds(i))
+                    .CreateDrillDownAsync(_db, conversation["PK"], conversation["SK"]);
+            }
+
+            // Act
+            var allPosts = await _db.RetrieveConversationPosts(conversation["PK"]);
+
+            // Assert: metadata + number of posts
+            allPosts.Should().HaveCount(1 + postsToCreate);
+        }
+
         public async Task DisposeAsync()
         {
 
