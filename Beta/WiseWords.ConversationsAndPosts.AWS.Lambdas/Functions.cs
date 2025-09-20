@@ -117,7 +117,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendDrillDownPost(req.ConversationPK, req.ParentPostSK, req.NewDrillDownGuid, GetAuthor(req.Author, context), req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendDrillDownPost(req.ConversationPK, req.ParentPostSK, req.NewDrillDownGuid, GetAuthor(req.Author, context), req.Title, req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendDrillDownPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 

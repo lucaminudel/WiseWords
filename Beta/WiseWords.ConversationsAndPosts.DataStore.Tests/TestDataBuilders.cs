@@ -50,13 +50,6 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
         public class PostBuilder : BaseBuilder<PostBuilder>
         {
-            public async Task<Dictionary<string, string>> CreateDrillDownAsync(WiseWordsTable db, string parentPK, string parentSK)
-            {
-                ValidateGuidIsSet();
-                var json = await db.AppendDrillDownPost(parentPK, parentSK, _guid!.Value, _author, _messageBody, _timestamp);
-                return ParseResult(json);
-            }
-
             public async Task<Dictionary<string, string>> CreateCommentAsync(WiseWordsTable db, string parentPK, string parentSK)
             {
                 ValidateGuidIsSet();
@@ -64,17 +57,31 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 return ParseResult(json);
             }
 
+        }
+
+        public class PostWithTitleBuilder : BaseBuilder<PostWithTitleBuilder>
+        {
+            protected string _title = "Test title";
+            public PostWithTitleBuilder WithTitle(string title) { _title = title; return this; }
+
+            public async Task<Dictionary<string, string>> CreateDrillDownAsync(WiseWordsTable db, string parentPK, string parentSK)
+            {
+                ValidateGuidIsSet();
+                var json = await db.AppendDrillDownPost(parentPK, parentSK, _guid!.Value, _author, _title, _messageBody, _timestamp);
+                return ParseResult(json);
+            }
+
             public async Task<Dictionary<string, string>> CreateConclusionAsync(WiseWordsTable db, string parentPK, string parentSK)
             {
                 ValidateGuidIsSet();
-                var json = await db.AppendConclusionPost(parentPK, parentSK, _guid!.Value, _author, _messageBody, _timestamp);
+                var json = await db.AppendConclusionPost(parentPK, parentSK, _guid!.Value, _author, _title, _messageBody, _timestamp);
                 return ParseResult(json);
             }
         }
 
         public class DrillDownHierarchyBuilder
         {
-            private readonly List<PostBuilder> _postBuilders = new();
+            private readonly List<PostWithTitleBuilder> _postBuilders = new();
             private Dictionary<string, string> _conversation = new();
 
             public DrillDownHierarchyBuilder WithConversation(Dictionary<string, string> conversation)
@@ -83,9 +90,9 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 return this;
             }
 
-            public DrillDownHierarchyBuilder AddLevel(Guid guid, string author, string message, DateTimeOffset timestamp)
+            public DrillDownHierarchyBuilder AddLevel(Guid guid, string author, string title, string message, DateTimeOffset timestamp)
             {
-                _postBuilders.Add(new PostBuilder().WithGuid(guid).WithAuthor(author).WithMessageBody(message).WithTimestamp(timestamp));
+                _postBuilders.Add(new PostWithTitleBuilder().WithGuid(guid).WithAuthor(author).WithTitle(title).WithMessageBody(message).WithTimestamp(timestamp));
                 return this;
             }
 
@@ -109,6 +116,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         // Factory methods for creating builders
         public static ConversationBuilder AConversation() => new();
         public static PostBuilder APost() => new();
+        public static PostWithTitleBuilder APostWithTitle() => new();
         public static DrillDownHierarchyBuilder ADrillDownHierarchy() => new();
     }
 }

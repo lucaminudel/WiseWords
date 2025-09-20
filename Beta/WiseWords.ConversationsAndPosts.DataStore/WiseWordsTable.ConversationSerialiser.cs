@@ -5,27 +5,25 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 {
     public partial class WiseWordsTable
     {
-        private class ConversationSerialiser : PostSerialiser
+        private class ConversationSerialiser : PostWithTitleSerialiser
         {
 
             public ConversationSerialiser() { }
 
-            public ConversationSerialiser(string json) : base(json)
+            public ConversationSerialiser(string json) 
             {
-                if (string.IsNullOrEmpty(json))
-                    throw new ArgumentException("The value is null or emplty, it should be a valid jsan", nameof(json));
-
-                var conversation = JsonSerializer.Deserialize<ConversationSerialiser>(json);
-                if (conversation == null)
-                    throw new ArgumentOutOfRangeException(nameof(json), "The value has been serialised to a null value, it is probaly invalid");
-
-                ConvoType = conversation.ConvoType;
-                Title = conversation.Title;
-                UpdatedAtYear = conversation.UpdatedAtYear;
+                Copy(From<ConversationSerialiser>(json)!);
             }
 
+            protected void Copy(ConversationSerialiser source)
+            {
+                base.Copy(source);
+                ConvoType = source.ConvoType;
+                UpdatedAtYear = source.UpdatedAtYear;
+            }            
+
             public string ConvoType { get; set; } = string.Empty;
-            public string Title { get; set; } = string.Empty;
+
             public int UpdatedAtYear { get; set; } = -1;
 
             public override string ToString()

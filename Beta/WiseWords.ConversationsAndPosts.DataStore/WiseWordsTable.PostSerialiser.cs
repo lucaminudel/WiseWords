@@ -14,20 +14,40 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
             public PostSerialiser(string json)
             {
+                Copy(From<PostSerialiser>(json)!);
+            }
 
+            protected T From<T>(string json)
+            {
+                JsonValidation(json);
+
+                var post = JsonSerializer.Deserialize<T>(json);
+                PostValisation<T>(post, nameof(json));
+
+                return post!;
+            }
+
+            protected void Copy(PostSerialiser source)
+            {
+                PK = source.PK;
+                SK = source.SK;
+                MessageBody = source.MessageBody;
+                Author = source.Author;
+                UpdatedAt = source.UpdatedAt;                
+            }
+
+            protected static void PostValisation<T>(T? post, string fieldName)
+            {
+                if (post == null)
+                    throw new ArgumentOutOfRangeException(fieldName, "The value has been serialised to a null value, it is probaly invalid");
+            }
+
+            protected static void JsonValidation(string json)
+            {
                 if (string.IsNullOrEmpty(json))
                     throw new ArgumentException("The value is null or emplty, it should be a valid jsan", nameof(json));
-
-                var conversation = JsonSerializer.Deserialize<PostSerialiser>(json);
-                if (conversation == null)
-                    throw new ArgumentOutOfRangeException(nameof(json), "The value has been serialised to a null value, it is probaly invalid");
-
-                PK = conversation.PK;
-                SK = conversation.SK;
-                MessageBody = conversation.MessageBody;
-                Author = conversation.Author;
-                UpdatedAt = conversation.UpdatedAt;
             }
+
 
             [DynamoDBHashKey]
             public string PK { get; set; } = string.Empty;

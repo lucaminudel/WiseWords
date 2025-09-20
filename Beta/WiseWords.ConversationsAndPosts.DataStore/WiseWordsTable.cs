@@ -38,14 +38,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
         public async Task<string> CreateNewConversation(Guid newGuid, ConvoTypeEnum convoType, string title, string messageBody, string author, DateTimeOffset utcCreationTime)
         {
+            TitleFieldValidation(title);
             CommonFieldsValidation("Conversation", newGuid, messageBody, author);
 
             if (!Enum.IsDefined(typeof(ConvoTypeEnum), convoType))
                 throw new ArgumentException("Invalid conversation type", nameof(convoType));
-
-            if (string.IsNullOrWhiteSpace(title))
-                throw new ArgumentException("Title cannot be null or empty", nameof(title));
-
 
             var utcCreationTimeUnixTimestamp = utcCreationTime.ToUnixTimeSeconds();
             var updateAt = utcCreationTimeUnixTimestamp;
@@ -179,9 +176,9 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             });
         }
 
-        public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
+        public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string title, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPostWithoutReferencialIntegrityCheck(DRILL_DOWN_POST_SK_PREFIX, "DrillDown", conversationPK, parentPostSK, newPostGuid, author, messageBody, utcCreationTime);
+            return await AppendPostWithTitleWithoutReferencialIntegrityCheck(DRILL_DOWN_POST_SK_PREFIX, "DrillDown", conversationPK, parentPostSK, newPostGuid, author, title, messageBody, utcCreationTime);
         }
 
         public async Task<string> AppendCommentPost(string conversationPK, string parentPostSK, Guid newCommentGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
@@ -189,12 +186,27 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             return await AppendPostWithoutReferencialIntegrityCheck(COMMENT_POST_SK_PREFIX, "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
         }
 
-        public async Task<string> AppendConclusionPost(string conversationPK, string parentPostSK, Guid newConclusionGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
+        public async Task<string> AppendConclusionPost(string conversationPK, string parentPostSK, Guid newConclusionGuid, string author, string title, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPostWithoutReferencialIntegrityCheck(CONCLUSION_POST_SK_PREFIX, "Conclusion", conversationPK, parentPostSK, newConclusionGuid, author, messageBody, utcCreationTime);
+            return await AppendPostWithTitleWithoutReferencialIntegrityCheck(CONCLUSION_POST_SK_PREFIX, "Conclusion", conversationPK, parentPostSK, newConclusionGuid, author, title, messageBody, utcCreationTime);
         }
 
-        private async Task<string> AppendPostWithoutReferencialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
+        private async Task<string> AppendPostWithoutReferencialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author,
+                                                                              string messageBody, DateTimeOffset utcCreationTime)
+        {
+            return await AppendPostAsync(new PostSerialiser(), postType, postTypeName, conversationPK, parentPostSK, newGuid, author, messageBody, utcCreationTime);
+        }
+
+        private async Task<string> AppendPostWithTitleWithoutReferencialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid,
+                                                                                       string author, string title, string messageBody, DateTimeOffset utcCreationTime)
+        {
+            TitleFieldValidation(title);
+
+            return await AppendPostAsync(new PostWithTitleSerialiser { Title = title }, postType, postTypeName, conversationPK, parentPostSK, newGuid, author, messageBody, utcCreationTime);
+        }
+
+        private async Task<string> AppendPostAsync<T>(T post, string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid,
+                                                      string author, string messageBody, DateTimeOffset utcCreationTime) where T : PostSerialiser
         {
             CommonFieldsValidation(postTypeName, newGuid, messageBody, author);
 
@@ -206,14 +218,11 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
             ValidateParentPostSkIntegrity(parentPostSK);
 
-            var post = new PostSerialiser
-            {
-                PK = conversationPK,
-                SK = $"{parentPostSK}#{postType}#{newGuid}",
-                MessageBody = messageBody,
-                Author = author,
-                UpdatedAt = utcCreationTime.ToUnixTimeSeconds()
-            };
+            post.PK = conversationPK;
+            post.SK = $"{parentPostSK}#{postType}#{newGuid}";
+            post.MessageBody = messageBody;
+            post.Author = author;
+            post.UpdatedAt = utcCreationTime.ToUnixTimeSeconds();
 
             await AsyncExecuteWithDynamoDB(async (client, context) =>
             {
@@ -225,7 +234,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
         private static void ValidateAllowedTreeStructure(string postTypeName, string parentPostSK)
         {
-            if (parentPostSK.LastIndexOf($"#{COMMENT_POST_SK_PREFIX}#") != -1 || parentPostSK.LastIndexOf($"#{CONCLUSION_POST_SK_PREFIX}") != -1)
+            if (parentPostSK.LastIndexOf($"#{COMMENT_POST_SK_PREFIX}#") != -1 || parentPostSK.LastIndexOf($"#{CONCLUSION_POST_SK_PREFIX}#") != -1)
                 throw new ArgumentException($"Cannot append a {postTypeName} post to a Comment or Conclusion post", nameof(parentPostSK));
         }
 
@@ -240,7 +249,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
         private static void ValidateParentPostSkIntegrity(string parentPostSK)
         {
-            if (parentPostSK.LastIndexOf($"#{CONVERSATION_PK_PREFIX}") != -1)
+            if (parentPostSK.LastIndexOf($"#{CONVERSATION_PK_PREFIX}#") != -1)
                 throw new ArgumentException($"Parent Post SK tree's path must not contain '#{CONVERSATION_PK_PREFIX}' prefix", nameof(parentPostSK));
 
             var parts = parentPostSK.Split('#', StringSplitOptions.RemoveEmptyEntries);
@@ -248,10 +257,10 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             Enumerable.Range(0, parts.Length / 2).ToList().ForEach(i =>
             {
                 if (parts[i * 2] != DRILL_DOWN_POST_SK_PREFIX)
-                    throw new ArgumentException("Parent Post SK tree's path has invalid post type: {parts[i * 2]}", nameof(parentPostSK));
+                    throw new ArgumentException($"Parent Post SK tree's path has invalid post type: {parts[i * 2]}", nameof(parentPostSK));
 
                 if (!Guid.TryParse(parts[i * 2 + 1], out _))
-                    throw new ArgumentException("Parent Post SK tree's path has invalid guid: {parts[i * 2 + 1}", nameof(parentPostSK));
+                    throw new ArgumentException($"Parent Post SK tree's path has invalid guid: {parts[i * 2 + 1]}", nameof(parentPostSK));
             });
         }
 
@@ -265,6 +274,12 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
             if (string.IsNullOrWhiteSpace(messageBody))
                 throw new ArgumentException("Message body cannot be null or empty", nameof(messageBody));
+        }
+
+        private static void TitleFieldValidation(string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                throw new ArgumentException("Title cannot be null or empty", nameof(title));
         }
 
         private static readonly JsonSerializerOptions JsonOptions = new()

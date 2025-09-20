@@ -16,6 +16,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
         private static TestDataBuilders.ConversationBuilder AConversation() => TestDataBuilders.AConversation();
         private static TestDataBuilders.PostBuilder APost() => TestDataBuilders.APost();
+        private static TestDataBuilders.PostWithTitleBuilder APostWithTitle() => TestDataBuilders.APostWithTitle();
         private static TestDataBuilders.DrillDownHierarchyBuilder ADrillDownHierarchy() => TestDataBuilders.ADrillDownHierarchy();
 
 
@@ -152,9 +153,10 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 .CreateAsync(_db);
 
             // Act
-            var drillDownPost = await APost()
+            var drillDownPost = await APostWithTitle()
                 .WithGuid(drillDownGuid)
                 .WithAuthor("TestyTesterX")
+                .WithTitle("Drill-down something title")
                 .WithMessageBody("This is a drill-down post responding to the conversation")
                 .WithTimestamp(drillDownTimestamp)
                 .CreateDrillDownAsync(_db, conversation["PK"], conversation["SK"]);
@@ -192,9 +194,9 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             // Act - Create nested hierarchy using fluent builder
             var drillDownPosts = await ADrillDownHierarchy()
                 .WithConversation(conversation)
-                .AddLevel(firstGuid, "TestyTesterX", "First level drill-down post", DateTimeOffset.Parse("1970-01-01T00:00:02Z"))
-                .AddLevel(secondGuid, "TestyTesterW", "Second level drill-down post (reply to first)", DateTimeOffset.Parse("1970-01-01T00:00:03Z"))
-                .AddLevel(thirdGuid, "TestyTesterK", "Third level drill-down post (reply to second)", DateTimeOffset.Parse("1970-01-01T00:00:04Z"))
+                .AddLevel(firstGuid, "TestyTesterX", "Drill-down 1", "First level drill-down post", DateTimeOffset.Parse("1970-01-01T00:00:02Z"))
+                .AddLevel(secondGuid, "TestyTesterW", "Drill-down 2","Second level drill-down post (reply to first)", DateTimeOffset.Parse("1970-01-01T00:00:03Z"))
+                .AddLevel(thirdGuid, "TestyTesterK", "Drill-down 3","Third level drill-down post (reply to second)", DateTimeOffset.Parse("1970-01-01T00:00:04Z"))
                 .BuildAsync(_db);
 
             // Assert - Verify nested hierarchy structure using simplified assertions
@@ -291,7 +293,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 .WithTimestamp(DateTimeOffset.Parse("1970-01-01T00:00:03Z"))
                 .CreateCommentAsync(_db, conversation["PK"], conversation["SK"]);
 
-            var drillDownPost = await APost()
+            var drillDownPost = await APostWithTitle()
                 .WithGuid(drillDownGuid)
                 .WithAuthor("TestyTesterX")
                 .WithMessageBody("This is a drill-down post")
@@ -382,6 +384,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 commentFields["SK"],
                 Guid.NewGuid(),
                 "TestyTesterW",
+                "Doomed",
                 "This drill-down post should fail to be added to the comment",
                 DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
 
@@ -396,6 +399,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var conversationGuid = GetNewConversationGuid();
             var conclusionPostGuid = Guid.NewGuid();
             var conclusionPostAuthor = "TestyTesterX";
+            var conclusionPostTitle = "Conclusion";
             var conclusionPostMessageBody = "This is a conclusion post responding to the conversation";
             var conclusionPostCreationTime = DateTimeOffset.Parse("1970-01-01T00:00:10Z");
             
@@ -415,6 +419,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 conversationFields["SK"],
                 conclusionPostGuid,
                 conclusionPostAuthor,
+                conclusionPostTitle,
                 conclusionPostMessageBody,
                 conclusionPostCreationTime);
 
@@ -433,6 +438,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var conclusionPostGuid = Guid.NewGuid();
             var conclusionPostTime = DateTimeOffset.Parse("1970-01-01T00:00:03Z");
             var conclusionPostAuthor = "TestyTesterW";
+            var conclusionPostTitle = "Conclusion";
             var conclusionPostMessageBody = "This is a conclusion to the drill-down post";
             
 
@@ -450,6 +456,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 conversationFields["SK"],
                 drillDownPostGuid,
                 "TestyTesterX",
+                "Drill-down",
                 "This is a drill-down post",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var drillDownPostFields = DeserialiseToStringDictionary.This(jsonDrillDownPost);
@@ -460,6 +467,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 drillDownPostFields["SK"],
                 conclusionPostGuid,
                 conclusionPostAuthor,
+                conclusionPostTitle,
                 conclusionPostMessageBody,
                 conclusionPostTime);
 
@@ -500,6 +508,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 commentFields["SK"],
                 Guid.NewGuid(),
                 "TestyTesterW",
+                "Conclusion",
                 "This conclusion should fail to be added to the comment",
                 DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
 
@@ -527,6 +536,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 conversationFields["SK"],
                 Guid.NewGuid(),
                 "TestyTesterX",
+                "Conclusion",
                 "This is the first conclusion on the conversation",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var firstConclusionFields = DeserialiseToStringDictionary.This(jsonFirstConclusion);
@@ -537,6 +547,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 firstConclusionFields["SK"],
                 Guid.NewGuid(),
                 "TestyTesterW",
+                "Conclusion",
                 "This conclusion should fail to be added to the first conclusion",
                 DateTimeOffset.Parse("1970-01-01T00:00:03Z"));
 
@@ -571,6 +582,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 conversationFields["SK"],
                 drillDownGuid,
                 authorPrefix + "-DD",
+                "Drill-down",
                 "This is a drill-down post",
                 DateTimeOffset.Parse("1970-01-01T00:00:02Z"));
             var drillDownFields = DeserialiseToStringDictionary.This(jsonDrillDown);
@@ -588,6 +600,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 conversationFields["SK"],
                 conclusionGuid,
                 authorPrefix + "-CC",
+                "Conclusion",
                 "This is a conclusion to the conversation",
                 DateTimeOffset.Parse("1970-01-01T00:00:04Z"));
 
