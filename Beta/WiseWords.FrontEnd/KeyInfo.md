@@ -41,9 +41,9 @@ And this is how those types are presented by the frontend:
 
 Among the sibling posts of the same type, they should be further ordered by ascending order by UpdatedAt (older posts first).
 This means that
-- #CC# siblings are in ascending order by UpdateAt
-- #CM# siblings are in ascending order by UpdateAt
-- #DD# siblings are in ascending order by UpdateAt
+- #CC# siblings are in ascending order by updatedAt
+- #CM# siblings are in ascending order by updatedAt
+- #DD# siblings are in ascending order by updatedAt
 
 This is an example of a conversaton tree retrieved by the API in the form or a list of posts (for each you see Post type, depth, SK, Message body, UpdatedAt):
 

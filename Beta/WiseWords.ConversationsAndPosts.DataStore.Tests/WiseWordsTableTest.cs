@@ -62,7 +62,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var guid = GetNewConversationGuid();
             var convoType = WiseWordsTable.ConvoTypeEnum.DILEMMA;
             var title = "Idempotent title";
-            var messageBody = "Itempotent message bodey";
+            var messageBody = "Idempotent message body";
             var authorId = "IdempotentTester";
             var firstTime = DateTimeOffset.Parse("1970-01-01T00:00:02Z");
             var secondTime = DateTimeOffset.Parse("1970-01-01T00:00:12Z");

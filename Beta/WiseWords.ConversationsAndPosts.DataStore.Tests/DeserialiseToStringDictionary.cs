@@ -8,7 +8,7 @@ public static class DeserialiseToStringDictionary
     public static Dictionary<string, string> This(string json)
     {
         if (string.IsNullOrEmpty(json))
-            throw new ArgumentNullException(nameof(json), "The value provided is either null or emplty.");
+            throw new ArgumentNullException(nameof(json), "The value provided is either null or empty.");
 
         var keyValueDictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
         if (keyValueDictionary == null || keyValueDictionary.Count == 0)

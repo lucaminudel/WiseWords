@@ -45,7 +45,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                 throw new ArgumentException("Invalid conversation type", nameof(convoType));
 
             var utcCreationTimeUnixTimestamp = utcCreationTime.ToUnixTimeSeconds();
-            var updateAt = utcCreationTimeUnixTimestamp;
+            var updatedAt = utcCreationTimeUnixTimestamp;
             var updatedAtYear = utcCreationTime.Year;
 
             var conversation = new ConversationSerialiser
@@ -56,7 +56,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                 Title = title,
                 MessageBody = messageBody,
                 Author = author,
-                UpdatedAt = updateAt,
+                UpdatedAt = updatedAt,
                 UpdatedAtYear = updatedAtYear
             };
 
@@ -68,7 +68,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             return conversation.ToString();
         }
 
-        public async Task<List<Dictionary<string, string>>> RetrieveConversations(int updatedAtYear, string filterByauthor = "")
+        public async Task<List<Dictionary<string, string>>> RetrieveConversations(int updatedAtYear, string filterByAuthor = "")
         {
             if (updatedAtYear < 1970)
                 throw new ArgumentException("Invalid year", nameof(updatedAtYear));
@@ -90,13 +90,13 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                     AttributesToGet = new List<string> { "PK", "Author", "Title", "ConvoType", "UpdatedAtYear", "UpdatedAt" }
                 };
 
-                if (string.IsNullOrEmpty(filterByauthor) == false)
+                if (string.IsNullOrEmpty(filterByAuthor) == false)
                 {
                     queryConfig.FilterExpression = new Expression
                     {
                         ExpressionStatement = "#author = :author",
                         ExpressionAttributeNames = new Dictionary<string, string> { { "#author", "Author" } },
-                        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry> { { ":author", filterByauthor } }
+                        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry> { { ":author", filterByAuthor } }
                     };
                 }
 
@@ -178,26 +178,26 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
         public async Task<string> AppendDrillDownPost(string conversationPK, string parentPostSK, Guid newPostGuid, string author, string title, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPostWithTitleWithoutReferencialIntegrityCheck(DRILL_DOWN_POST_SK_PREFIX, "DrillDown", conversationPK, parentPostSK, newPostGuid, author, title, messageBody, utcCreationTime);
+            return await AppendPostWithTitleWithoutReferentialIntegrityCheck(DRILL_DOWN_POST_SK_PREFIX, "DrillDown", conversationPK, parentPostSK, newPostGuid, author, title, messageBody, utcCreationTime);
         }
 
         public async Task<string> AppendCommentPost(string conversationPK, string parentPostSK, Guid newCommentGuid, string author, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPostWithoutReferencialIntegrityCheck(COMMENT_POST_SK_PREFIX, "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
+            return await AppendPostWithoutReferentialIntegrityCheck(COMMENT_POST_SK_PREFIX, "Comment", conversationPK, parentPostSK, newCommentGuid, author, messageBody, utcCreationTime);
         }
 
         public async Task<string> AppendConclusionPost(string conversationPK, string parentPostSK, Guid newConclusionGuid, string author, string title, string messageBody, DateTimeOffset utcCreationTime)
         {
-            return await AppendPostWithTitleWithoutReferencialIntegrityCheck(CONCLUSION_POST_SK_PREFIX, "Conclusion", conversationPK, parentPostSK, newConclusionGuid, author, title, messageBody, utcCreationTime);
+            return await AppendPostWithTitleWithoutReferentialIntegrityCheck(CONCLUSION_POST_SK_PREFIX, "Conclusion", conversationPK, parentPostSK, newConclusionGuid, author, title, messageBody, utcCreationTime);
         }
 
-        private async Task<string> AppendPostWithoutReferencialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author,
+        private async Task<string> AppendPostWithoutReferentialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author,
                                                                               string messageBody, DateTimeOffset utcCreationTime)
         {
             return await AppendPostAsync(new PostSerialiser(), postType, postTypeName, conversationPK, parentPostSK, newGuid, author, messageBody, utcCreationTime);
         }
 
-        private async Task<string> AppendPostWithTitleWithoutReferencialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid,
+        private async Task<string> AppendPostWithTitleWithoutReferentialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid,
                                                                                        string author, string title, string messageBody, DateTimeOffset utcCreationTime)
         {
             TitleFieldValidation(title);

@@ -133,4 +133,4 @@ The referential integrity of posts and sub-posts is currently implicitly ensured
 - the front-end appending new posts only to existing posts
 - no physical posts deletion other than for tests cleanup.
 
-Given this, the explicit enforcement of referencial integrity that incurs in additional costs is not needed, and is not currently implemented.
+Given this, the explicit enforcement of referential integrity that incurs in additional costs is not needed, and is not currently implemented.

@@ -514,48 +514,48 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     }
 
 
-    private static string CreateNewConversatonRequestJason(Guid guid, DateTimeOffset updateAt) => CreateNewConversatonRequestJason(guid, "HttpTestUser", updateAt);
-    private static string CreateNewConversatonRequestJason(Guid guid, string Author, DateTimeOffset updateAt) => $$"""
+    private static string CreateNewConversatonRequestJason(Guid guid, DateTimeOffset updatedAt) => CreateNewConversatonRequestJason(guid, "HttpTestUser", updatedAt);
+    private static string CreateNewConversatonRequestJason(Guid guid, string Author, DateTimeOffset updatedAt) => $$"""
         {
             "NewGuid": "{{guid}}",
             "ConvoType": 2,
             "Title": "Test Conversation tilet",
             "MessageBody": "This is a test conversation message body",
             "Author": "{{Author}}",
-            "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
+            "UtcCreationTime": "{{updatedAt:yyyy-MM-ddTHH:mm:ssZ}}"
         }
         """;
 
-    private static string CreateNewDrillDownPostRequestJason(Guid newDrillDownPostguid, Guid convoGuid, DateTimeOffset updateAt) => $$"""
+    private static string CreateNewDrillDownPostRequestJason(Guid newDrillDownPostguid, Guid convoGuid, DateTimeOffset updatedAt) => $$"""
         {
             "NewDrillDownGuid": "{{newDrillDownPostguid}}",
             "ConversationPK": "CONVO#{{convoGuid}}",
             "ParentPostSK": "",
             "Author": "HttpTestUser",
             "MessageBody": "This is a drill-down post",
-            "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
+            "UtcCreationTime": "{{updatedAt:yyyy-MM-ddTHH:mm:ssZ}}"
         }
         """;
 
-    private static string CreateNewCommentPostRequestJson(Guid newCommentGuid, Guid convoGuid, DateTimeOffset updateAt) => $$"""
+    private static string CreateNewCommentPostRequestJson(Guid newCommentGuid, Guid convoGuid, DateTimeOffset updatedAt) => $$"""
         {
             "NewCommentGuid": "{{newCommentGuid}}",
             "ConversationPK": "CONVO#{{convoGuid}}",
             "ParentPostSK": "",
             "Author": "HttpTestUser",
             "MessageBody": "This is a comment post",
-            "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
+            "UtcCreationTime": "{{updatedAt:yyyy-MM-ddTHH:mm:ssZ}}"
         }
         """;
 
-    private static string CreateNewConclusionPostRequestJson(Guid newConclusionGuid, Guid convoGuid, DateTimeOffset updateAt) => $$"""
+    private static string CreateNewConclusionPostRequestJson(Guid newConclusionGuid, Guid convoGuid, DateTimeOffset updatedAt) => $$"""
         {
             "NewConclusionGuid": "{{newConclusionGuid}}",
             "ConversationPK": "CONVO#{{convoGuid}}",
             "ParentPostSK": "",
             "Author": "HttpTestUser",
             "MessageBody": "This is a conclusion post",
-            "UtcCreationTime": "{{updateAt:yyyy-MM-ddTHH:mm:ssZ}}"
+            "UtcCreationTime": "{{updatedAt:yyyy-MM-ddTHH:mm:ssZ}}"
         }
         """;
 

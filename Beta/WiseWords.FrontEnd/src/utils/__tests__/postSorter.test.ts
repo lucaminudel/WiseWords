@@ -63,7 +63,7 @@ describe('sortPosts', () => {
         expect(sortPosts(posts)).toEqual(expected);
     });
 
-  it('should sort posts correctly by post type #CM# > #CC# > #DD#  and among siblings of the same type by ascending UpdateAt date', () => {
+  it('should sort posts correctly by post type #CM# > #CC# > #DD#  and among siblings of the same type by ascending updatedAt date', () => {
     const apiSortedPosts: Post[] = [
       { PK: 'CONV#1', SK: '#CC#0', MessageBody: 'Proposed Solution 0', Author: 'User', UpdatedAt: String(toUnix('09/07/2025, 11:48:23')) },
       { PK: 'CONV#1', SK: '#CM#1', MessageBody: 'Comment 1', Author: 'User', UpdatedAt: String(toUnix('28/07/2025, 16:14:20')) },

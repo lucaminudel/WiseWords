@@ -16,7 +16,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
 #if DEBUG
             // This fallback allows IDE Tests explores to run using local_dev settings
             var environment = Environment.GetEnvironmentVariable("WISEWORDS_ENV") ?? "local_dev";
-            Console.WriteLine($"Environnment variable WISEWORDS_ENV: {Environment.GetEnvironmentVariable("WISEWORDS_ENV") ?? "not set, defaulting to " + environment}");
+            Console.WriteLine($"Environment variable WISEWORDS_ENV: {Environment.GetEnvironmentVariable("WISEWORDS_ENV") ?? "not set, defaulting to " + environment}");
 #else
             var environment = Environment.GetEnvironmentVariable("WISEWORDS_ENV");
             if (string.IsNullOrEmpty(environment))
@@ -133,7 +133,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
                 throw new ArgumentNullException($"{nameof(cfg.ApiBaseUrl)} configuration value need to be a well formed Url ('{cfg.ApiBaseUrl}').");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalUrl, UriKind.Absolute))
-                throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalUrl)} configuration value nned to be either empty or a well formed Url. But is: '{cfg.DynamoDbServiceLocalUrl}'.");
+                throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalUrl)} configuration value need to be either empty or a well formed Url. But is: '{cfg.DynamoDbServiceLocalUrl}'.");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalContainerUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalContainerUrl, UriKind.Absolute))
                 throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalContainerUrl)} configuration value need to be either empty or a well formed Url. But is: '{cfg.DynamoDbServiceLocalContainerUrl}'.");
@@ -143,13 +143,13 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
                 throw new ArgumentException($"{nameof(cfg.AWS.Region)} configuration value must be empty or valid AWS Region. But is: '{cfg.AWS.Region}'.");
 
             if (string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && string.IsNullOrEmpty(cfg.AWS.Region))
-                throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.AWS.Region)} cannot be both emmpty.");
+                throw new ArgumentException($"Configuration parameters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.AWS.Region)} cannot both be empty.");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && !string.IsNullOrEmpty(cfg.AWS.Region))
-                throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.AWS.Region)} cannot be both specified. But are: '{cfg.DynamoDbServiceLocalUrl}' and '{cfg.AWS.Region}'.");
+                throw new ArgumentException($"Configuration parameters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.AWS.Region)} cannot be both specified. But are: '{cfg.DynamoDbServiceLocalUrl}' and '{cfg.AWS.Region}'.");
 
             if (string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) != string.IsNullOrEmpty(cfg.DynamoDbServiceLocalContainerUrl))
-                throw new ArgumentException($"Configuration paramenters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.DynamoDbServiceLocalContainerUrl)} cannot be both empty or botth specified. But are: '{cfg.DynamoDbServiceLocalUrl}' and '{cfg.DynamoDbServiceLocalContainerUrl}'.");
+                throw new ArgumentException($"Configuration parameters {nameof(cfg.DynamoDbServiceLocalUrl)} and {nameof(cfg.DynamoDbServiceLocalContainerUrl)} cannot both be empty or both specified. But are: '{cfg.DynamoDbServiceLocalUrl}' and '{cfg.DynamoDbServiceLocalContainerUrl}'.");
         }
 
         public Uri? ApiBaseUrl { get; internal set; } = null;

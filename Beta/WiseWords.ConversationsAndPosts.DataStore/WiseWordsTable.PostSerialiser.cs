@@ -22,7 +22,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                 JsonValidation(json);
 
                 var post = JsonSerializer.Deserialize<T>(json);
-                PostValisation<T>(post, nameof(json));
+                PostValidation<T>(post, nameof(json));
 
                 return post!;
             }
@@ -36,16 +36,16 @@ namespace WiseWords.ConversationsAndPosts.DataStore
                 UpdatedAt = source.UpdatedAt;                
             }
 
-            protected static void PostValisation<T>(T? post, string fieldName)
+            protected static void PostValidation<T>(T? post, string fieldName)
             {
                 if (post == null)
-                    throw new ArgumentOutOfRangeException(fieldName, "The value has been serialised to a null value, it is probaly invalid");
+                    throw new ArgumentOutOfRangeException(fieldName, "The value has been serialised to a null value, it is probably invalid");
             }
 
             protected static void JsonValidation(string json)
             {
                 if (string.IsNullOrEmpty(json))
-                    throw new ArgumentException("The value is null or emplty, it should be a valid jsan", nameof(json));
+                    throw new ArgumentException("The value is null or empty, it should be a valid json", nameof(json));
             }
 
 
