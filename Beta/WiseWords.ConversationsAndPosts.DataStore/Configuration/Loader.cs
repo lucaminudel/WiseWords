@@ -130,7 +130,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
                 throw new ArgumentNullException($"{nameof(cfg.ApiBaseUrl)} configuration value cannot be null.");
 
             if (false == Uri.IsWellFormedUriString(cfg.ApiBaseUrl, UriKind.Absolute))
-                throw new ArgumentNullException($"{nameof(cfg.ApiBaseUrl)} configuration value need to be a well formed Url ('{cfg.ApiBaseUrl}').");
+                throw new ArgumentException($"{nameof(cfg.ApiBaseUrl)} configuration value need to be a well formed Url ('{cfg.ApiBaseUrl}').");
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalUrl, UriKind.Absolute))
                 throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalUrl)} configuration value need to be either empty or a well formed Url. But is: '{cfg.DynamoDbServiceLocalUrl}'.");
