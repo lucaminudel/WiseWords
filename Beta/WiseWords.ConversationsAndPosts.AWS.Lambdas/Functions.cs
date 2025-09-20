@@ -155,7 +155,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, GetAuthor(req.Author, context), req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, GetAuthor(req.Author, context), req.Title, req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 

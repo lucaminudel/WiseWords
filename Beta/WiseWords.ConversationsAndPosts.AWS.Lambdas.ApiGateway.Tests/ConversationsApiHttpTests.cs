@@ -532,6 +532,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
             "ConversationPK": "CONVO#{{convoGuid}}",
             "ParentPostSK": "",
             "Author": "HttpTestUser",
+            "Title": "Drill-down",
             "MessageBody": "This is a drill-down post",
             "UtcCreationTime": "{{updatedAt:yyyy-MM-ddTHH:mm:ssZ}}"
         }
@@ -554,6 +555,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
             "ConversationPK": "CONVO#{{convoGuid}}",
             "ParentPostSK": "",
             "Author": "HttpTestUser",
+            "Title": "Conclusion",
             "MessageBody": "This is a conclusion post",
             "UtcCreationTime": "{{updatedAt:yyyy-MM-ddTHH:mm:ssZ}}"
         }

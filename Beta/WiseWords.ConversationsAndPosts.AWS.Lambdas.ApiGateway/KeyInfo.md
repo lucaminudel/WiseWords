@@ -25,7 +25,7 @@ POST /conversations
 
 # Append a DrillDown Post
 POST /conversations/drilldown 
-{ "NewDrillDownGuid": "389de26e-d625-4ede-9988-73dc2841f8c2", "ConversationPK": "CONVO#81b481e0-c1fe-42fb-bc53-9d289aa05e84", "ParentPostSK": "", "Author": "HttpTestUser",  "MessageBody": "This is a drill-down post", "UtcCreationTime": "2025-07-09T10:39:03Z"}
+{ "NewDrillDownGuid": "389de26e-d625-4ede-9988-73dc2841f8c2", "ConversationPK": "CONVO#81b481e0-c1fe-42fb-bc53-9d289aa05e84", "ParentPostSK": "", "Author": "HttpTestUser", "Title": "Sub-problem title", "MessageBody": "This is a drill-down post", "UtcCreationTime": "2025-07-09T10:39:03Z"}
 
 # Append a Comment Post
 POST /conversations/comment 
@@ -34,7 +34,7 @@ POST /conversations/comment
 
 # Append a Conclusion Post
 POST /conversations/conclusion 
-{"NewConclusionGuid": "3f92293c-8877-4767-b373-030c98e6c3f1", "ConversationPK": "CONVO#81b481e0-c1fe-42fb-bc53-9d289aa05e84", "ParentPostSK": "", "Author": "HttpTestUser", "MessageBody": "This is a conclusion post", "UtcCreationTime": "2025-07-09T10:48:23Z"}
+{"NewConclusionGuid": "3f92293c-8877-4767-b373-030c98e6c3f1", "ConversationPK": "CONVO#81b481e0-c1fe-42fb-bc53-9d289aa05e84", "ParentPostSK": "", "Author": "HttpTestUser", "Title": "Conclusion title", "MessageBody": "This is a conclusion post", "UtcCreationTime": "2025-07-09T10:48:23Z"}
     
 # Retrieve Conversation's Posts
 GET /conversations/CONVO%2381b481e0-c1fe-42fb-bc53-9d289aa05e84/posts 
