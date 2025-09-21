@@ -179,6 +179,21 @@ Resources:
         AllowOrigin: !Sub "'${AllowedOrigin}'" 
         AllowCredentials: true
         MaxAge: 600  # Cache preflight response for 10 minutes
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
+              Access-Control-Allow-Credentials: "'true'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
+              Access-Control-Allow-Credentials: "'true'"
       Auth:
         DefaultAuthorizer: WiseWordsCognitoAuthorizer
         AddDefaultAuthorizerToCorsPreflight: false
