@@ -18,6 +18,7 @@
   {
     "PK": "CONVO#123",
     "SK": "#DD#1",
+    "Title": "Sub-question title",
     "MessageBody": "Root level sub-question",
     "Author": "Charlie",
     "UpdatedAt": "1690000200"
@@ -32,6 +33,7 @@
   {
     "PK": "CONVO#123",
     "SK": "#DD#1#DD#1",
+    "Title": "Nested sub-question title",
     "MessageBody": "Nested sub-question",
     "Author": "Eve",
     "UpdatedAt": "1690000400"
@@ -39,6 +41,7 @@
   {
     "PK": "CONVO#123",
     "SK": "#CC#1",
+    "Title": "Proposed solution title",
     "MessageBody": "Proposed solution",
     "Author": "Frank",
     "UpdatedAt": "1690000500"

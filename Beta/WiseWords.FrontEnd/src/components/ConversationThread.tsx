@@ -55,7 +55,8 @@ const ConversationThread: React.FC = () => {
 
   // --- Refactored State ---
   const [activeForm, setActiveForm] = useState<{ type: FormType; context: FormContext } | null>(null);
-  const [formData, setFormData] = useState({ 
+  const [formData, setFormData] = useState<{ title?: string; messageBody: string}>({ 
+    title: '',
     messageBody: '' 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -151,14 +152,27 @@ const isInitialLoadCompleted = useRef(false);
             block: 'end'
           });
           
-          // Focus on the message textarea and position cursor
-          const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.focus();
-            
-            // If there's pre-filled content (quoted text), position cursor at the end
-            if (formData.messageBody) {
-              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+          // Focus on the first input field (Title if required, otherwise Message)
+          if (activeForm.type !== 'comment') {
+            // For forms that require a title, focus on the title input first
+            const titleInput = formElement.querySelector('input[type="text"]') as HTMLInputElement;
+            if (titleInput) {
+              titleInput.focus();
+            } else {
+              // Fallback to textarea if title input not found
+              const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
+              textarea?.focus();
+            }
+          } else {
+            // For comments, focus on the textarea
+            const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
+            if (textarea) {
+              textarea.focus();
+              
+              // If there's pre-filled content (quoted text), position cursor at the end
+              if (formData.messageBody) {
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+              }
             }
           }
         }
@@ -168,13 +182,13 @@ const isInitialLoadCompleted = useRef(false);
 
   const handleOpenForm = (type: FormType, context: FormContext, initialMessage: string = '') => {
     setActiveForm({ type, context });
-    setFormData({ messageBody: initialMessage });
+    setFormData({ title: '', messageBody: initialMessage });
     setFormError(null);
   };
 
   const handleCancelForm = () => {
     setActiveForm(null);
-    setFormData({ messageBody: '' });
+    setFormData({ title: '', messageBody: '' });
     setFormError(null);
   };
 
@@ -227,7 +241,8 @@ const isInitialLoadCompleted = useRef(false);
 
     // Validate required fields
     const requiredFields: { [key: string]: string } = {
-      messageBody: formData.messageBody.trim()
+      messageBody: formData.messageBody.trim(),
+      ...(activeForm.type !== 'comment' ? { title: (formData.title || '').trim() } : {})
     };
 
     if (Object.values(requiredFields).some(field => !field)) {
@@ -240,7 +255,7 @@ const isInitialLoadCompleted = useRef(false);
 
     const { type, context } = activeForm;
     const { conversationPK, parentPostSK } = context;
-    const { messageBody } = formData;
+    const { messageBody, title: formTitle } = formData;
 
     try {
       let newPost: Post;
@@ -250,10 +265,10 @@ const isInitialLoadCompleted = useRef(false);
           newPost = await ConversationService.appendCommentAndUpdateCache(conversationPK, parentPostSK, finalAuthor, messageBody.trim());
           break;
         case 'drilldown':
-          newPost = await ConversationService.appendDrillDownAndUpdateCache(conversationPK, parentPostSK, finalAuthor, messageBody.trim());
+          newPost = await ConversationService.appendDrillDownAndUpdateCache(conversationPK, parentPostSK, finalAuthor, messageBody.trim(), (formTitle || '').trim());
           break;
         case 'conclusion':
-          newPost = await ConversationService.appendConclusionAndUpdateCache(conversationPK, parentPostSK, finalAuthor, messageBody.trim());
+          newPost = await ConversationService.appendConclusionAndUpdateCache(conversationPK, parentPostSK, finalAuthor, messageBody.trim(), (formTitle || '').trim());
           break;
       }
 
@@ -261,7 +276,7 @@ const isInitialLoadCompleted = useRef(false);
       handleCancelForm();
 
     } catch (err: any) {
-      setFormError(`Failed to post ${type}. Please try again. (Error: ${err.message})`);
+      setFormError(`Failed to post ${type}. Please try again. (Error: ${err.message})`);      
     } finally {
       setIsSubmitting(false);
     }
@@ -346,10 +361,10 @@ const isInitialLoadCompleted = useRef(false);
                 <div className="thread-actions">
                   <button type="button" style={{ ...buttonStyle, opacity: 0.5, cursor: 'not-allowed' }} disabled>Comment</button>
                   <button type="button" style={{ ...buttonStyle, marginLeft: '8px', opacity: 0.5, cursor: 'not-allowed' }} disabled>
-                    Add Sub-Action
+                    Add Sub-problem
                   </button>
                   <button type="button" style={{ ...buttonStyle, marginLeft: '8px', opacity: 0.5, cursor: 'not-allowed' }} disabled>
-                    Propose Solution
+                    Suggest Solution
                   </button>
                 </div>
               </div>
@@ -574,7 +589,7 @@ const isInitialLoadCompleted = useRef(false);
       {/* --- Render Forms for Main Conversation --- */}
       {activeForm && activeForm.context.insertAfterSK === conversation?.SK && (
         <ConversatonThreadAppendPostForm
-          title={`Add ${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
+          title={`${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
           formData={formData}
           setFormData={setFormData}
           onCancel={handleCancelForm}
@@ -584,6 +599,7 @@ const isInitialLoadCompleted = useRef(false);
           marginLeft={`${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`}
           id={`${activeForm.type}-form-${conversation?.SK || 'main'}`}
           dataTestId={`${activeForm.type}-form-${conversation.SK}`}
+          requireTitle={activeForm.type !== 'comment'}
            />
       )}
       
@@ -636,6 +652,22 @@ const isInitialLoadCompleted = useRef(false);
                   </div>
                 )}
                 
+                {(postTypeInfo.isDrillDown || postTypeInfo.isConclusion) && (
+                  <div 
+                    data-testid={`post-title-${post.SK}`}
+                    style={{
+                      fontWeight: 700,
+                      marginBottom: '8px',
+                      color: 'var(--color-text-primary)',
+                      whiteSpace: 'normal',
+                      overflow: 'visible',
+                      wordBreak: 'break-word',
+                      maxWidth: '100%'
+                    }}
+                  >
+                    {post.Title}
+                  </div>
+                )}
                 <div style={{ 
                   whiteSpace: 'pre-line',
                   lineHeight: '1.6',
@@ -768,7 +800,7 @@ const isInitialLoadCompleted = useRef(false);
               {/* --- Render Forms for this specific post --- */}
               {activeForm && activeForm.context.insertAfterSK === post.SK && (
                 <ConversatonThreadAppendPostForm
-                  title={`Add ${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
+                  title={`${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
                   formData={formData}
                   setFormData={setFormData}
                   onCancel={handleCancelForm}
@@ -778,6 +810,7 @@ const isInitialLoadCompleted = useRef(false);
                   marginLeft={`${activeForm.type === 'comment' ? newCommentDepth * 48 : (depth + 1) * 48}px`}
                   id={`${activeForm.type}-form-${post.SK}`}
                   dataTestId={`${activeForm.type}-form-${post.SK}`}
+                  requireTitle={activeForm.type !== 'comment'}
                    />
               )}
               </React.Fragment>

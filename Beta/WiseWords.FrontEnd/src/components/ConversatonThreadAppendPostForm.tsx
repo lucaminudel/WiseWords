@@ -11,11 +11,12 @@ export const ConversatonThreadAppendPostForm = ({
   formError,
   marginLeft,
   id,
-  dataTestId
+  dataTestId,
+  requireTitle = false
 }: {
   title: string;
-  formData: { messageBody: string };
-  setFormData: React.Dispatch<React.SetStateAction<{ messageBody: string }>>;
+  formData: { title?: string; messageBody: string };
+  setFormData: React.Dispatch<React.SetStateAction<{ title?: string; messageBody: string }>>;
   onCancel: () => void;
   onPost: () => Promise<void>;
   isSubmitting: boolean;
@@ -23,6 +24,7 @@ export const ConversatonThreadAppendPostForm = ({
   marginLeft: string;
   id: string;
   dataTestId: string;
+  requireTitle?: boolean;
 }) => {
   return (
     <div
@@ -64,6 +66,30 @@ export const ConversatonThreadAppendPostForm = ({
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {requireTitle && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+              Title
+            </label>
+            <input
+              type="text"
+              placeholder="Provide a short Title"
+              value={formData.title || ''}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              disabled={isSubmitting}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                backgroundColor: 'var(--color-background)',
+                color: 'var(--color-text-primary)',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+        )}
         <div>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
             Message
@@ -71,7 +97,7 @@ export const ConversatonThreadAppendPostForm = ({
           <textarea
             data-testid="post-editor-textarea"
             value={formData.messageBody}
-            onChange={(e) => setFormData({ messageBody: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
             placeholder="Enter your message..."
             rows={3}
             disabled={isSubmitting}
@@ -113,18 +139,18 @@ export const ConversatonThreadAppendPostForm = ({
           <button
             data-testid="post-button"
             onClick={onPost}
-            disabled={!formData.messageBody.trim() || isSubmitting}
+            disabled={isSubmitting || !formData.messageBody.trim() || (requireTitle && !(formData.title || '').trim())}
             style={{
               backgroundColor: 'var(--color-accent)',
               color: 'var(--color-text-primary)',
               border: 'none',
               padding: '0.75rem 1.5rem',
               borderRadius: '8px',
-              cursor: (!formData.messageBody.trim() || isSubmitting) ? 'not-allowed' : 'pointer',
+              cursor: isSubmitting || !formData.messageBody.trim() || (requireTitle && !(formData.title || '').trim()) ? 'not-allowed' : 'pointer',
               fontWeight: 700,
               fontFamily: 'Inter, sans-serif',
               fontSize: '1rem',
-              opacity: (!formData.messageBody.trim() || isSubmitting) ? 0.6 : 1,
+              opacity: isSubmitting || !formData.messageBody.trim() || (requireTitle && !(formData.title || '').trim()) ? 0.6 : 1,
               transition: 'all 0.2s ease'
             }}
           >

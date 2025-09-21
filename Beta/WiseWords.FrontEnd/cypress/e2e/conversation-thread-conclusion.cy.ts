@@ -18,6 +18,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
     it('should post a new conclusion on the Conversation root post successfully', () => {
       const newConclusion = {
         author: 'Test Author',
+        title: 'Conclusion title',
         message: 'This is a brand new conclusion on the root post.'
       };
 
@@ -35,7 +36,8 @@ describe('Conversation Thread Conclusion Workflow', () => {
       cy.get(formId).should('be.visible');
       cy.get(formId).should('have.css', 'margin-left', '48px');
 
-      // 4. Fill out the message field
+      // 4. Fill out the title and message fields
+      cy.get(formId).find('input[placeholder*="Title"]').type(newConclusion.title);
       cy.get(formId).find('textarea').type(newConclusion.message);
 
       // 4. Set up intercept for the API call and click "Post"
@@ -45,6 +47,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
           PK: 'CONVO#123',
           SK: '#CC#new-conclusion-guid',
           Author: newConclusion.author,
+          Title: newConclusion.title,
           MessageBody: newConclusion.message,
           UpdatedAt: Math.floor(Date.now() / 1000).toString()
         }
@@ -57,6 +60,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
         expect(request.body.ConversationPK).to.equal('CONVO#123');
         expect(request.body.ParentPostSK).to.equal('');
         expect(request.body.Author).to.equal(newConclusion.author);
+        expect(request.body.Title).to.equal(newConclusion.title);
         expect(request.body.MessageBody).to.equal(newConclusion.message);
         expect(request.body.NewConclusionGuid).to.be.a('string');
         expect(request.body.UtcCreationTime).to.be.a('string');
@@ -66,7 +70,13 @@ describe('Conversation Thread Conclusion Workflow', () => {
       cy.contains('[data-testid="post-container"]', newConclusion.message).as('NewConclusionPost');
       cy.get('@NewConclusionPost').should('be.visible');
       cy.get('@NewConclusionPost').should('contain.text', newConclusion.author);
+      cy.get('@NewConclusionPost').should('contain.text', newConclusion.message);
       cy.get('@NewConclusionPost').should('have.css', 'margin-left', '48px'); // Level 1 indentation
+      
+      // Assert the title is displayed correctly within the new conclusion post
+      cy.get('@NewConclusionPost').within(() => {
+        cy.get('[data-testid^="post-title-"]').should('contain.text', newConclusion.title);
+      });
 
       // 7. Assert that the conclusion form is now hidden
       cy.get(formId).should('not.exist');
@@ -86,6 +96,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       cy.get(formId).should('be.visible');
 
       // 4. Fill out the form
+      cy.get(formId).find('input[placeholder*="Title"]').type('Cancelled conclusion title');
       cy.get(formId).find('textarea').type('This conclusion should be cancelled.');
 
       // 5. Click the "Cancel" button
@@ -121,6 +132,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       cy.get(formId).should('be.visible');
 
       // 4. Fill out the form
+     cy.get(formId).find('input[placeholder*="Title"]').type('Error conclusion title');
       cy.get(formId).find('textarea').type(newConclusion.message);
 
       // 5. Set up intercept for the API call to return an error
@@ -148,6 +160,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
     it('should post a new conclusion successfully on a nested post', () => {
       const newConclusion = {
         author: 'Nested Conclusion Author',
+        title: 'Nested conclusion title',
         message: 'This is a conclusion to a nested sub-question.'
       };
       const parentPostText = 'Nested sub-question';
@@ -168,6 +181,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       cy.get(formId).should('have.css', 'margin-left', '144px'); // Depth 2 (parent) + 1 = 3 * 48px
 
       // 4. Fill out the form and set up the API intercept
+      cy.get(formId).find('input[placeholder*="Title"]').type(newConclusion.title);
       cy.get(formId).find('textarea').type(newConclusion.message);
 
       cy.intercept('POST', '/conversations/conclusion', {
@@ -176,6 +190,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
           PK: 'CONVO#123',
           SK: `${parentPostSK}#CC#new-nested-guid`,
           Author: newConclusion.author,
+          Title: newConclusion.title,
           MessageBody: newConclusion.message,
           UpdatedAt: Math.floor(Date.now() / 1000).toString()
         }
@@ -188,6 +203,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
         expect(request.body.ConversationPK).to.equal('CONVO#123');
         expect(request.body.ParentPostSK).to.equal(parentPostSK);
         expect(request.body.Author).to.equal(newConclusion.author);
+        expect(request.body.Title).to.equal(newConclusion.title);
         expect(request.body.MessageBody).to.equal(newConclusion.message);
       });
 
@@ -195,7 +211,13 @@ describe('Conversation Thread Conclusion Workflow', () => {
       const newConclusionSelector = `[data-testid="post-container"]:contains("${newConclusion.message}")`;
       cy.get(newConclusionSelector).should('be.visible');
       cy.get(newConclusionSelector).should('contain.text', newConclusion.author);
+      cy.get(newConclusionSelector).should('contain.text', newConclusion.message);
       cy.get(newConclusionSelector).should('have.css', 'margin-left', '144px'); // Depth 3 indentation
+      
+      // Assert the title is displayed correctly within the new conclusion post
+      cy.get(newConclusionSelector).within(() => {
+        cy.get('[data-testid^="post-title-"]').should('contain.text', newConclusion.title);
+      });
 
       // Assert form is hidden
       cy.get(formId).should('not.exist');
@@ -206,6 +228,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
     it('should persist conclusion post after page reload', () => {
       const newConclusion = {
         author: 'Persistence Test Author',
+        title: 'Persistence conclusion title',
         message: 'This conclusion should persist after page reload.'
       };
 
@@ -220,6 +243,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
       // 3. Fill out and submit the conclusion form
       const formId = '#conclusion-form-METADATA';
       cy.get(formId).should('be.visible');
+      cy.get(formId).find('input[placeholder*="Title"]').type(newConclusion.title);
       cy.get(formId).find('textarea').type(newConclusion.message);
 
       // 3. Set up intercept for the API call
@@ -228,6 +252,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
         body: {
           PK: 'CONVO#123',
           SK: '#CC#persistence-test-guid',
+          Title: 'Persistence conclusion title',
           Author: newConclusion.author,
           MessageBody: newConclusion.message,
           UpdatedAt: Math.floor(Date.now() / 1000).toString()
@@ -250,6 +275,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
           {
             PK: 'CONVO#123',
             SK: '#DD#1',
+            Title: 'Sub-question title',
             MessageBody: 'Sub-question',
             Author: 'Sub Author',
             UpdatedAt: '1640995300',
@@ -258,6 +284,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
           {
             PK: 'CONVO#123',
             SK: '#DD#1#DD#1',
+            Title: 'Nested sub-question title',
             MessageBody: 'Nested sub-question',
             Author: 'Nested Author',
             UpdatedAt: '1640995400',
@@ -266,6 +293,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
           {
             PK: 'CONVO#123',
             SK: '#CC#persistence-test-guid',
+            Title: 'Persistence conclusion title',
             Author: newConclusion.author,
             MessageBody: newConclusion.message,
             UpdatedAt: Math.floor(Date.now() / 1000).toString(),

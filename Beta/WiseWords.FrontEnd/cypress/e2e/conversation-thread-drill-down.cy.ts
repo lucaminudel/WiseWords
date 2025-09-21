@@ -18,6 +18,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
     it('should post a new drill down on the Conversation root post successfully', () => {
       const newDrillDown = {
         author: 'Test Author',
+        title: 'Sub-problem title',
         message: 'This is a brand new drill down on the root post.'
       };
 
@@ -35,7 +36,8 @@ describe('Conversation Thread Drill Down Workflow', () => {
       cy.get(formSelector).should('be.visible');
       cy.get(formSelector).should('have.css', 'margin-left', '48px');
 
-      // 4. Fill out the message field
+      // 4. Fill out the title and message fields
+      cy.get(formSelector).find('input[placeholder*="Title"]').type(newDrillDown.title);
       cy.get(formSelector).find('textarea').type(newDrillDown.message);
 
       // 4. Set up intercept for the API call and click "Post"
@@ -45,6 +47,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
           PK: 'CONVO#123',
           SK: '#DD#new-drill-down-guid',
           Author: newDrillDown.author,
+          Title: newDrillDown.title,
           MessageBody: newDrillDown.message,
           UpdatedAt: Math.floor(Date.now() / 1000).toString()
         }
@@ -57,6 +60,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
         expect(request.body.ConversationPK).to.equal('CONVO#123');
         expect(request.body.ParentPostSK).to.equal('');
         expect(request.body.Author).to.equal(newDrillDown.author);
+        expect(request.body.Title).to.equal(newDrillDown.title);
         expect(request.body.MessageBody).to.equal(newDrillDown.message);
         expect(request.body.NewDrillDownGuid).to.be.a('string');
         expect(request.body.UtcCreationTime).to.be.a('string');
@@ -66,6 +70,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
       cy.contains('[data-testid="post-container"]', newDrillDown.message).as('NewDrillDownPost');
       cy.get('@NewDrillDownPost').should('be.visible');
       cy.get('@NewDrillDownPost').should('contain.text', newDrillDown.author);
+      cy.get('@NewDrillDownPost').should('contain.text', newDrillDown.title);
       cy.get('@NewDrillDownPost').should('have.css', 'margin-left', '48px'); // Level 1 indentation
 
       // 7. Assert that the drill down form is now hidden
@@ -85,7 +90,8 @@ describe('Conversation Thread Drill Down Workflow', () => {
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
       cy.get(formSelector).should('be.visible');
 
-      // 4. Fill out the form
+      // 4. Fill out the title and message
+      cy.get(formSelector).find('input[placeholder*="Title"]').type('Cancelled drill down title');
       cy.get(formSelector).find('textarea').type('This drill down should be cancelled.');
 
       // 5. Click the "Cancel" button
@@ -120,7 +126,8 @@ describe('Conversation Thread Drill Down Workflow', () => {
       const formSelector = '[data-testid="drilldown-form-METADATA"]';
       cy.get(formSelector).should('be.visible');
 
-      // 4. Fill out the form
+      // 4. Fill out the title and message
+      cy.get(formSelector).find('input[placeholder*="Title"]').type('Error drill down title');
       cy.get(formSelector).find('textarea').type(newDrillDown.message);
 
       // 5. Set up intercept for the API call to return an error
@@ -148,6 +155,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
     it('should post a new drill down successfully on a nested post', () => {
       const newDrillDown = {
         author: 'Nested Drill Down Author',
+        title: 'Nested Sub-problem title',
         message: 'This is a reply to a nested sub-question.'
       };
       const parentPostText = 'Nested sub-question';
@@ -167,7 +175,8 @@ describe('Conversation Thread Drill Down Workflow', () => {
       cy.get(formSelector).should('be.visible');
       cy.get(formSelector).should('have.css', 'margin-left', '144px'); // Depth 2 (parent) + 1 = 3 * 48px
 
-      // 4. Fill out the form and set up the API intercept
+      // 4. Fill out the title and message, then set up the API intercept
+      cy.get(formSelector).find('input[placeholder*="Title"]').type(newDrillDown.title);
       cy.get(formSelector).find('textarea').type(newDrillDown.message);
 
       cy.intercept('POST', '/conversations/drilldown', {
@@ -176,6 +185,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
           PK: 'CONVO#123',
           SK: `${parentPostSK}#DD#new-nested-guid`,
           Author: newDrillDown.author,
+          Title: newDrillDown.title,
           MessageBody: newDrillDown.message,
           UpdatedAt: Math.floor(Date.now() / 1000).toString()
         }
@@ -188,6 +198,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
         expect(request.body.ConversationPK).to.equal('CONVO#123');
         expect(request.body.ParentPostSK).to.equal(parentPostSK);
         expect(request.body.Author).to.equal(newDrillDown.author);
+        expect(request.body.Title).to.equal(newDrillDown.title);
         expect(request.body.MessageBody).to.equal(newDrillDown.message);
       });
 
@@ -195,6 +206,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
       const newDrillDownSelector = `[data-testid="post-container"]:contains("${newDrillDown.message}")`;
       cy.get(newDrillDownSelector).should('be.visible');
       cy.get(newDrillDownSelector).should('contain.text', newDrillDown.author);
+      cy.get(newDrillDownSelector).should('contain.text', newDrillDown.title);
       cy.get(newDrillDownSelector).should('have.css', 'margin-left', '144px'); // Depth 3 indentation
 
       // Assert form is hidden

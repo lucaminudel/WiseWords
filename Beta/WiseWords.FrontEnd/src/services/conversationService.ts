@@ -256,13 +256,15 @@ export class ConversationService {
         conversationPK: string,
         parentPostSK: string,
         author: string,
-        messageBody: string
+        messageBody: string,
+        title: string
     ): Promise<Post> {
         const drillDownRequest: AppendDrillDownRequest = {
             ConversationPK: conversationPK,
             ParentPostSK: parentPostSK,
             NewDrillDownGuid: crypto.randomUUID(),
             Author: author,
+            Title: title,
             MessageBody: messageBody,
             UtcCreationTime: new Date().toISOString()
         };
@@ -277,13 +279,15 @@ export class ConversationService {
         conversationPK: string,
         parentPostSK: string,
         author: string,
-        messageBody: string
+        messageBody: string,
+        title: string
     ): Promise<Post> {
         const conclusionRequest: AppendConclusionRequest = {
             ConversationPK: conversationPK,
             ParentPostSK: parentPostSK,
             NewConclusionGuid: crypto.randomUUID(),
             Author: author,
+            Title: title,
             MessageBody: messageBody,
             UtcCreationTime: new Date().toISOString()
         };

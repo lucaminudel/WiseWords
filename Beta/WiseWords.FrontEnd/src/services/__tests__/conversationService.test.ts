@@ -762,6 +762,7 @@ describe('ConversationService', () => {
       PK: mockConversationPK,
       SK: `#DD#${mockUUID}`,
       Author: mockAuthor,
+      Title: 'Sub-problem title',
       MessageBody: mockMessage,
       UpdatedAt: Math.floor(mockDate.getTime() / 1000).toString(),
       ConvoType: 'QUESTION'
@@ -790,7 +791,8 @@ describe('ConversationService', () => {
         mockConversationPK,
         '', // ParentSK for root
         mockAuthor,
-        mockMessage
+        mockMessage,
+        'Sub-problem title'
       );
 
       // Assert
@@ -800,6 +802,7 @@ describe('ConversationService', () => {
         ParentPostSK: '',
         NewDrillDownGuid: mockUUID,
         Author: mockAuthor,
+        Title: 'Sub-problem title',
         MessageBody: mockMessage,
         UtcCreationTime: mockDate.toISOString(),
       });
@@ -828,7 +831,8 @@ describe('ConversationService', () => {
         mockConversationPK,
         parentPostSK,
         mockAuthor,
-        mockMessage
+        mockMessage,
+        'Sub-problem title'
       );
 
       // Assert
@@ -845,7 +849,7 @@ describe('ConversationService', () => {
 
       // Act & Assert
       await expect(
-        ConversationService.appendDrillDownAndUpdateCache(mockConversationPK, '', mockAuthor, mockMessage)
+        ConversationService.appendDrillDownAndUpdateCache(mockConversationPK, '', mockAuthor, mockMessage, 'Sub-problem title')
       ).rejects.toThrow(apiError);
       expect(mockConversationThreadCache.set).not.toHaveBeenCalled();
     });
@@ -862,6 +866,7 @@ describe('ConversationService', () => {
       PK: mockConversationPK,
       SK: `#CC#${mockUUID}`,
       Author: mockAuthor,
+      Title: 'Conclusion title',
       MessageBody: mockMessage,
       UpdatedAt: Math.floor(mockDate.getTime() / 1000).toString(),
       ConvoType: 'QUESTION'
@@ -890,7 +895,8 @@ describe('ConversationService', () => {
         mockConversationPK,
         '', // ParentSK for root
         mockAuthor,
-        mockMessage
+        mockMessage,
+        'Conclusion title'
       );
 
       // Assert
@@ -900,6 +906,7 @@ describe('ConversationService', () => {
         ParentPostSK: '',
         NewConclusionGuid: mockUUID,
         Author: mockAuthor,
+        Title: 'Conclusion title',
         MessageBody: mockMessage,
         UtcCreationTime: mockDate.toISOString(),
       });
@@ -928,7 +935,8 @@ describe('ConversationService', () => {
         mockConversationPK,
         parentPostSK,
         mockAuthor,
-        mockMessage
+        mockMessage,
+        'Conclusion title'
       );
 
       // Assert
@@ -945,7 +953,7 @@ describe('ConversationService', () => {
 
       // Act & Assert
       await expect(
-        ConversationService.appendConclusionAndUpdateCache(mockConversationPK, '', mockAuthor, mockMessage)
+        ConversationService.appendConclusionAndUpdateCache(mockConversationPK, '', mockAuthor, mockMessage, 'Conclusion title')
       ).rejects.toThrow(apiError);
       expect(mockConversationThreadCache.set).not.toHaveBeenCalled();
     });

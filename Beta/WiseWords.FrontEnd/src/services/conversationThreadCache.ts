@@ -55,6 +55,7 @@ class ConversationThreadCache {
           currentSize -= entryToRemove.size;
           delete metadata[entryToRemove.key];
         } catch (e) {
+          console.error('Failed to evict cache item', entryToRemove.key, e);
         }
       }
     }
@@ -138,8 +139,9 @@ class ConversationThreadCache {
         lastSaved: now,      // Point 2: Track when cache was saved
         version: CACHE_VERSION, // Point 3: Store current version
       };
-      this.setMetadata(metadata);
+      this.setMetadata(metadata);      
     } catch (e) {
+      console.error('Failed to set cache for', conversationId, e);
     }
   }
 

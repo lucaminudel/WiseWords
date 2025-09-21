@@ -77,6 +77,7 @@ export interface AppendCommentRequest extends AppendPostRequest {
  */
 export interface AppendDrillDownRequest extends AppendPostRequest {
   NewDrillDownGuid: string;
+  Title: string;
 }
 
 /**
@@ -84,6 +85,7 @@ export interface AppendDrillDownRequest extends AppendPostRequest {
  */
 export interface AppendConclusionRequest extends AppendPostRequest {
   NewConclusionGuid: string;
+  Title: string;
 }
 
 /**
