@@ -53,6 +53,10 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         jsonResult!["PK"].Should().Be($"CONVO#{conversationGuid}");
         jsonResult["SK"].Should().Be("METADATA");
         jsonResult["ConvoType"].Should().Be("DILEMMA");
+        jsonResult["Title"].Should().Be("Test Conversation tilet");
+        jsonResult["MessageBody"].Should().Be("This is a test conversation message body");
+        jsonResult["Author"].Should().Be("HttpTestUser");
+        jsonResult["UpdatedAt"].Should().Be(new DateTimeOffset(new DateTime(2025, 12, 12)).ToUnixTimeSeconds().ToString());
         jsonResult["UpdatedAtYear"].Should().Be("2025");
     }
 
@@ -98,13 +102,14 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     {
         // Arrange
         var newConvoGuid = GetNewConversationGuid();
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
         await _httpClient.PostAsync("/conversations",
-                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, DateTimeOffset.UtcNow),
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, creationTime),
                                     System.Text.Encoding.UTF8, "application/json"));
 
         // Act
         var newDDguid = Guid.NewGuid();
-        var content = new StringContent(CreateNewDrillDownPostRequestJason(newDDguid, newConvoGuid, DateTimeOffset.UtcNow),
+        var content = new StringContent(CreateNewDrillDownPostRequestJason(newDDguid, newConvoGuid, creationTime),
                                          System.Text.Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync("/conversations/drilldown", content);
 
@@ -119,6 +124,10 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var jsonResult = JsonSerializer.Deserialize<Dictionary<string, string>>(result);
         jsonResult!["PK"].Should().Be($"CONVO#{newConvoGuid}");
         jsonResult["SK"].Should().Be($"#DD#{newDDguid}");
+        jsonResult["Title"].Should().Be("Drill-down");
+        jsonResult["MessageBody"].Should().Be("This is a drill-down post");
+        jsonResult["Author"].Should().Be("HttpTestUser");
+        jsonResult["UpdatedAt"].Should().Be(creationTime.ToUnixTimeSeconds().ToString());
     }
 
 
@@ -145,13 +154,14 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     {
         // Arrange
         var newConvoGuid = GetNewConversationGuid();
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
         await _httpClient.PostAsync("/conversations",
-                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, DateTimeOffset.UtcNow),
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, creationTime),
                                     System.Text.Encoding.UTF8, "application/json"));
 
         // Act
         var newCMguid = Guid.NewGuid();
-        var content = new StringContent(CreateNewCommentPostRequestJson(newCMguid, newConvoGuid, DateTimeOffset.UtcNow),
+        var content = new StringContent(CreateNewCommentPostRequestJson(newCMguid, newConvoGuid, creationTime),
                                          System.Text.Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync("/conversations/comment", content);
 
@@ -166,6 +176,9 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var jsonResult = JsonSerializer.Deserialize<Dictionary<string, string>>(result);
         jsonResult!["PK"].Should().Be($"CONVO#{newConvoGuid}");
         jsonResult["SK"].Should().Be($"#CM#{newCMguid}");
+        jsonResult["MessageBody"].Should().Be("This is a comment post");
+        jsonResult["Author"].Should().Be("HttpTestUser");
+        jsonResult["UpdatedAt"].Should().Be(creationTime.ToUnixTimeSeconds().ToString());
     }
 
     [Fact]
@@ -191,13 +204,14 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     {
         // Arrange
         var newConvoGuid = GetNewConversationGuid();
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
         await _httpClient.PostAsync("/conversations",
-                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, DateTimeOffset.UtcNow),
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, creationTime),
                                     System.Text.Encoding.UTF8, "application/json"));
 
         // Act
         var newCCguid = Guid.NewGuid();
-        var content = new StringContent(CreateNewConclusionPostRequestJson(newCCguid, newConvoGuid, DateTimeOffset.UtcNow),
+        var content = new StringContent(CreateNewConclusionPostRequestJson(newCCguid, newConvoGuid, creationTime),
                                          System.Text.Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync("/conversations/conclusion", content);
 
@@ -212,6 +226,10 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         var jsonResult = JsonSerializer.Deserialize<Dictionary<string, string>>(result);
         jsonResult!["PK"].Should().Be($"CONVO#{newConvoGuid}");
         jsonResult["SK"].Should().Be($"#CC#{newCCguid}");
+        jsonResult["Title"].Should().Be("Conclusion");
+        jsonResult["MessageBody"].Should().Be("This is a conclusion post");
+        jsonResult["Author"].Should().Be("HttpTestUser");
+        jsonResult["UpdatedAt"].Should().Be(creationTime.ToUnixTimeSeconds().ToString());
 
     }
 
@@ -238,7 +256,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     {
         // Arrange 
         var newConvoGuid = GetNewConversationGuid();
-        var creationTime = DateTimeOffset.UtcNow;
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
         await _httpClient.PostAsync("/conversations",
                                     new StringContent(CreateNewConversatonRequestJason(newConvoGuid, creationTime),
                                                       System.Text.Encoding.UTF8, "application/json"));
@@ -276,6 +294,28 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
         posts[2]!["PK"].Should().Be(conversationPK);
         posts[2]!["SK"].Should().Be("METADATA");
+
+        var commentPost = posts.FirstOrDefault(p => p["SK"].Contains("#CM#"));
+        commentPost.Should().NotBeNull();
+        commentPost!["MessageBody"].Should().Be("This is a comment post");
+        commentPost!["Author"].Should().Be("HttpTestUser");
+        commentPost!["UpdatedAt"].Should().Be(creationTime.AddMinutes(2).ToUnixTimeSeconds().ToString());
+
+        var drillDownPost = posts.FirstOrDefault(p => p["SK"].Contains("#DD#"));
+        drillDownPost.Should().NotBeNull();
+        drillDownPost!["Title"].Should().Be("Drill-down");
+        drillDownPost!["MessageBody"].Should().Be("This is a drill-down post");
+        drillDownPost!["Author"].Should().Be("HttpTestUser");
+        drillDownPost!["UpdatedAt"].Should().Be(creationTime.AddMinutes(1).ToUnixTimeSeconds().ToString());
+
+        var metadataPost = posts.FirstOrDefault(p => p["SK"] == "METADATA");
+        metadataPost.Should().NotBeNull();
+        metadataPost!["Title"].Should().Be("Test Conversation tilet");
+        metadataPost!["MessageBody"].Should().Be("This is a test conversation message body");
+        metadataPost!["Author"].Should().Be("HttpTestUser");
+        metadataPost!["ConvoType"].Should().Be("DILEMMA");
+        metadataPost!["UpdatedAtYear"].Should().Be(creationTime.Year.ToString());
+        metadataPost!["UpdatedAt"].Should().Be(creationTime.ToUnixTimeSeconds().ToString());
     }
 
     [Fact]
@@ -348,6 +388,23 @@ public class ConversationsApiHttpTests : IAsyncLifetime
         returnedPKs.Should().Contain(expectedPK1);
         returnedPKs.Should().Contain(expectedPK2);
         returnedPKs.Should().NotContain(unexpectedPK3);
+
+        // Verify the correct conversations are returned by checking their content
+        var convo1 = conversations.FirstOrDefault(c => c["PK"] == $"CONVO#{convo1Guid}");
+        convo1.Should().NotBeNull();
+        convo1!["Author"].Should().Be(filterByUniqueAuthor);
+        convo1!["Title"].Should().Be("Test Conversation tilet");
+        convo1!["ConvoType"].Should().Be("DILEMMA");
+        convo1!["UpdatedAtYear"].Should().Be(updatedAtYear.ToString());
+        convo1!["UpdatedAt"].Should().Be(targetYearTime.ToUnixTimeSeconds().ToString());
+
+        var convo2 = conversations.FirstOrDefault(c => c["PK"] == $"CONVO#{convo2Guid}");
+        convo2.Should().NotBeNull();
+        convo2!["Author"].Should().Be(filterByUniqueAuthor);
+        convo2!["Title"].Should().Be("Test Conversation tilet");
+        convo2!["ConvoType"].Should().Be("DILEMMA");
+        convo2!["UpdatedAtYear"].Should().Be(updatedAtYear.ToString());
+        convo2!["UpdatedAt"].Should().Be(targetYearTime.AddHours(1).ToUnixTimeSeconds().ToString());
     }
 
 
@@ -396,7 +453,7 @@ public class ConversationsApiHttpTests : IAsyncLifetime
     {
         // Arrange - Create a conversation with posts first
         var newConvoGuid = GetNewConversationGuid();
-        var creationTime = DateTimeOffset.UtcNow;
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
         
         // Create the conversation
         await _httpClient.PostAsync("/conversations",

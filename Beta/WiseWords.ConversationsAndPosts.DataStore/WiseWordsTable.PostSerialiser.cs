@@ -61,7 +61,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore
 
             public override string ToString()
             {
-                return JsonSerializer.Serialize(this, new JsonSerializerOptions 
+                return JsonSerializer.Serialize(this, this.GetType(), new JsonSerializerOptions 
                 { 
                     WriteIndented = true,
                     NumberHandling = JsonNumberHandling.WriteAsString
