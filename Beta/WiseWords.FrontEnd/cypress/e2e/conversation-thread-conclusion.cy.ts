@@ -17,7 +17,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
   context('Adding Conclusion to the Root Conversation Post', () => {
     it('should post a new conclusion on the Conversation root post successfully', () => {
       const newConclusion = {
-        author: 'Test Author',
+        author: 'Alice',
         title: 'Conclusion title',
         message: 'This is a brand new conclusion on the root post.'
       };
@@ -85,7 +85,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
     it('should cancel posting a new conclusion', () => {
       // 1. Stub the window prompt before clicking the button
       cy.window().then((win) => {
-        cy.stub(win, 'prompt').returns('A. User');
+        cy.stub(win, 'prompt').returns('Alice');
       });
 
       // 2. Click the "Propose Answer/Solution/Choice" button on the main conversation post
@@ -115,7 +115,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
 
     it('should display an error message and keep form content on API error', () => {
       const newConclusion = {
-        author: 'Error Author',
+        author: 'Alice',
         message: 'This conclusion should fail to post.'
       };
 
@@ -159,7 +159,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
   context('Adding Conclusion to a Nested Drill-Down Post', () => {
     it('should post a new conclusion successfully on a nested post', () => {
       const newConclusion = {
-        author: 'Nested Conclusion Author',
+        author: 'Alice',
         title: 'Nested conclusion title',
         message: 'This is a conclusion to a nested sub-question.'
       };
@@ -227,7 +227,7 @@ describe('Conversation Thread Conclusion Workflow', () => {
   context('Conclusion Post Persistence', () => {
     it('should persist conclusion post after page reload', () => {
       const newConclusion = {
-        author: 'Persistence Test Author',
+        author: 'Alice',
         title: 'Persistence conclusion title',
         message: 'This conclusion should persist after page reload.'
       };

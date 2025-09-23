@@ -32,6 +32,7 @@ const ConversationsList: React.FC = () => {
   const [showNewConversationForm, setShowNewConversationForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setIsSubmitting] = useState(false);
+  const [showNewConversationInfo, setShowNewConversationInfo] = useState(false);
   const [formData, setFormData] = useState({
     type: 'QUESTION',
     title: '',
@@ -140,6 +141,7 @@ const ConversationsList: React.FC = () => {
   
   const handleOpenForm = () => {  
     setShowNewConversationForm(true);
+    setShowNewConversationInfo(true);
     setFormError(null);
   };
 
@@ -368,6 +370,23 @@ const ConversationsList: React.FC = () => {
             alignSelf: 'center'
           }}>
           <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>Create New Conversation</h3>
+
+          {showNewConversationInfo && !formError && (
+            <div style={{
+              padding: '1rem 2rem',
+              backgroundColor: 'rgba(94, 139, 255, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid var(--color-accent)',
+              margin: '1rem 0',
+              width: '100%',
+              color: 'var(--color-accent)',
+              fontFamily: 'Inter, sans-serif'
+            }}>
+              <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-accent)' }}>
+                Only you will be able to add sub-{getConversationSubType(formData.type)}s and propose {getConversationConclusionType(formData.type)}s. Others will be allowed to comment.
+              </p>
+            </div>
+          )}
           
           {/* Form Error Display */}
           {formError && (
@@ -499,6 +518,32 @@ const ConversationsList: React.FC = () => {
       )}
     </div>
   );
+};
+
+const getConversationConclusionType = (type: string) => {
+  switch (type) {
+    case 'QUESTION':
+      return 'answer';
+    case 'PROBLEM':
+      return 'solution';
+    case 'DILEMMA':
+      return 'choice';
+    default:
+      return 'conclusion';
+  }
+};
+
+const getConversationSubType = (type: string) => {
+  switch (type) {
+    case 'QUESTION':
+      return 'question';
+    case 'PROBLEM':
+      return 'problem';
+    case 'DILEMMA':
+      return 'dilemma';
+    default:
+      return 'item';
+  }
 };
 
 export default ConversationsList;

@@ -98,10 +98,8 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
 
   it('should handle button interactions correctly', () => {
     cy.visitConversation('CONVO#123')
-    cy.wait('@getConversationPosts')
-
     cy.window().then((win) => {
-      cy.stub(win, 'prompt').returns('TestAuthor');
+      cy.stub(win, 'prompt').returns('Alice');
     });
 
     // Test that buttons are clickable when not disabled
@@ -170,7 +168,7 @@ describe('ConversationThread Button Accessibility & Interactions', () => {
     checkButtonsEnabled();
 
     cy.window().then((win) => {
-      cy.stub(win, 'prompt').returns('TestAuthor');
+      cy.stub(win, 'prompt').returns('Alice');
     });
 
     // Click the comment button to open the edit form

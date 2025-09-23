@@ -61,6 +61,7 @@ const ConversationThread: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showOwnershipInfo, setShowOwnershipInfo] = useState(false);
 
 // Binary Semaphors to prevent double calls to fetchData (API - cache). 
 // In the future review the suggestion to use data fetching library like React Query or SWR instead.
@@ -73,6 +74,7 @@ const isInitialLoadCompleted = useRef(false);
 
       setLoading(true);
       setError(null);
+      setShowOwnershipInfo(false); // Clear info message when starting new conversation load
       try {
         const data = await ConversationService.fetchConversationPostsViaCachedAPI(conversationId, forceRefresh);
         const conversationData = data.find((item: Post) => item.SK === 'METADATA');
@@ -180,6 +182,8 @@ const isInitialLoadCompleted = useRef(false);
     }
   }, [activeForm]);
 
+
+
   const handleOpenForm = (type: FormType, context: FormContext, initialMessage: string = '') => {
     setActiveForm({ type, context });
     setFormData({ title: '', messageBody: initialMessage });
@@ -190,6 +194,21 @@ const isInitialLoadCompleted = useRef(false);
     setActiveForm(null);
     setFormData({ title: '', messageBody: '' });
     setFormError(null);
+    setShowOwnershipInfo(false); // Clear info message when cancelling forms
+  };
+
+  // Check if current user is the conversation owner
+  const isConversationOwner = (): boolean => {
+    if (!conversation || !username) return false;
+    return conversation.Author === username;
+  };
+
+  // Handle restricted actions for non-owners (drill-down and conclusion)
+  const handleRestrictedAction = (type: 'drilldown' | 'conclusion', context: FormContext, initialMessage: string = '') => {
+    if (!isConversationOwner()) {
+      setShowOwnershipInfo(true);
+    }
+    handleOpenForm(type, context, initialMessage);
   };
 
   // If login is required, store buttonId and start login. Returns true if login started.
@@ -477,6 +496,8 @@ const isInitialLoadCompleted = useRef(false);
       <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
         <Logo linkTo="/conversations" />
       </header>
+      
+
       <div style={{ 
         width: '90%',
         margin: '0 auto',
@@ -554,7 +575,7 @@ const isInitialLoadCompleted = useRef(false);
               onClick={() => {
                 const buttonId = `drill-down-button-${conversation.SK}`;
                 if (handleLoginIfNeeded(buttonId)) return;
-                handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })
+                handleRestrictedAction('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })
               }}
             >
               {getAddSubActionButtonText(conversation.ConvoType)}
@@ -568,7 +589,7 @@ const isInitialLoadCompleted = useRef(false);
               onClick={() => {
                 const buttonId = `propose-answer-button-${conversation.SK}`;
                 if (handleLoginIfNeeded(buttonId)) return;
-                handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })
+                handleRestrictedAction('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK })
               }}
             >
               {getProposeSolutionButtonText(conversation.ConvoType)}
@@ -588,20 +609,21 @@ const isInitialLoadCompleted = useRef(false);
       
       {/* --- Render Forms for Main Conversation --- */}
       {activeForm && activeForm.context.insertAfterSK === conversation?.SK && (
-        <ConversatonThreadAppendPostForm
-          title={`${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
-          formData={formData}
-          setFormData={setFormData}
-          onCancel={handleCancelForm}
-          onPost={handleSubmit}
-          isSubmitting={isSubmitting}
-          formError={formError}
-          marginLeft={`${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`}
-          id={`${activeForm.type}-form-${conversation?.SK || 'main'}`}
-          dataTestId={`${activeForm.type}-form-${conversation.SK}`}
-          requireTitle={activeForm.type !== 'comment'}
-           />
-      )}
+                  <ConversatonThreadAppendPostForm
+                    title={`${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
+                    formData={formData}
+                    setFormData={setFormData}
+                    onCancel={handleCancelForm}
+                    onPost={handleSubmit}
+                    isSubmitting={isSubmitting}
+                    formError={formError}
+                    showOwnershipInfo={showOwnershipInfo}
+                    author={conversation.Author}
+                    marginLeft={`${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`}
+                    id={`${activeForm.type}-form-${conversation?.SK || 'main'}`}
+                    dataTestId={`${activeForm.type}-form-${conversation.SK}`}
+                    requireTitle={activeForm.type !== 'comment'}
+                   />      )}
       
       {posts.length === 0 ? (
         <div style={{ 
@@ -709,7 +731,7 @@ const isInitialLoadCompleted = useRef(false);
                           onClick={() => {
                             const buttonId = `drill-down-button-${post.SK}`;
                             if (handleLoginIfNeeded(buttonId)) return;
-                            handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })
+                            handleRestrictedAction('drilldown', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })
                           }}
                         >
                           {getAddSubActionButtonText(conversation.ConvoType)}
@@ -719,7 +741,7 @@ const isInitialLoadCompleted = useRef(false);
                           onClick={() => {
                             const buttonId = `propose-answer-button-${post.SK}`;
                             if (handleLoginIfNeeded(buttonId)) return;
-                            handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })
+                            handleRestrictedAction('conclusion', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: post.SK })
                           }}>
                           {getProposeSolutionButtonText(conversation.ConvoType)}
                         </button>
@@ -770,7 +792,7 @@ const isInitialLoadCompleted = useRef(false);
                           onClick={() => {
                             const buttonId = `drill-down-button-${post.SK}`;
                             if (handleLoginIfNeeded(buttonId)) return;
-                            handleOpenForm('drilldown', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })
+                            handleRestrictedAction('drilldown', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })
                           }}
                         >
                           {getAddSubActionButtonText(conversation.ConvoType)}
@@ -784,7 +806,7 @@ const isInitialLoadCompleted = useRef(false);
                           onClick={() => {
                             const buttonId = `propose-answer-button-${post.SK}`;
                             if (handleLoginIfNeeded(buttonId)) return;
-                            handleOpenForm('conclusion', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })
+                            handleRestrictedAction('conclusion', { conversationPK: conversation.PK, parentPostSK: post.SK, insertAfterSK: post.SK })
                           }}
                         >
                           {getProposeSolutionButtonText(conversation.ConvoType)}
@@ -807,6 +829,8 @@ const isInitialLoadCompleted = useRef(false);
                   onPost={handleSubmit}
                   isSubmitting={isSubmitting}
                   formError={formError}
+                  showOwnershipInfo={showOwnershipInfo}
+                  author={conversation.Author}
                   marginLeft={`${activeForm.type === 'comment' ? newCommentDepth * 48 : (depth + 1) * 48}px`}
                   id={`${activeForm.type}-form-${post.SK}`}
                   dataTestId={`${activeForm.type}-form-${post.SK}`}

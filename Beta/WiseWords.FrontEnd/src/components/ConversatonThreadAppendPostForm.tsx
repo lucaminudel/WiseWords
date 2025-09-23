@@ -9,6 +9,9 @@ export const ConversatonThreadAppendPostForm = ({
   onPost,
   isSubmitting,
   formError,
+  showOwnershipInfo,
+  author,
+  operation,
   marginLeft,
   id,
   dataTestId,
@@ -21,6 +24,9 @@ export const ConversatonThreadAppendPostForm = ({
   onPost: () => Promise<void>;
   isSubmitting: boolean;
   formError: string | null;
+  showOwnershipInfo: boolean;
+  author: string;
+  operation: string;
   marginLeft: string;
   id: string;
   dataTestId: string;
@@ -52,6 +58,27 @@ export const ConversatonThreadAppendPostForm = ({
         {title}
       </div>
 
+      {showOwnershipInfo && (
+        <div 
+          data-testid="ownership-info-message"
+          style={{
+            padding: '1rem 2rem',
+            backgroundColor: 'rgba(94, 139, 255, 0.1)', 
+            borderRadius: '8px',
+            border: '1px solid var(--color-accent)',
+            margin: '1rem 0',
+            width: '100%',
+            color: 'var(--color-accent)',
+            fontFamily: 'Inter, sans-serif'
+          }}
+        >
+          <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-accent)' }}>
+            Only <em>{author}</em>, who started this conversation, can do this. 
+            You can comment, suggesting they do so and providing your motivations.
+          </p>
+        </div>
+      )}
+
       {formError && (
         <div style={{
           color: 'var(--color-danger)',
@@ -76,7 +103,7 @@ export const ConversatonThreadAppendPostForm = ({
               placeholder="Provide a short Title"
               value={formData.title || ''}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              disabled={isSubmitting}
+              disabled={isSubmitting || showOwnershipInfo}
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -100,7 +127,7 @@ export const ConversatonThreadAppendPostForm = ({
             onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
             placeholder="Enter your message..."
             rows={3}
-            disabled={isSubmitting}
+            disabled={isSubmitting || showOwnershipInfo}
             style={{
               width: '100%',
               padding: '0.75rem',
@@ -139,7 +166,7 @@ export const ConversatonThreadAppendPostForm = ({
           <button
             data-testid="post-button"
             onClick={onPost}
-            disabled={isSubmitting || !formData.messageBody.trim() || (requireTitle && !(formData.title || '').trim())}
+            disabled={isSubmitting || !formData.messageBody.trim() || (requireTitle && !(formData.title || '').trim()) || showOwnershipInfo}
             style={{
               backgroundColor: 'var(--color-accent)',
               color: 'var(--color-text-primary)',

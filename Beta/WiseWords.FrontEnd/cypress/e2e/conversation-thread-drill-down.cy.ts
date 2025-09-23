@@ -17,7 +17,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
   context('Drilling down on the Root Conversation Post', () => {
     it('should post a new drill down on the Conversation root post successfully', () => {
       const newDrillDown = {
-        author: 'Test Author',
+        author: 'Alice',
         title: 'Sub-problem title',
         message: 'This is a brand new drill down on the root post.'
       };
@@ -80,7 +80,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
     it('should cancel posting a new drill down', () => {
       // 1. Stub the window prompt before clicking the button
       cy.window().then((win) => {
-        cy.stub(win, 'prompt').returns('A. User');
+        cy.stub(win, 'prompt').returns('Alice');
       });
 
       // 2. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
@@ -110,7 +110,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
 
     it('should display an error message and keep form content on API error', () => {
       const newDrillDown = {
-        author: 'Error Author',
+        author: 'Alice',
         message: 'This drill down should fail to post.'
       };
 
@@ -154,7 +154,7 @@ describe('Conversation Thread Drill Down Workflow', () => {
   context('Drilling down on a Nested Drill-Down Post', () => {
     it('should post a new drill down successfully on a nested post', () => {
       const newDrillDown = {
-        author: 'Nested Drill Down Author',
+        author: 'Alice',
         title: 'Nested Sub-problem title',
         message: 'This is a reply to a nested sub-question.'
       };
