@@ -140,6 +140,7 @@ const isInitialLoadCompleted = useRef(false);
     };
   }, [conversationId]);
 
+
   // Scroll to form when it becomes visible and set focus
   useEffect(() => {
     if (activeForm) {
@@ -378,11 +379,11 @@ const isInitialLoadCompleted = useRef(false);
                   fontStyle: 'normal'
                 }}>Loading...</span>
                 <div className="thread-actions">
-                  <button type="button" style={{ ...buttonStyle, opacity: 0.5, cursor: 'not-allowed' }} disabled>Comment</button>
-                  <button type="button" style={{ ...buttonStyle, marginLeft: '8px', opacity: 0.5, cursor: 'not-allowed' }} disabled>
+                  <button type="button" className="button-thread-action button-disabled" disabled>Comment</button>
+                  <button type="button" className="button-thread-action button-margin-left button-disabled" disabled>
                     Add Sub-problem
                   </button>
-                  <button type="button" style={{ ...buttonStyle, marginLeft: '8px', opacity: 0.5, cursor: 'not-allowed' }} disabled>
+                  <button type="button" className="button-thread-action button-margin-left button-disabled" disabled>
                     Suggest Solution
                   </button>
                 </div>
@@ -556,7 +557,7 @@ const isInitialLoadCompleted = useRef(false);
               id={`comment-button-${conversation.SK}`}
               data-testid="comment-button" 
               type="button" 
-              style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+              className={`button-thread-action ${!!activeForm ? 'button-disabled' : ''}`}
               disabled={!!activeForm}
               onClick={() => {
                 const buttonId = `comment-button-${conversation.SK}`;
@@ -570,7 +571,7 @@ const isInitialLoadCompleted = useRef(false);
               id={`drill-down-button-${conversation.SK}`}
               data-testid="drill-down-button" 
               type="button" 
-              style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+              className={`button-thread-action button-margin-left ${!!activeForm ? 'button-disabled' : ''}`}
               disabled={!!activeForm}
               onClick={() => {
                 const buttonId = `drill-down-button-${conversation.SK}`;
@@ -584,7 +585,7 @@ const isInitialLoadCompleted = useRef(false);
               id={`propose-answer-button-${conversation.SK}`}
               data-testid="propose-answer-button" 
               type="button" 
-              style={{ ...buttonStyle, marginLeft: '8px', ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+              className={`button-thread-action button-margin-left ${!!activeForm ? 'button-disabled' : ''}`}
               disabled={!!activeForm}
               onClick={() => {
                 const buttonId = `propose-answer-button-${conversation.SK}`;
@@ -715,7 +716,9 @@ const isInitialLoadCompleted = useRef(false);
                         <button 
                           id={`comment-button-${post.SK}`}
                           data-testid="comment-button" 
-                          style={buttonStyle}
+                          type="button"
+                          className={`button-thread-action ${!!activeForm ? 'button-disabled' : ''}`}
+                          disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `comment-button-${post.SK}`;
                             if (handleLoginIfNeeded(buttonId)) return;
@@ -727,7 +730,9 @@ const isInitialLoadCompleted = useRef(false);
                         <button 
                           id={`drill-down-button-${post.SK}`}
                           data-testid="drill-down-button" 
-                          style={buttonStyle}
+                          type="button"
+                          className={`button-thread-action button-margin-left ${!!activeForm ? 'button-disabled' : ''}`}
+                          disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `drill-down-button-${post.SK}`;
                             if (handleLoginIfNeeded(buttonId)) return;
@@ -736,7 +741,11 @@ const isInitialLoadCompleted = useRef(false);
                         >
                           {getAddSubActionButtonText(conversation.ConvoType)}
                         </button>
-                        <button id={`propose-answer-button-${post.SK}`} data-testid="propose-answer-button" style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                        <button 
+                          id={`propose-answer-button-${post.SK}`} 
+                          data-testid="propose-answer-button" 
+                          type="button"
+                          className={`button-thread-action button-margin-left ${!!activeForm ? 'button-disabled' : ''}`}
                           disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `propose-answer-button-${post.SK}`;
@@ -754,7 +763,7 @@ const isInitialLoadCompleted = useRef(false);
                         type="button" 
                         id={`reply-quote-button-${post.SK}`}
                         data-testid="reply-quote-button" 
-                        style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                        className={`button-thread-action ${!!activeForm ? 'button-disabled' : ''}`}
                         disabled={!!activeForm}
                         onClick={() => {
                           const buttonId = `reply-quote-button-${post.SK}`;
@@ -773,7 +782,7 @@ const isInitialLoadCompleted = useRef(false);
                           type="button" 
                           id={`comment-button-${post.SK}`}
                           data-testid="comment-button" 
-                          style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          className={`button-thread-action ${!!activeForm ? 'button-disabled' : ''}`}
                           disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `comment-button-${post.SK}`;
@@ -787,7 +796,7 @@ const isInitialLoadCompleted = useRef(false);
                           type="button" 
                           id={`drill-down-button-${post.SK}`}
                           data-testid="drill-down-button" 
-                          style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          className={`button-thread-action button-margin-left ${!!activeForm ? 'button-disabled' : ''}`}
                           disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `drill-down-button-${post.SK}`;
@@ -801,7 +810,7 @@ const isInitialLoadCompleted = useRef(false);
                           type="button" 
                           id={`propose-answer-button-${post.SK}`}
                           data-testid="propose-answer-button" 
-                          style={{ ...buttonStyle, ...(!!activeForm && { opacity: 0.5, cursor: 'not-allowed' }) }}
+                          className={`button-thread-action button-margin-left ${!!activeForm ? 'button-disabled' : ''}`}
                           disabled={!!activeForm}
                           onClick={() => {
                             const buttonId = `propose-answer-button-${post.SK}`;
@@ -847,25 +856,6 @@ const isInitialLoadCompleted = useRef(false);
   );
 };
 
-const buttonStyle = {
-  backgroundColor: 'var(--color-accent)',
-  color: 'var(--color-text-primary)',
-  border: 'none',
-  padding: '0.3rem 0.7rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 700,
-  fontFamily: 'Orbitron, Inter, sans-serif',
-  fontSize: '0.85rem',
-  transition: 'all 0.2s ease',
-  ':hover': {
-    backgroundColor: 'var(--color-accent-hover)',
-    transform: 'translateY(-1px)'
-  },
-  ':active': {
-    transform: 'translateY(0)'
-  }
-};
 
 
 export default ConversationThread;

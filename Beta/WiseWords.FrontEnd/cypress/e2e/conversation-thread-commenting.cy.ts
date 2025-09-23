@@ -267,4 +267,46 @@ describe('Conversation Thread Commenting Workflow', () => {
       cy.get(formId).should('not.exist');
     });
   });
+
+  context('Form Validation', () => {
+    it('should have an enabled "Post" button when the comment form is opened', () => {
+      // 1. Stub the window prompt before clicking the comment button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('Test Author');
+      });
+
+      // 2. Click the "Comment" button on the main conversation post
+      cy.get('#comment-button-METADATA').click();
+
+      // 3. Verify the comment form appears
+      const formId = '#comment-form-METADATA';
+      cy.get(formId).should('be.visible');
+
+      // 4. The "Post" button should be enabled
+      cy.get(formId).contains('button', 'Post').should('be.enabled');
+    });
+
+    it('should show an error message when trying to post an empty comment', () => {
+      // 1. Stub the window prompt before clicking the comment button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('Test Author');
+      });
+
+      // 2. Click the "Comment" button on the main conversation post
+      cy.get('#comment-button-METADATA').click();
+
+      // 3. Verify the comment form appears
+      const formId = '#comment-form-METADATA';
+      cy.get(formId).should('be.visible');
+
+      // 4. Click the "Post" button without filling in the message
+      cy.get(formId).contains('button', 'Post').click();
+
+      // 5. An error message should be displayed
+      cy.get(formId).should('contain.text', 'Please fill in all required fields');
+
+      // 6. The error message should have the correct styling
+      cy.get(formId).find('div').contains('Please fill in all required fields').should('have.css', 'color', 'rgb(255, 79, 90)'); // --color-danger
+    });
+  });
 });

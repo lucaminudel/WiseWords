@@ -213,4 +213,54 @@ describe('Conversation Thread Drill Down Workflow', () => {
       cy.get(formSelector).should('not.exist');
     });
   });
+
+  context('Form Validation', () => {
+    beforeEach(() => {
+      // Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('Alice'); // Log in as owner
+      });
+    });
+
+    it('should have an enabled "Post" button when the drill-down form is opened by the owner', () => {
+      // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
+      cy.get('#drill-down-button-METADATA').click();
+
+      // 2. Verify the drill down form appears
+      const formSelector = '[data-testid="drilldown-form-METADATA"]';
+      cy.get(formSelector).should('be.visible');
+
+      // 3. The "Post" button should be enabled
+      cy.get(formSelector).contains('button', 'Post').should('be.enabled');
+    });
+
+    it('should show an error message when trying to post a drill-down with empty fields', () => {
+      // 1. Click the "Sub-question/Sub-problem:/Sub-Dilemma" button on the main conversation post
+      cy.get('#drill-down-button-METADATA').click();
+
+      // 2. Verify the drill down form appears
+      const formSelector = '[data-testid="drilldown-form-METADATA"]';
+      cy.get(formSelector).should('be.visible');
+
+      // 3. Click the "Post" button without filling in the fields
+      cy.get(formSelector).contains('button', 'Post').click();
+
+      // 4. An error message should be displayed
+      cy.get(formSelector).should('contain.text', 'Please fill in all required fields');
+
+      // 5. The error message should have the correct styling
+      cy.get(formSelector).find('div').contains('Please fill in all required fields').should('have.css', 'color', 'rgb(255, 79, 90)'); // --color-danger
+
+      // 6. Fill in only the title and check for the error again
+      cy.get(formSelector).find('input[placeholder*="Title"]').type('Incomplete Drill Down');
+      cy.get(formSelector).contains('button', 'Post').click();
+      cy.get(formSelector).should('contain.text', 'Please fill in all required fields');
+
+      // 7. Clear the title, fill in only the message and check for the error again
+      cy.get(formSelector).find('input[placeholder*="Title"]').clear();
+      cy.get(formSelector).find('textarea').type('This is an incomplete drill down message.');
+      cy.get(formSelector).contains('button', 'Post').click();
+      cy.get(formSelector).should('contain.text', 'Please fill in all required fields');
+    });
+  });
 });

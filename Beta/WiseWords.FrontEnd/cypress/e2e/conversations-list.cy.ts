@@ -125,4 +125,42 @@ describe('Conversations List Page', () => {
       cy.window().its('scrollY').should('be.greaterThan', scrollYBefore);
     });
   });
+
+    it('should have an enabled "Create" button when the new conversation form is opened', () => {
+      // Stub the prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('Test Author');
+      });
+
+      // Click the "New Conversation" button
+      cy.contains('button', 'New Conversation').click();
+
+      // The form should now be visible
+      cy.get('#new-conversation-form').should('be.visible');
+
+      // The "Create" button should be enabled
+      cy.get('#new-conversation-form').contains('button', 'Create').should('be.enabled');
+    });
+
+    it('should show an error message when trying to create a conversation with empty fields', () => {
+      // Stub the prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('Test Author');
+      });
+
+      // Click the "New Conversation" button
+      cy.contains('button', 'New Conversation').click();
+
+      // The form should now be visible
+      cy.get('#new-conversation-form').should('be.visible');
+
+      // Click the "Create" button without filling in the form
+      cy.get('#new-conversation-form').contains('button', 'Create').click();
+
+      // An error message should be displayed
+      cy.get('#new-conversation-form').should('contain.text', 'Please fill in all required fields');
+
+      // The error message should have the correct styling
+      cy.get('#new-conversation-form').find('div').contains('Please fill in all required fields').should('have.css', 'color', 'rgb(255, 79, 90)'); // --color-danger
+    });
 });

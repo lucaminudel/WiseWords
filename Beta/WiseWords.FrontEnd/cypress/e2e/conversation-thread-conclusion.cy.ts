@@ -320,4 +320,54 @@ describe('Conversation Thread Conclusion Workflow', () => {
       cy.contains('[data-testid="post-container"]', newConclusion.message).should('be.visible');
     });
   });
+
+  context('Form Validation', () => {
+    beforeEach(() => {
+      // Stub the window prompt before clicking the button
+      cy.window().then((win) => {
+        cy.stub(win, 'prompt').returns('Alice'); // Log in as owner
+      });
+    });
+
+    it('should have an enabled "Post" button when the conclusion form is opened by the owner', () => {
+      // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
+      cy.get('#propose-answer-button-METADATA').click();
+
+      // 2. Verify the conclusion form appears
+      const formSelector = '[data-testid="conclusion-form-METADATA"]';
+      cy.get(formSelector).should('be.visible');
+
+      // 3. The "Post" button should be enabled
+      cy.get(formSelector).contains('button', 'Post').should('be.enabled');
+    });
+
+    it('should show an error message when trying to post a conclusion with empty fields', () => {
+      // 1. Click the "Propose Answer/Solution/Choice" button on the main conversation post
+      cy.get('#propose-answer-button-METADATA').click();
+
+      // 2. Verify the conclusion form appears
+      const formSelector = '[data-testid="conclusion-form-METADATA"]';
+      cy.get(formSelector).should('be.visible');
+
+      // 3. Click the "Post" button without filling in the fields
+      cy.get(formSelector).contains('button', 'Post').click();
+
+      // 4. An error message should be displayed
+      cy.get(formSelector).should('contain.text', 'Please fill in all required fields');
+
+      // 5. The error message should have the correct styling
+      cy.get(formSelector).find('div').contains('Please fill in all required fields').should('have.css', 'color', 'rgb(255, 79, 90)'); // --color-danger
+
+      // 6. Fill in only the title and check for the error again
+      cy.get(formSelector).find('input[placeholder*="Title"]').type('Incomplete Conclusion');
+      cy.get(formSelector).contains('button', 'Post').click();
+      cy.get(formSelector).should('contain.text', 'Please fill in all required fields');
+
+      // 7. Clear the title, fill in only the message and check for the error again
+      cy.get(formSelector).find('input[placeholder*="Title"]').clear();
+      cy.get(formSelector).find('textarea').type('This is an incomplete conclusion message.');
+      cy.get(formSelector).contains('button', 'Post').click();
+      cy.get(formSelector).should('contain.text', 'Please fill in all required fields');
+    });
+  });
 });

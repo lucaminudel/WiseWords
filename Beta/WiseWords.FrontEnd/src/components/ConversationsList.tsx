@@ -321,30 +321,11 @@ const ConversationsList: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem', width: '100%' }}>
             <button 
               id='new-conversation-button'
+              className="button-primary"
               onClick={() => {
                 const buttonId = 'new-conversation-button';
                 if (handleLoginIfNeeded(buttonId)) return;
                 handleOpenForm()
-              }}
-              style={{
-                backgroundColor: 'var(--color-accent)',
-                color: 'var(--color-text-primary)',
-                border: 'none',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 700,
-                fontFamily: 'Orbitron, Inter, sans-serif',
-                fontSize: '1rem',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-accent)';
-                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
               New Conversation
@@ -477,38 +458,14 @@ const ConversationsList: React.FC = () => {
               <button 
                 onClick={handleCancel}
                 disabled={submitting}
-                style={{
-                  backgroundColor: 'var(--color-text-secondary)',
-                  color: 'var(--color-background)',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                  fontWeight: 700,
-                  fontFamily: 'Orbitron, Inter, sans-serif',
-                  fontSize: '1rem',
-                  opacity: submitting ? 0.6 : 1,
-                  transition: 'all 0.2s ease'
-                }}
+                className={`button-secondary ${submitting ? 'button-disabled' : ''}`}
               >
                 Cancel
               </button>
               <button 
                 onClick={handleSubmit}
                 disabled={submitting}
-                style={{
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'var(--color-text-primary)',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                  fontWeight: 700,
-                  fontFamily: 'Orbitron, Inter, sans-serif',
-                  fontSize: '1rem',
-                  opacity: submitting ? 0.6 : 1,
-                  transition: 'all 0.2s ease'
-                }}
+                className={`button-primary ${submitting ? 'button-disabled' : ''}`}
               >
                 {submitting ? 'Creating...' : 'Create'}
               </button>

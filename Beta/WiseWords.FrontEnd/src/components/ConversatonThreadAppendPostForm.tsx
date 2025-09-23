@@ -11,7 +11,6 @@ export const ConversatonThreadAppendPostForm = ({
   formError,
   showOwnershipInfo,
   author,
-  operation,
   marginLeft,
   id,
   dataTestId,
@@ -26,7 +25,6 @@ export const ConversatonThreadAppendPostForm = ({
   formError: string | null;
   showOwnershipInfo: boolean;
   author: string;
-  operation: string;
   marginLeft: string;
   id: string;
   dataTestId: string;
@@ -74,7 +72,7 @@ export const ConversatonThreadAppendPostForm = ({
         >
           <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-accent)' }}>
             Only <em>{author}</em>, who started this conversation, can do this. 
-            You can comment, suggesting they do so and providing your motivations.
+            You can comment, suggesting they do so, providing your motivations.
           </p>
         </div>
       )}
@@ -148,38 +146,15 @@ export const ConversatonThreadAppendPostForm = ({
             data-testid="cancel-button"
             onClick={onCancel}
             disabled={isSubmitting}
-            style={{
-              backgroundColor: 'var(--color-text-secondary)',
-              color: 'var(--color-background)',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              fontWeight: 700,
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '1rem',
-              transition: 'all 0.2s ease'
-            }}
+            className={`button-secondary ${isSubmitting ? 'button-disabled' : ''}`}
           >
             Cancel
           </button>
           <button
             data-testid="post-button"
             onClick={onPost}
-            disabled={isSubmitting || !formData.messageBody.trim() || (requireTitle && !(formData.title || '').trim()) || showOwnershipInfo}
-            style={{
-              backgroundColor: 'var(--color-accent)',
-              color: 'var(--color-text-primary)',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              cursor: isSubmitting || !formData.messageBody.trim() || (requireTitle && !(formData.title || '').trim()) ? 'not-allowed' : 'pointer',
-              fontWeight: 700,
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '1rem',
-              opacity: isSubmitting || !formData.messageBody.trim() || (requireTitle && !(formData.title || '').trim()) ? 0.6 : 1,
-              transition: 'all 0.2s ease'
-            }}
+            disabled={isSubmitting || showOwnershipInfo}
+            className={`button-primary ${(isSubmitting || showOwnershipInfo) ? 'button-disabled' : ''}`}
           >
             {isSubmitting ? 'Posting...' : (formError ? 'Retry Post' : 'Post')}
           </button>

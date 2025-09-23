@@ -146,11 +146,7 @@ button {
   cursor: pointer;
   transition: all 0.2s ease;
   outline: none;
-}
-
-button:hover {
-  background-color: var(--color-accent-hover);
-  transform: translateY(-1px);
+  user-select: none;
 }
 
 button:focus-visible {
@@ -160,6 +156,78 @@ button:focus-visible {
 
 button:active {
   transform: translateY(0);
+}
+
+/* Button Variants */
+.button-primary {
+  background-color: var(--color-accent);
+  color: var(--color-text-primary);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-family: 'Orbitron', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.button-primary:hover:not(.button-disabled) {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.button-secondary {
+  background-color: var(--color-text-secondary);
+  color: var(--color-background);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-family: 'Orbitron', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.button-secondary:hover:not(.button-disabled) {
+  background-color: var(--color-text-primary);
+  transform: translateY(-1px);
+}
+
+.button-thread-action {
+  background-color: var(--color-accent);
+  color: var(--color-text-primary);
+  border: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-family: 'Orbitron', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.button-thread-action:hover:not(.button-disabled) {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.button-thread-action.button-margin-left {
+  margin-left: 8px;
+}
+
+/* Button States */
+.button-disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+.button-disabled:hover {
+  transform: none !important;
 }
 
 /* Utility Classes */
@@ -182,14 +250,7 @@ button:active {
   transform: translateY(-1px);
 }
 
-.button-secondary {
-  background-color: var(--color-text-secondary);
-}
 
-.button-secondary:hover {
-  background-color: var(--color-text-primary);
-  color: var(--color-background);
-}
 
 /* Form Elements */
 .form-group {
