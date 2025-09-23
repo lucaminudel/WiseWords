@@ -97,7 +97,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
         
         // Network or other errors
         throw new ConversationApiError(
-            `Network error while fetching ${endpoint}: ${error instanceof Error ? error.message : 'Unknown error'}`
+            `Network error ${error instanceof Error ? `(${error.message} - Endpoint: ${endpoint}.)` : '.'}`
         );
     }
 }
