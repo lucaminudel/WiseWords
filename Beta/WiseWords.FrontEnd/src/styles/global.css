@@ -219,6 +219,9 @@ button:active {
 .button-thread-action.button-margin-left {
   margin-left: 8px;
 }
+.button-thread-action.button-margin-right {
+  margin-right: 8px;
+}
 
 /* Button States */
 .button-disabled {

@@ -365,6 +365,7 @@ const ConversationsList: React.FC = () => {
             }}>
               <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-accent)' }}>
                 Only you will be able to add sub-{getConversationSubType(formData.type)}s and propose {getConversationConclusionType(formData.type)}s. Others will be allowed to comment.
+                <br />You can also export the entire conversation to keep for your records or for your own analysis.
               </p>
             </div>
           )}

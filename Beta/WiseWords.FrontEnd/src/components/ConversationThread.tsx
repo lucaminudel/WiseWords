@@ -3,6 +3,8 @@ import { useParams, Link, useLocation } from 'react-router-dom';
 import { Logo } from './common/Logo';
 import { ConversatonThreadAppendPostForm } from './ConversatonThreadAppendPostForm';
 import { sortPosts } from '../utils/postSorter';
+import { buildNestedConversation } from '../utils/conversationExport';
+import { buildConversationHtml } from '../utils/conversationExportHtml';
 import { ConversationService } from '../services/conversationService';
 import { formatUnixTimestamp } from '../utils/dateUtils';
 import { getConversationTypeColor } from '../utils/conversationUtils';
@@ -551,6 +553,51 @@ const isInitialLoadCompleted = useRef(false);
           paddingTop: '12px',
           borderTop: '1px solid var(--color-border, #444)'
         }}>
+          {isConversationOwner() && (
+            <button
+              id={`export-conversation-button-${conversation.SK}`}
+              data-testid="export-conversation-button"
+              type="button"
+              className={`button-thread-action button-margin-right ${!!activeForm ? 'button-disabled' : ''}`}
+              disabled={!!activeForm}
+              onClick={() => {
+                try {
+                  // Build nested export structure and trigger JSON + HTML downloads (part b + c)
+                  const exportData = buildNestedConversation(conversation, posts);
+                  const safeId = (conversationId || conversation.PK || 'conversation').replace(/^CONVO#/i, '');
+
+                  // Download JSON
+                  const jsonBlob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                  const jsonUrl = URL.createObjectURL(jsonBlob);
+                  const a1 = document.createElement('a');
+                  a1.href = jsonUrl;
+                  const jsonFileName = `conversation-${safeId}.json`;
+                  a1.download = jsonFileName;
+                  document.body.appendChild(a1);
+                  a1.click();
+                  document.body.removeChild(a1);
+                  URL.revokeObjectURL(jsonUrl);
+
+                  // Download HTML that references the JSON (and can fallback to file input)
+                  const htmlContent = buildConversationHtml(exportData, { jsonFileName, titleOverride: conversation.Title });
+                  const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+                  const htmlUrl = URL.createObjectURL(htmlBlob);
+                  const a2 = document.createElement('a');
+                  a2.href = htmlUrl;
+                  a2.download = `conversation-${safeId}.html`;
+                  document.body.appendChild(a2);
+                  a2.click();
+                  document.body.removeChild(a2);
+                  URL.revokeObjectURL(htmlUrl);
+                } catch (err) {
+                  // eslint-disable-next-line no-console
+                  console.error('Failed to export conversation as JSON', err);
+                }
+              }}
+            >
+              Export conversation
+            </button>
+          )}
           <span>by <strong>{conversation.Author}</strong> • {formatUnixTimestamp(conversation.UpdatedAt)}</span>
           <div className="thread-actions">
             <button 
