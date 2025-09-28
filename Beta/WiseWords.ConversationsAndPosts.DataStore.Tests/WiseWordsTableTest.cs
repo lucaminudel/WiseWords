@@ -12,7 +12,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         private readonly Queue<string> _dbCleanupConversationPostTest = new();
 
 
-         private enum PostType { Conversation, Post }
+         private enum PostType { Conversation, Comment, DrillDown, Conclusion }
 
         private static TestDataBuilders.ConversationBuilder AConversation() => TestDataBuilders.AConversation();
         private static TestDataBuilders.PostBuilder APost() => TestDataBuilders.APost();
@@ -126,6 +126,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 var retrieved = retrievedConversations[i];
                 var expected = expectedConversationsInOrder[i];
 
+                // _ConversationsByYear index fields
                 retrieved["PK"].Should().Be(expected["PK"]);
                 retrieved["Author"].Should().Be(expected["Author"]);
                 retrieved["Title"].Should().Be(expected["Title"]);
@@ -167,11 +168,12 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 ["PK"] = $"CONVO#{conversationGuid}",
                 ["SK"] = $"#DD#{drillDownGuid}",
                 ["Author"] = "TestyTesterX",
+                ["Title"] = "Drill-down something title",
                 ["MessageBody"] = "This is a drill-down post responding to the conversation",
                 ["UpdatedAt"] = drillDownTimestamp.ToUnixTimeSeconds().ToString()
             };
 
-            AssertPostMatches(drillDownPost, expectedDrillDownPost);
+            AssertPostWithTitleMatches(drillDownPost, expectedDrillDownPost);
         }
 
         [Fact]
@@ -296,6 +298,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             var drillDownPost = await APostWithTitle()
                 .WithGuid(drillDownGuid)
                 .WithAuthor("TestyTesterX")
+                .WithTitle("Drill-down title")
                 .WithMessageBody("This is a drill-down post")
                 .WithTimestamp(DateTimeOffset.Parse("1970-01-01T00:00:02Z"))
                 .CreateDrillDownAsync(_db, conversation["PK"], conversation["SK"]);
@@ -308,8 +311,8 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
                 .CreateCommentAsync(_db, drillDownPost["PK"], drillDownPost["SK"]);
 
             // Assert - Using simplified assertion helpers
-            AssertPostHasStructure(drillDownPost, conversation["PK"], $"#DD#{drillDownGuid}", 
-                "TestyTesterX", "This is a drill-down post", DateTimeOffset.Parse("1970-01-01T00:00:02Z").ToUnixTimeSeconds());
+            AssertPostWithTitleHasStructure(drillDownPost, conversation["PK"], $"#DD#{drillDownGuid}", 
+                "TestyTesterX","Drill-down title", "This is a drill-down post", DateTimeOffset.Parse("1970-01-01T00:00:02Z").ToUnixTimeSeconds());
                 
             AssertPostHasStructure(conversationComment, conversation["PK"], $"#CM#{conversationCommentGuid}", 
                 "TestyTesterW", "Comment directly on conversation", DateTimeOffset.Parse("1970-01-01T00:00:03Z").ToUnixTimeSeconds());
@@ -426,8 +429,8 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             // Assert
             var conclusionFields = DeserialiseToStringDictionary.This(jsonConclusionPost);
             
-            AssertPostHasStructure(conclusionFields, $"CONVO#{conversationGuid}", $"#CC#{conclusionPostGuid}", 
-                conclusionPostAuthor, conclusionPostMessageBody, conclusionPostCreationTime.ToUnixTimeSeconds());
+            AssertPostWithTitleHasStructure(conclusionFields, $"CONVO#{conversationGuid}", $"#CC#{conclusionPostGuid}", 
+                conclusionPostAuthor, conclusionPostTitle, conclusionPostMessageBody, conclusionPostCreationTime.ToUnixTimeSeconds());
         }
 
         [Fact]
@@ -474,8 +477,8 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             // Assert
             var conclusionFields = DeserialiseToStringDictionary.This(jsonConclusionPost);
             
-            AssertPostHasStructure(conclusionFields, conversationFields["PK"], $"#DD#{drillDownPostGuid}#CC#{conclusionPostGuid}", 
-                conclusionPostAuthor, conclusionPostMessageBody, conclusionPostTime.ToUnixTimeSeconds());
+            AssertPostWithTitleHasStructure(conclusionFields, conversationFields["PK"], $"#DD#{drillDownPostGuid}#CC#{conclusionPostGuid}", 
+                conclusionPostAuthor, conclusionPostTitle, conclusionPostMessageBody, conclusionPostTime.ToUnixTimeSeconds());
         }
 
         [Fact]
@@ -728,33 +731,47 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
             return guid;
         }
- 
-        
-        private static void AssertPostMatches(Dictionary<string, string> actual, Dictionary<string, string> expected, PostType postType = PostType.Post)
+
+        private static void AssertPostWithTitleMatches(Dictionary<string, string> actualPost, Dictionary<string, string> expectedPost)
         {
-            actual["PK"].Should().Be(expected["PK"]);
-            actual["SK"].Should().Be(expected["SK"]);
-            actual["Author"].Should().Be(expected["Author"]);
-            actual["MessageBody"].Should().Be(expected["MessageBody"]);
-            actual["UpdatedAt"].Should().Be(expected["UpdatedAt"]);
-            
-            if (postType != PostType.Conversation)
-            {
-                actual.Should().NotContainKeys("UpdatedAtYear", "ConvoType", "Title");
-            }
+            actualPost["Title"].Should().Be(expectedPost["Title"]);
+            AssertPostWithTitleMatches(actualPost, expectedPost);
+        }
+        private static void AssertPostMatches(Dictionary<string, string> actualPost, Dictionary<string, string> expectedPost)
+        {
+            actualPost["PK"].Should().Be(expectedPost["PK"]);
+            actualPost["SK"].Should().Be(expectedPost["SK"]);
+            actualPost["Author"].Should().Be(expectedPost["Author"]);
+            actualPost["MessageBody"].Should().Be(expectedPost["MessageBody"]);
+            actualPost["UpdatedAt"].Should().Be(expectedPost["UpdatedAt"]);
         }
         
-        private static void AssertConversationMatches(Dictionary<string, string> actual, Dictionary<string, string> expected)
+        private static void AssertConversationMatches(Dictionary<string, string> actuaConversation, Dictionary<string, string> expectedConversation)
         {
             var conversationFields = new[] { "PK", "SK", "Author", "Title", "ConvoType", "MessageBody", "UpdatedAt", "UpdatedAtYear" };
-            actual.Should().ContainKeys(conversationFields);
+            actuaConversation.Should().ContainKeys(conversationFields);
             
             foreach (var field in conversationFields)
             {
-                actual[field].Should().Be(expected[field], $"Field {field} should match");
+                actuaConversation[field].Should().Be(expectedConversation[field], $"Field {field} should match");
             }
         }
-        
+
+        private static void AssertPostWithTitleHasStructure(Dictionary<string, string> actual, string expectedPK, string expectedSK, string expectedAuthor, string expectedTitle, string expectedMessage, long expectedTimestamp)
+        {
+            var expected = new Dictionary<string, string>
+            {
+                ["PK"] = expectedPK,
+                ["SK"] = expectedSK,
+                ["Author"] = expectedAuthor,
+                ["Title"] = expectedTitle,
+                ["MessageBody"] = expectedMessage,
+                ["UpdatedAt"] = expectedTimestamp.ToString()
+            };
+            AssertPostWithTitleMatches(actual, expected);
+            
+        }
+
         private static void AssertPostHasStructure(Dictionary<string, string> actual, string expectedPK, string expectedSK, string expectedAuthor, string expectedMessage, long expectedTimestamp)
         {
             var expected = new Dictionary<string, string>
