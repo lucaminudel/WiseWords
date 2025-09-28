@@ -31,8 +31,7 @@
 - When starting a new session, always look at these instructions in this file [~/Code/WiseWords/Beta/KeyInfo2.md](KeyInfo2.md)
 - Read these instructions in this file as soon as you may need information about the application infrastructure, deployment, technology stack, local and production environment, authentication and authorisation, the main components, and the overall application design
 
-
-## How to generate and collect feedback in agentic mode, to generate feedback that helps diagnose problems or validate solutions
+## Essential Shell commands for the AI Agent and the developer to generate and collect feedback that helps diagnose problems or validate solutions
 - When you change the applicaiton code or the tests code use the build and test commands to verify that they succeed without error or to collect the error info so thare you can fix them; when you run Cypress end to end (e2e) tests and a test fails then use the commands to inspect the HTML of the page that failed and the screeshot of the page in order to find-out what needs fixing. Read all these commands from this local file: [~/Code/WiseWords/Beta/KeyInfo.md](KeyInfo.md)
 - Read the instructions in this file as soon as you make any changes to the code (add/remove/modify).
 
