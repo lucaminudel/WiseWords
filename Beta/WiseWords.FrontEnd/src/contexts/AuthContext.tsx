@@ -7,6 +7,7 @@ interface AuthContextType {
   processAuthCallbackIfPresent: () => Promise<void>;
   isAuthenticated: boolean;
   username: string | null;
+  email: string | null;
   IsCognitoAuthEnabled: boolean;
   login: (loginReturnUrl: string, buttonId?: string) => void;
   logout: (logoutReturnUrl: string) => void;
@@ -31,6 +32,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [cognitoConfig, setCognitoConfig] = useState<CognitoConfig | null>(null);
   const [userPool, setUserPool] = useState<CognitoUserPool | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -47,6 +49,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return payload.preferred_username || payload.name || payload.email || payload.sub || 'user';
     } catch (error) {
       return 'user';
+    }
+  };
+
+  // Extract email from ID token
+  const extractEmailFromToken = (idToken: string): string | null => {
+    if (!idToken || typeof idToken !== 'string') {
+      return null;
+    }
+    try {
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      return payload.email || null;
+    } catch (error) {
+      return null;
     }
   };
 
@@ -73,15 +88,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 const storedIdToken = localStorage.getItem(`${keyPrefix}.user.idToken`);
                 if (storedIdToken) {
                   const extractedUsername = extractUsernameFromToken(storedIdToken);
+                  const extractedEmail = extractEmailFromToken(storedIdToken);
                   setIsAuthenticated(true);
                   setUsername(extractedUsername);
+                  setEmail(extractedEmail);
                 } else {
                   setIsAuthenticated(false);
                   setUsername(null);
+                  setEmail(null);
                 }
               } else {
                 setIsAuthenticated(false);
                 setUsername(null);
+                setEmail(null);
               }
             });
           } else {
@@ -93,9 +112,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const mockAuth = localStorage.getItem('mockAuth');
           if (mockAuth) {
             try {
-              const { username } = JSON.parse(mockAuth);
+              const { username, idToken } = JSON.parse(mockAuth);
               setIsAuthenticated(true);
               setUsername(username);
+              setEmail(extractEmailFromToken(idToken) || `${username}@example.com`);
             } catch (e) {
               console.error('Error parsing mock auth data', e);
             }
@@ -107,6 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } catch (error) {
         setIsAuthenticated(false);
         setUsername(null);
+        setEmail(null);
       }
     }
     
@@ -126,8 +147,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const storedIdToken = localStorage.getItem(`${keyPrefix}.user.idToken`);
     if (storedIdToken) {
       const extractedUsername = extractUsernameFromToken(storedIdToken);
+      const extractedEmail = extractEmailFromToken(storedIdToken);
       setIsAuthenticated(true);
       setUsername(extractedUsername);
+      setEmail(extractedEmail);
 
       return;
     }
@@ -191,6 +214,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Update auth state
         setIsAuthenticated(true);
         setUsername(extractedUsername);
+        setEmail(extractEmailFromToken(tokens.id_token));
         
       })
       .catch((error) => {
@@ -201,11 +225,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const mockLogin = (username: string) => {
+  const mockLogin = (username: string, email: string) => {
     // Store mock tokens
     const mockIdToken = btoa(JSON.stringify({
       'cognito:username': username,
-      email: `${username}@example.com`,
+      email: email,
       preferred_username: username,
       sub: `mock-${Date.now()}`,
       exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
@@ -221,6 +245,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Update state
     setIsAuthenticated(true);
     setUsername(username);
+    setEmail(email);
     
     // Store in our custom location for consistency
     localStorage.setItem('mockAuth', JSON.stringify({
@@ -240,7 +265,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!cognitoConfig || !cognitoConfig.ClientId) {
       const username = window.prompt('Enter your username for local development:');
       if (username) {
-        mockLogin(username);
+        const email = window.prompt('Enter your email for local development:', `${username}@example.com`);
+        mockLogin(username, email || `${username}@example.com`);
       }
       return;
     }
@@ -254,6 +280,7 @@ function clearAuthState() {
   // Clear all React state
   setIsAuthenticated(false);
   setUsername(null);
+  setEmail(null);
   setUserPool(null);
 
   // Remove Cognito-related localStorage keys if config is available
@@ -347,6 +374,7 @@ const logout = (logoutReturnUrl: string) => {
       processAuthCallbackIfPresent,
       isAuthenticated,
       username,
+      email,
       IsCognitoAuthEnabled,
       login,
       logout,

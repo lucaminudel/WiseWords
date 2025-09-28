@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Logo } from './common/Logo';
 import { ConversatonThreadAppendPostForm } from './ConversatonThreadAppendPostForm';
+import { ConversationInviteForm } from './ConversationInviteForm';
 import { sortPosts } from '../utils/postSorter';
 import { buildNestedConversation } from '../utils/conversationExport';
 import { buildConversationHtml } from '../utils/conversationExportHtml';
@@ -21,7 +22,7 @@ interface PageShowEvent extends Event {
 }
 
 // --- Refactored State Types ---
-type FormType = 'comment' | 'drilldown' | 'conclusion';
+type FormType = 'comment' | 'drilldown' | 'conclusion' | 'invite';
 interface FormContext {
   conversationPK: string;
   parentPostSK: string;
@@ -29,7 +30,7 @@ interface FormContext {
 }
 
 const ConversationThread: React.FC = () => {
-  const { isAuthenticated, IsCognitoAuthEnabled, login, authError, username, processAuthCallbackIfPresent } = useAuth();
+  const { isAuthenticated, IsCognitoAuthEnabled, login, authError, username, email, processAuthCallbackIfPresent } = useAuth();
   const { conversationId: rawConversationId } = useParams<{ conversationId: string }>();
 
   const conversationId = rawConversationId?.toUpperCase().startsWith("CONVO#")
@@ -61,6 +62,9 @@ const ConversationThread: React.FC = () => {
     title: '',
     messageBody: '' 
   });
+  const [inviteFormOpen, setInviteFormOpen] = useState(false);
+  const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [inviteFormError, setInviteFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showOwnershipInfo, setShowOwnershipInfo] = useState(false);
@@ -191,12 +195,21 @@ const isInitialLoadCompleted = useRef(false);
     setActiveForm({ type, context });
     setFormData({ title: '', messageBody: initialMessage });
     setFormError(null);
+    // Exclusive form handling: if invite opens, close post forms; vice versa
+    if (type === 'invite') {
+      setInviteFormOpen(true);
+    } else {
+      setInviteFormOpen(false);
+    }
   };
 
   const handleCancelForm = () => {
     setActiveForm(null);
     setFormData({ title: '', messageBody: '' });
     setFormError(null);
+    setInviteFormOpen(false);
+    setInviteFormError(null);
+    setInviteSubmitting(false);
     setShowOwnershipInfo(false); // Clear info message when cancelling forms
   };
 
@@ -554,13 +567,28 @@ const isInitialLoadCompleted = useRef(false);
           borderTop: '1px solid var(--color-border, #444)'
         }}>
           {isConversationOwner() && (
-            <button
-              id={`export-conversation-button-${conversation.SK}`}
-              data-testid="export-conversation-button"
-              type="button"
-              className={`button-thread-action button-margin-right ${!!activeForm ? 'button-disabled' : ''}`}
-              disabled={!!activeForm}
-              onClick={() => {
+            <>
+              <button
+                id={`invite-participants-button-${conversation.SK}`}
+                data-testid="invite-participants-button"
+                type="button"
+                className={`button-thread-action button-margin-right ${!!activeForm ? 'button-disabled' : ''}`}
+                disabled={!!activeForm}
+                onClick={() => {
+                  const buttonId = `invite-participants-button-${conversation.SK}`;
+                  if (handleLoginIfNeeded(buttonId)) return;
+                  handleOpenForm('invite', { conversationPK: conversation.PK, parentPostSK: '', insertAfterSK: conversation.SK } as any);
+                }}
+              >
+                Invite participants
+              </button>
+              <button
+                id={`export-conversation-button-${conversation.SK}`}
+                data-testid="export-conversation-button"
+                type="button"
+                className={`button-thread-action button-margin-right ${!!activeForm ? 'button-disabled' : ''}`}
+                disabled={!!activeForm}
+                onClick={() => {
                 try {
                   // Build nested export structure and trigger JSON + HTML downloads (part b + c)
                   const exportData = buildNestedConversation(conversation, posts);
@@ -597,6 +625,7 @@ const isInitialLoadCompleted = useRef(false);
             >
               Export conversation
             </button>
+          </>
           )}
           <span>by <strong>{conversation.Author}</strong> • {formatUnixTimestamp(conversation.UpdatedAt)}</span>
           <div className="thread-actions">
@@ -646,6 +675,32 @@ const isInitialLoadCompleted = useRef(false);
         </div>
       </div>
       
+     {/* Invite Participants Form (for conversation owner) */}
+     {isConversationOwner() && inviteFormOpen && (
+       <ConversationInviteForm
+         onCancel={handleCancelForm}
+         onSend={(data) => {
+           // For now, just log and close (SES integration later)
+           console.log('Invite participants payload:', {
+             conversationId,
+             conversationPK: conversation.PK,
+             invitee: data,
+             author: username,
+           });
+           setInviteSubmitting(false);
+           setInviteFormError(null);
+           setInviteFormOpen(false);
+           setActiveForm(null);
+         }}
+         isSubmitting={inviteSubmitting}
+         formError={inviteFormError}
+         authorEmail={email || null}
+         marginLeft={`${(postTypeService.getPostDepth(conversation.SK) + 1) * 48}px`}
+         id={`invite-form-${conversation.SK}`}
+         dataTestId={`invite-form-${conversation.SK}`}
+       />
+     )}
+
       <h2 style={{ 
         fontSize: '1.5rem',
         margin: '32px 0 16px 0',
@@ -656,7 +711,7 @@ const isInitialLoadCompleted = useRef(false);
       </h2>
       
       {/* --- Render Forms for Main Conversation --- */}
-      {activeForm && activeForm.context.insertAfterSK === conversation?.SK && (
+      {activeForm && activeForm.type !== 'invite' && activeForm.context.insertAfterSK === conversation?.SK && (
                   <ConversatonThreadAppendPostForm
                     title={`${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
                     formData={formData}
@@ -876,7 +931,7 @@ const isInitialLoadCompleted = useRef(false);
               </div>
 
               {/* --- Render Forms for this specific post --- */}
-              {activeForm && activeForm.context.insertAfterSK === post.SK && (
+              {activeForm && activeForm.type !== 'invite' && activeForm.context.insertAfterSK === post.SK && (
                 <ConversatonThreadAppendPostForm
                   title={`${activeForm.type === 'comment' ? 'Comment' : activeForm.type === 'drilldown' ? getAddSubActionButtonText(conversation.ConvoType) : getProposeSolutionButtonText(conversation.ConvoType)}`}
                   formData={formData}
