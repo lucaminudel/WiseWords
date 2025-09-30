@@ -14,7 +14,7 @@ export default defineConfig({
     port: 3001,
   },
   build: {
-    outDir: 'dist',
+    outDir: process.env.WISEWORDS_ENV === 'aws_prod' ? 'dist-prod' : 'dist',
     sourcemap: true
   }
 })

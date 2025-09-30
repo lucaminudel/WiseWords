@@ -48,26 +48,6 @@
 			"problemMatcher": [
 				"$msCompile"
 			],
-			"label": "Build: AWS Lambdas solution",
-			"detail": "Build the AWS Lambdas solution",
-			"options": {
-				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas"
-			}
-		},
-		{
-			"type": "shell",
-			"command": "dotnet",
-			"args": ["build", "WiseWords.ConversationsAndPosts.DataStore.sln"],
-			"group": "build",
-			"presentation": {
-				"echo": true,
-				"reveal": "always",
-				"focus": false,
-				"panel": "shared"
-			},
-			"problemMatcher": [
-				"$msCompile"
-			],
 			"label": "Build: DataStore solution",
 			"detail": "Build the DataStore solution",
 			"options": {
@@ -207,6 +187,29 @@
 			}
 		},
 		{
+			"type": "shell",
+			"command": "zsh",
+			"args": [
+				"-lc",
+				"dotnet publish WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway.csproj -c Release -o ./publish -r linux-x64 && cd publish && zip -r ../publish.zip . && cd ../ && rm -rf publish"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"label": "AWS Prod - Build Lambdas for Release (publish.zip)",
+			"detail": "Builds ApiGateway-Lambdas in release mode into publish.zip.",
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway"
+			}
+		},
+		{
 			"label": "npm: build_and_test",
 			"dependsOn": [
 				"Build: Frontend (Vite)",
@@ -219,6 +222,71 @@
 				"isDefault": true
 			},
 			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "AWS Prod - Watch Fast Lambda live update (publish.zip)",
+			"command": "npx",
+			"args": [
+				"chokidar-cli",
+				"publish.zip",
+				"-c",
+				"${workspaceFolder}/scripts/vsc_watch_tasks/fast_lambda_update.sh"
+			],
+			"isBackground": true,
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.ConversationsAndPosts.AWS.Lambdas.ApiGateway"
+			}
+		}
+		,
+		{
+			"type": "shell",
+			"label": "AWS Prod - Build S3 Frontend (dist-prod)",
+			"command": "npm",
+			"args": ["run", "build:prod"],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.FrontEnd"
+			}
+		}
+		,
+		{
+			"type": "shell",
+			"label": "AWS Prod - Watch Fast S3 Frontend update (dist-prod)",
+			"command": "npx",
+			"args": [
+				"chokidar-cli",
+				"dist-prod",
+				"-i",
+				"node_modules",
+				"-c",
+				"${workspaceFolder}/scripts/vsc_watch_tasks/fast_S3_FrontEnd_update.sh"
+			],
+			"isBackground": true,
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/WiseWords.FrontEnd"
+			}
 		}
 	]
 }
