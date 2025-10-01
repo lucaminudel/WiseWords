@@ -150,7 +150,7 @@ public class Router
             return CreateResponse(upsatedAtYearValidationResult.ErrorStatusCode, upsatedAtYearValidationResult.ErrorMessage);
         }
 
-        var filterByAuthorValidationResult = ValidateOptonalFilterByAuthorQueryStringRequest(request);
+        var filterByAuthorValidationResult = ValidateOptionalFilterByAuthorQueryStringRequest(request);
         if (!filterByAuthorValidationResult.IsValid)
         {
             _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardGetConversations)}", context, $"HTTP error code {(int)filterByAuthorValidationResult.ErrorStatusCode}, HTTP error message {filterByAuthorValidationResult.ErrorMessage}");
@@ -395,7 +395,7 @@ public class Router
         return (true, year, HttpStatusCode.OK, string.Empty);
     }
 
-    private static (bool IsValid, string Author, HttpStatusCode ErrorStatusCode, string ErrorMessage) ValidateOptonalFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
+    private static (bool IsValid, string Author, HttpStatusCode ErrorStatusCode, string ErrorMessage) ValidateOptionalFilterByAuthorQueryStringRequest(APIGatewayProxyRequest request)
     {
         string? authorStr;
 
