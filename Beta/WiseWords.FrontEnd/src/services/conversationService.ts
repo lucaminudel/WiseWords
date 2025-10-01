@@ -229,6 +229,25 @@ export class ConversationService {
     }
 
     /**
+     * Send a conversation invite
+     */
+    static async sendConversationInvite(
+        conversationPK: string,
+        senderUsername: string,
+        inviteeName: string,
+        inviteeEmail: string
+    ): Promise<void> {
+        await conversationApi.sendConversationInvite({
+            SenderUsername: senderUsername,
+            InviteeName: inviteeName,
+            InviteeEmail: inviteeEmail,
+            ConversationPK: conversationPK,
+            NewInviteGuid: crypto.randomUUID(),
+            UtcCreationTime: new Date().toISOString()
+        });
+    }
+
+    /**
      * Append a comment to a conversation
      */
     static async appendCommentAndUpdateCache(

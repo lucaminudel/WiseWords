@@ -91,6 +91,23 @@ export interface AppendConclusionRequest extends AppendPostRequest {
 /**
  * API error response interface
  */
+export interface SendConversationInviteRequest {
+  SenderUsername: string;
+  InviteeName: string;
+  InviteeEmail: string;
+  ConversationPK: string;
+  Message?: string;
+  NewInviteGuid?: string;
+  UtcCreationTime?: string;
+}
+
+export interface SendConversationInviteAck {
+  Status: string;
+  ConversationPK: string;
+  InviteeEmail: string;
+  RequestId: string;
+}
+
 export interface ApiError {
   error: string;
   message?: string;

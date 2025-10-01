@@ -679,18 +679,23 @@ const isInitialLoadCompleted = useRef(false);
      {isConversationOwner() && inviteFormOpen && (
        <ConversationInviteForm
          onCancel={handleCancelForm}
-         onSend={(data) => {
-           // For now, just log and close (SES integration later)
-           console.log('Invite participants payload:', {
-             conversationId,
-             conversationPK: conversation.PK,
-             invitee: data,
-             author: username,
-           });
-           setInviteSubmitting(false);
+         onSend={async (data) => {
+           setInviteSubmitting(true);
            setInviteFormError(null);
-           setInviteFormOpen(false);
-           setActiveForm(null);
+           try {
+             await ConversationService.sendConversationInvite(
+               conversation.PK,
+               username!,
+               data.name,
+               data.email
+             );
+             setInviteFormOpen(false);
+             setActiveForm(null);
+           } catch (err: any) {
+             setInviteFormError(err?.message || 'Failed to send invite');
+           } finally {
+             setInviteSubmitting(false);
+           }
          }}
          isSubmitting={inviteSubmitting}
          formError={inviteFormError}

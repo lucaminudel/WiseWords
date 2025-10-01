@@ -2,7 +2,7 @@
  * Pure API communication layer for conversation-related endpoints
  */
 
-import { CreateConversationRequest, ConversationResponse, Post, ApiError, AppendCommentRequest, AppendDrillDownRequest, AppendConclusionRequest } from '../types/conversation';
+import { CreateConversationRequest, ConversationResponse, Post, ApiError, AppendCommentRequest, AppendDrillDownRequest, AppendConclusionRequest, SendConversationInviteRequest, SendConversationInviteAck } from '../types/conversation';
 import { loadConfig } from '../config/environment';
 
 /**
@@ -189,6 +189,16 @@ export const conversationApi = {
         return apiFetch<Post>('/conversations/conclusion', {
             method: 'POST',
             body: JSON.stringify(conclusionRequest),
+        });
+    },
+
+    /**
+     * Send a conversation invite (fire-and-forget semantics, API returns 202)
+     */
+    async sendConversationInvite(request: SendConversationInviteRequest): Promise<SendConversationInviteAck> {
+        return apiFetch<SendConversationInviteAck>('/conversations/invite', {
+            method: 'POST',
+            body: JSON.stringify(request),
         });
     }
 };
