@@ -132,6 +132,14 @@ Resources:
             RestApiId: !Ref WiseWordsApi
             Auth:
               Authorizer: WiseWordsCognitoAuthorizer
+        PostInvite:
+          Type: Api
+          Properties:
+            Path: /conversations/invite
+            Method: POST
+            RestApiId: !Ref WiseWordsApi
+            Auth:
+              Authorizer: WiseWordsCognitoAuthorizer
         # Protected DELETE endpoints
         DeleteConversation:
           Type: Api
