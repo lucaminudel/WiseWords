@@ -111,10 +111,14 @@ export const ConversationInviteForm: React.FC<ConversationInviteFormProps> = ({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+          <label 
+            htmlFor={`${id}-name`}
+            style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}
+          >
             Name (used in the email greeting)
           </label>
           <input
+            id={`${id}-name`}
             ref={nameRef}
             type="text"
             placeholder="Enter the invitee's name"
@@ -141,10 +145,14 @@ export const ConversationInviteForm: React.FC<ConversationInviteFormProps> = ({
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+          <label 
+            htmlFor={`${id}-email`}
+            style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}
+          >
             Send to Email address
           </label>
           <input
+            id={`${id}-email`}
             ref={emailRef}
             type="email"
             placeholder="Enter the invitee's email address"

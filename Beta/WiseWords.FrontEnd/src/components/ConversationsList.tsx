@@ -353,16 +353,13 @@ const ConversationsList: React.FC = () => {
           <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>Create New Conversation</h3>
 
           {showNewConversationInfo && !formError && (
-            <div style={{
-              padding: '1rem 2rem',
-              backgroundColor: 'rgba(94, 139, 255, 0.1)',
-              borderRadius: '8px',
-              border: '1px solid var(--color-accent)',
-              margin: '1rem 0',
-              width: '100%',
-              color: 'var(--color-accent)',
-              fontFamily: 'Inter, sans-serif'
-            }}>
+            <div 
+              className="info-message-box"
+              style={{
+                margin: '1rem 0',
+                width: '100%',
+              }}
+            >
               <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-accent)' }}>
                 Only you will be able to add sub-{getConversationSubType(formData.type)}s and propose {getConversationConclusionType(formData.type)}s. Others will be allowed to comment.
                 <br />You can also export the entire conversation to keep for your records or for your own analysis.

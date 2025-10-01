@@ -68,6 +68,7 @@ const ConversationThread: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showOwnershipInfo, setShowOwnershipInfo] = useState(false);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
 // Binary Semaphors to prevent double calls to fetchData (API - cache). 
 // In the future review the suggestion to use data fetching library like React Query or SWR instead.
@@ -78,6 +79,7 @@ const isInitialLoadCompleted = useRef(false);
     const fetchConversation = async (forceRefresh: boolean = false) => {
       if (!conversationId) return;
 
+      setInfoMessage(null);
       setLoading(true);
       setError(null);
       setShowOwnershipInfo(false); // Clear info message when starting new conversation load
@@ -192,6 +194,7 @@ const isInitialLoadCompleted = useRef(false);
 
 
   const handleOpenForm = (type: FormType, context: FormContext, initialMessage: string = '') => {
+    setInfoMessage(null);
     setActiveForm({ type, context });
     setFormData({ title: '', messageBody: initialMessage });
     setFormError(null);
@@ -204,6 +207,7 @@ const isInitialLoadCompleted = useRef(false);
   };
 
   const handleCancelForm = () => {
+    setInfoMessage(null);
     setActiveForm(null);
     setFormData({ title: '', messageBody: '' });
     setFormError(null);
@@ -273,6 +277,8 @@ const isInitialLoadCompleted = useRef(false);
 
   const handleSubmit = async () => {
     if (!activeForm || !conversationId) return;
+
+    setInfoMessage(null);
 
     // Validate required fields
     const requiredFields: { [key: string]: string } = {
@@ -512,7 +518,6 @@ const isInitialLoadCompleted = useRef(false);
       <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
         <Logo linkTo="/conversations" />
       </header>
-      
 
       <div style={{ 
         width: '90%',
@@ -521,6 +526,16 @@ const isInitialLoadCompleted = useRef(false);
         color: 'var(--color-text-primary)',
         fontFamily: 'Inter, sans-serif'
       }}>
+        {infoMessage && (
+          <div 
+            className="info-message-box"
+            style={{
+              marginBottom: '24px',
+            }}
+          >
+            <span>{infoMessage}</span>
+          </div>
+        )}
         <div 
           data-testid="post-container"
           style={{ 
@@ -689,6 +704,7 @@ const isInitialLoadCompleted = useRef(false);
                data.name,
                data.email
              );
+             setInfoMessage(`Your invite to ${data.name} (${data.email}) has been successfully sent.`);
              setInviteFormOpen(false);
              setActiveForm(null);
            } catch (err: any) {
