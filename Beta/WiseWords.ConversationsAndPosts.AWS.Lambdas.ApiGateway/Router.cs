@@ -54,6 +54,7 @@ public class Router
                     "/conversations/drilldown" => ForwardPostConversationsDrillDownPost(request, context),
                     "/conversations/comment" => ForwardPostConversationsComment(request, context),
                     "/conversations/conclusion" => ForwardPostConversationsConclusion(request, context),
+                   "/conversations/invite" => ForwardPostConversationsInvite(request, context),
                     _ => Task.FromResult(CreateResponse(HttpStatusCode.NotFound, "Not found"))
                 }),
 
@@ -311,6 +312,55 @@ public class Router
                                                                              { "Content-Type", "application/json; charset=utf-8" } };
         return CreateResponse(HttpStatusCode.Created, result, locationAndContentTypeHeaders);
     }
+
+    private async Task<APIGatewayProxyResponse> ForwardPostConversationsInvite(APIGatewayProxyRequest request, ILambdaContext context)
+    {
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsInvite)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+
+        TryToSerialise(request.Body, out SendConversationInviteRequest? validRequestOrNull, out HttpStatusCode errorCode, out string errorMessage);
+
+        if (validRequestOrNull == null)
+        {
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardPostConversationsInvite)}", context, $"HTTP error code {(int)errorCode}, HTTP error message {errorMessage}");
+            return CreateResponse(errorCode, errorMessage);
+        }
+
+        try
+        {
+            // await _lambdaFunctions.SendConversationInviteHandler(validRequestOrNull, context);
+            await Task.CompletedTask;
+
+            _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsInvite)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+
+            // 202 Accepted with minimal JSON ack
+            var ack = JsonSerializer.Serialize(new Dictionary<string, string>
+            {
+                ["Status"] = "QUEUED",
+                ["ConversationPK"] = validRequestOrNull.ConversationPK,
+                ["InviteeEmail"] = validRequestOrNull.InviteeEmail,
+                ["RequestId"] = context.AwsRequestId
+            });
+
+            return CreateResponse(HttpStatusCode.Accepted, ack, new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } });
+        }
+        catch (InvalidOperationException)
+        {
+            return CreateResponse(HttpStatusCode.NotFound, "Conversation not found");
+        }
+//        catch (RateLimitExceededException)
+//        {
+//            return CreateResponse((HttpStatusCode)429, "Too Many Requests");
+//        }
+//        catch (EmailProviderUnavailableException)
+//        {
+//            return CreateResponse(HttpStatusCode.BadGateway, "Upstream email provider failure");
+//        }
+        catch (Amazon.Runtime.AmazonServiceException)
+        {
+            return CreateResponse(HttpStatusCode.ServiceUnavailable, "Service unavailable");
+        }
+    }
+    
 
     private APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body)
         => CreateResponse(statusCode, body, new Dictionary<string, string>());
