@@ -13,13 +13,15 @@ public class Router
     private readonly IFunctions _lambdaFunctions;
     private readonly ILoggerObserver _routingObserver;
     private readonly ILoggerObserver _forwardingObserver;
+    private readonly string _allowedOrigin;
     private APIGatewayProxyRequest? _currentRequest;
 
-    public Router(IFunctions lambdaFunctions, ILoggerObserver routingObserver, ILoggerObserver forwardingObserver)
+    public Router(IFunctions lambdaFunctions, ILoggerObserver routingObserver, ILoggerObserver forwardingObserver, string allowedOrigin)
     {
         _lambdaFunctions = lambdaFunctions;
         _routingObserver = routingObserver;
         _forwardingObserver = forwardingObserver;
+        _allowedOrigin = allowedOrigin;
     }
 
     public Router()
@@ -28,9 +30,11 @@ public class Router
             new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalContainerUrl,
             new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region,
             GetAuthenticatedUserFromCognitoAuthorizerClaims);
-            
+
         _routingObserver = new LoggerObserver("Api Gateway Routing");
         _forwardingObserver = new LoggerObserver("Api Gateway Forwarding");
+        _allowedOrigin = Environment.GetEnvironmentVariable("ALLOWED_ORIGIN") ?? "*";
+
     }
 
     public async Task<APIGatewayProxyResponse> Dispatch(APIGatewayProxyRequest request, ILambdaContext context)
@@ -308,14 +312,13 @@ public class Router
         return CreateResponse(HttpStatusCode.Created, result, locationAndContentTypeHeaders);
     }
 
-    private static APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body)
+    private APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body)
         => CreateResponse(statusCode, body, new Dictionary<string, string>());
-    private static APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body, Dictionary<string, string> additionalHeaders)
+    private APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body, Dictionary<string, string> additionalHeaders)
     {
-        var allowedOrigin = Environment.GetEnvironmentVariable("ALLOWED_ORIGIN") ?? "*";
         var headers = new Dictionary<string, string>
         {
-            { "Access-Control-Allow-Origin", allowedOrigin },
+            { "Access-Control-Allow-Origin", _allowedOrigin },
             { "Access-Control-Allow-Headers", "Content-Type,Authorization" },
             { "Access-Control-Allow-Methods", "OPTIONS,POST,GET,DELETE" },
             { "Access-Control-Allow-Credentials", "true" }

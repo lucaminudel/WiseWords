@@ -25,7 +25,7 @@ public class RouterTests
         _testFunctions = new FunctionsMock();
         
         // Create a test implementation of Functions
-        _router = new Router(_testFunctions, new LambdaLoggerStub(), new LambdaLoggerStub());
+        _router = new Router(_testFunctions, new LambdaLoggerStub(), new LambdaLoggerStub(), "*");
         _context = new LambdaContextStub { AwsRequestId = "test-request-id" };
     }
 
