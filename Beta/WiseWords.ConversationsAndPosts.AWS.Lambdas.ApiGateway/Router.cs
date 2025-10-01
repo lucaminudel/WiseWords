@@ -134,8 +134,9 @@ public class Router
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
         
-        var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString("CONVO#") + validLambdaHandlerRequestOrNull.NewGuid.ToString()}/posts" } };
-        return CreateResponse(HttpStatusCode.Created, result, locationHeader);
+        var locationAndContentTypeHeaders = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString("CONVO#") + validLambdaHandlerRequestOrNull.NewGuid.ToString()}/posts" },
+                                                                             { "Content-Type", "application/json; charset=utf-8" } };
+        return CreateResponse(HttpStatusCode.Created, result, locationAndContentTypeHeaders);
     }
 
     private async Task<APIGatewayProxyResponse> ForwardGetConversations(APIGatewayProxyRequest request, ILambdaContext context)
@@ -168,7 +169,7 @@ public class Router
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardGetConversations)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(result));
+        return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(result), new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } });
     }
 
     private async Task<APIGatewayProxyResponse> ForwardGetConversationPosts(APIGatewayProxyRequest request, ILambdaContext context)
@@ -196,7 +197,7 @@ public class Router
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardGetConversationPosts)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(result));
+        return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(result), new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } });
 
     }
 
@@ -257,9 +258,10 @@ public class Router
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsDrillDownPost)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" } };
+        var locationAndContentTypeHeaders = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" },
+                                                                             { "Content-Type", "application/json; charset=utf-8" } };
 
-        return CreateResponse(HttpStatusCode.Created, result, locationHeader);
+        return CreateResponse(HttpStatusCode.Created, result, locationAndContentTypeHeaders);
     }
 
     private async Task<APIGatewayProxyResponse> ForwardPostConversationsComment(APIGatewayProxyRequest request, ILambdaContext context)
@@ -279,8 +281,9 @@ public class Router
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsComment)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" } };
-        return CreateResponse(HttpStatusCode.Created, result, locationHeader);
+        var locationAndContentTypeHeaders = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" },
+                                                                             { "Content-Type", "application/json; charset=utf-8" } };
+        return CreateResponse(HttpStatusCode.Created, result, locationAndContentTypeHeaders);
     }
 
     private async Task<APIGatewayProxyResponse> ForwardPostConversationsConclusion(APIGatewayProxyRequest request, ILambdaContext context)
@@ -300,8 +303,9 @@ public class Router
 
         _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsConclusion)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
-        var locationHeader = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" } };
-        return CreateResponse(HttpStatusCode.Created, result, locationHeader);
+        var locationAndContentTypeHeaders = new Dictionary<string, string> { { "Location", $"/conversations/{Uri.EscapeDataString(validLambdaHandlerRequestOrNull.ConversationPK)}/posts" },
+                                                                             { "Content-Type", "application/json; charset=utf-8" } };
+        return CreateResponse(HttpStatusCode.Created, result, locationAndContentTypeHeaders);
     }
 
     private static APIGatewayProxyResponse CreateResponse(HttpStatusCode statusCode, string body)
