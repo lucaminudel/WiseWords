@@ -238,12 +238,10 @@ export class ConversationService {
         inviteeEmail: string
     ): Promise<void> {
         await conversationApi.sendConversationInvite({
+            ConversationPK: conversationPK,
             SenderUsername: senderUsername,
             InviteeName: inviteeName,
-            InviteeEmail: inviteeEmail,
-            ConversationPK: conversationPK,
-            NewInviteGuid: crypto.randomUUID(),
-            UtcCreationTime: new Date().toISOString()
+            InviteeEmail: inviteeEmail
         });
     }
 

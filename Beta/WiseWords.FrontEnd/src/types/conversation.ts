@@ -89,25 +89,25 @@ export interface AppendConclusionRequest extends AppendPostRequest {
 }
 
 /**
- * API error response interface
+ * Interfaces for sending an invite to join a conversation
  */
 export interface SendConversationInviteRequest {
+  ConversationPK: string;
   SenderUsername: string;
   InviteeName: string;
   InviteeEmail: string;
-  ConversationPK: string;
-  Message?: string;
-  NewInviteGuid?: string;
-  UtcCreationTime?: string;
 }
 
 export interface SendConversationInviteAck {
   Status: string;
   ConversationPK: string;
+  SenderUsername: string;
   InviteeEmail: string;
-  RequestId: string;
 }
 
+/**
+ * API error response interface
+ */
 export interface ApiError {
   error: string;
   message?: string;
