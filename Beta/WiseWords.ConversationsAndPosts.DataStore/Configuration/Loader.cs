@@ -69,6 +69,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
     internal class EnvironmentConfigDeserialisation
     {
         public string ApiBaseUrl { get; set; } = string.Empty;
+        public string WebsiteBaseUrl { get; set; } = string.Empty;
         public string DynamoDbServiceLocalUrl { get; set; } = string.Empty;
         public string DynamoDbServiceLocalContainerUrl { get; set; } = string.Empty;
 
@@ -98,6 +99,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
             ValidateConfigFileInfo(cfg);
 
             ApiBaseUrl = new Uri(cfg.ApiBaseUrl);
+            WebsiteBaseUrl = new Uri(cfg.WebsiteBaseUrl);
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl))
                 DynamoDbServiceLocalUrl = new Uri(cfg.DynamoDbServiceLocalUrl);
@@ -132,6 +134,12 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
             if (false == Uri.IsWellFormedUriString(cfg.ApiBaseUrl, UriKind.Absolute))
                 throw new ArgumentException($"{nameof(cfg.ApiBaseUrl)} configuration value need to be a well formed Url ('{cfg.ApiBaseUrl}').");
 
+            if (cfg.WebsiteBaseUrl == null)
+                throw new ArgumentNullException($"{nameof(cfg.WebsiteBaseUrl)} configuration value cannot be null.");
+
+            if (false == Uri.IsWellFormedUriString(cfg.WebsiteBaseUrl, UriKind.Absolute))
+                throw new ArgumentException($"{nameof(cfg.WebsiteBaseUrl)} configuration value need to be a well formed Url ('{cfg.WebsiteBaseUrl}').");
+
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalUrl, UriKind.Absolute))
                 throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalUrl)} configuration value need to be either empty or a well formed Url. But is: '{cfg.DynamoDbServiceLocalUrl}'.");
 
@@ -153,6 +161,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
         }
 
         public Uri? ApiBaseUrl { get; internal set; } = null;
+        public Uri? WebsiteBaseUrl { get; internal set; } = null;
         public Uri? DynamoDbServiceLocalUrl { get; internal set; } = null;
         public Uri? DynamoDbServiceLocalContainerUrl { get; internal set; } = null;
 

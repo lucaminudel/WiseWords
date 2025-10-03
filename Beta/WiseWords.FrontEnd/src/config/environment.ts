@@ -1,6 +1,7 @@
 export interface EnvironmentConfig {
   WebAppBaseUrl: string;
   ApiBaseUrl: string;
+  WebsiteBaseUrl: string;
   DynamoDbServiceUrl: string;
   DynamoDbTableName: string;
   AWS: {
