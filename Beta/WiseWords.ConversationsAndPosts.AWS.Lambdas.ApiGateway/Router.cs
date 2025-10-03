@@ -26,10 +26,13 @@ public class Router
 
     public Router()
     {
+        var environmentInfo = new DataStore.Configuration.Loader().GetEnvironmentVariables();
+        Func<(string userName, string userEmail)>? _getAuthenticatedUser = environmentInfo.Cognito == null ? null : GetAuthenticatedUserFromCognitoAuthorizerClaims;
+
         _lambdaFunctions = new Functions(
-            new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalContainerUrl,
-            new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region,
-            GetAuthenticatedUserFromCognitoAuthorizerClaims);
+            environmentInfo.DynamoDbServiceLocalContainerUrl,
+            environmentInfo.AWS.Region,
+            _getAuthenticatedUser);
 
         _routingObserver = new LoggerObserver("Api Gateway Routing");
         _forwardingObserver = new LoggerObserver("Api Gateway Forwarding");
@@ -54,7 +57,7 @@ public class Router
                     "/conversations/drilldown" => ForwardPostConversationsDrillDownPost(request, context),
                     "/conversations/comment" => ForwardPostConversationsComment(request, context),
                     "/conversations/conclusion" => ForwardPostConversationsConclusion(request, context),
-                   "/conversations/invite" => ForwardPostConversationsInvite(request, context),
+                   "/conversations/invite" => ForwardSendConversationInviteEmail(request, context),
                     _ => Task.FromResult(CreateResponse(HttpStatusCode.NotFound, "Not found"))
                 }),
 
@@ -313,39 +316,46 @@ public class Router
         return CreateResponse(HttpStatusCode.Created, result, locationAndContentTypeHeaders);
     }
 
-    private async Task<APIGatewayProxyResponse> ForwardPostConversationsInvite(APIGatewayProxyRequest request, ILambdaContext context)
+    private async Task<APIGatewayProxyResponse> ForwardSendConversationInviteEmail(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardPostConversationsInvite)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
+        _forwardingObserver.OnStart($"HTTP Request Forwarding={nameof(ForwardSendConversationInviteEmail)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(request.HttpMethod)}={request.HttpMethod},  {nameof(request.Path)}={request.Path}", context);
 
         TryToSerialise(request.Body, out SendConversationInviteRequest? validRequestOrNull, out HttpStatusCode errorCode, out string errorMessage);
 
         if (validRequestOrNull == null)
         {
-            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardPostConversationsInvite)}", context, $"HTTP error code {(int)errorCode}, HTTP error message {errorMessage}");
+            _forwardingObserver.OnFailure($"HTTP Request Forwarding={nameof(ForwardSendConversationInviteEmail)}", context, $"HTTP error code {(int)errorCode}, HTTP error message {errorMessage}");
             return CreateResponse(errorCode, errorMessage);
         }
 
         try
         {
-            // await _lambdaFunctions.SendConversationInviteHandler(validRequestOrNull, context);
-            await Task.CompletedTask;
+            await _lambdaFunctions.SendConversationInviteEmailHandler(validRequestOrNull, context);
 
-            _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardPostConversationsInvite)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+            _forwardingObserver.OnSuccess($"HTTP Request Forwarding={nameof(ForwardSendConversationInviteEmail)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
             // 202 Accepted with minimal JSON ack
             var ack = JsonSerializer.Serialize(new Dictionary<string, string>
             {
                 ["Status"] = "QUEUED",
                 ["ConversationPK"] = validRequestOrNull.ConversationPK,
-                ["InviteeEmail"] = validRequestOrNull.InviteeEmail,
-                ["RequestId"] = context.AwsRequestId
+                ["SenderUsername"] = validRequestOrNull.SenderUsername,
+                ["InviteeEmail"] = validRequestOrNull.InviteeEmail
             });
 
             return CreateResponse(HttpStatusCode.Accepted, ack, new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } });
         }
-        catch (InvalidOperationException)
+        catch (ArgumentException ex)
         {
-            return CreateResponse(HttpStatusCode.NotFound, "Conversation not found");
+            return CreateResponse(HttpStatusCode.BadRequest, ex.Message);
+        }
+        catch (System.Security.SecurityException ex)
+        {
+            return CreateResponse(HttpStatusCode.Forbidden, ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return CreateResponse(HttpStatusCode.NotFound, ex.Message);
         }
 //        catch (RateLimitExceededException)
 //        {
@@ -473,20 +483,29 @@ public class Router
         return (true, authorStr, HttpStatusCode.OK, string.Empty);
     }
 
-    private  string GetAuthenticatedUserFromCognitoAuthorizerClaims()
+    private  (string userName, string userEmail) GetAuthenticatedUserFromCognitoAuthorizerClaims()
     {
+        var userName = string.Empty;
+        var userEmail = string.Empty;
         if (_currentRequest?.RequestContext?.Authorizer?.Claims is System.Collections.Generic.IDictionary<string, string> claims)
         {
-            if (claims.TryGetValue("preferred_username", out var preferred) && !string.IsNullOrWhiteSpace(preferred))
-                return preferred;
+
             if (claims.TryGetValue("email", out var email) && !string.IsNullOrWhiteSpace(email))
-                return email;
-            if (claims.TryGetValue("cognito:username", out var cognitoUser) && !string.IsNullOrWhiteSpace(cognitoUser))
-                return cognitoUser;
-            if (claims.TryGetValue("name", out var name) && !string.IsNullOrWhiteSpace(name))
-                return name;
+            {
+                userEmail = email;
+            }
+
+            if (claims.TryGetValue("preferred_username", out var preferred) && !string.IsNullOrWhiteSpace(preferred))
+                userName = preferred;
+            else if (!string.IsNullOrWhiteSpace(email))
+                userName = email;
+            else if (claims.TryGetValue("cognito:username", out var cognitoUser) && !string.IsNullOrWhiteSpace(cognitoUser))
+                userName = cognitoUser;
+            else if (claims.TryGetValue("name", out var name) && !string.IsNullOrWhiteSpace(name))
+                userName = name;
         }
-        return string.Empty;
+
+        return (userName, userEmail);
     }
 
     private static string SafeUrlDecode(string potentiallyUrlEncodedString)

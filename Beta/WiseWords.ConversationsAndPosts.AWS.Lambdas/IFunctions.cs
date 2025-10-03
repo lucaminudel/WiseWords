@@ -11,5 +11,6 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
         Task<string> AppendDrillDownPostHandler(AppendDrillDownPostRequest req, ILambdaContext context);
         Task<string> AppendCommentPostHandler(AppendCommentPostRequest req, ILambdaContext context);
         Task<string> AppendConclusionPostHandler(AppendConclusionPostRequest req, ILambdaContext context);
+        Task SendConversationInviteEmailHandler(SendConversationInviteRequest req, ILambdaContext context);
     }
 }

@@ -48,4 +48,9 @@ public class FunctionsMock : IFunctions
     {
         throw new NotImplementedException();
     }
+
+    public Task SendConversationInviteEmailHandler(SendConversationInviteRequest req, ILambdaContext context)
+    {
+        throw new NotImplementedException();
+    }
 }

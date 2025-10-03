@@ -560,7 +560,176 @@ public class ConversationsApiHttpTests : IAsyncLifetime
 
     #endregion
 
+    #region POST /conversations/invite Tests
 
+    [Fact]
+    public async Task POST_ConversationsInvite_Should_Return_202_For_Valid_Request()
+    {
+        // Arrange
+        var newConvoGuid = GetNewConversationGuid();
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var author = "HttpTestUser";
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, author, creationTime),
+                                    System.Text.Encoding.UTF8, "application/json"));
+        var conversationPK = $"CONVO#{newConvoGuid}";
+
+        // Act
+        var content = new StringContent(CreateSendConversationInviteRequestJson(conversationPK, author, "Invitee", "invitee@example.com"),
+                                         System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations/invite", content);
+
+        // Assert
+        var result = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        result.Should().NotBeEmpty();
+        var jsonResult = JsonSerializer.Deserialize<Dictionary<string, string>>(result);
+        jsonResult!["Status"].Should().Be("QUEUED");
+        jsonResult["ConversationPK"].Should().Be(conversationPK);
+        jsonResult["SenderUsername"].Should().Be(author);
+        jsonResult["InviteeEmail"].Should().Be("invitee@example.com");
+    }
+
+    [Fact]
+    public async Task POST_ConversationsInvite_Should_Return_400_For_Invalid_Request_Body()
+    {
+        // Arrange
+        var invalidRequestJson = "{ invalid json }";
+        var content = new StringContent(invalidRequestJson, System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await _httpClient.PostAsync("/conversations/invite", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().Contain("Invalid request body");
+    }
+
+    [Fact]
+    public async Task POST_ConversationsInvite_Should_Return_400_For_Empty_Request_Body()
+    {
+        // Arrange
+        var emptyRequestJson = string.Empty;
+        var content = new StringContent(emptyRequestJson, System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await _httpClient.PostAsync("/conversations/invite", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().Contain("Empty request body");
+    }
+
+    [Fact]
+    public async Task POST_ConversationsInvite_Should_Return_404_For_NonExistent_Conversation()
+    {
+        // Arrange
+        var nonExistentConversationPk = "CONVO#" + Guid.NewGuid().ToString();
+        var content = new StringContent(CreateSendConversationInviteRequestJson(nonExistentConversationPk, "HttpTestUser", "Invitee", "invitee@example.com"),
+                                         System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await _httpClient.PostAsync("/conversations/invite", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task POST_ConversationsInvite_Should_Return_403_For_Sender_Not_Matching_Conversation_Author()
+    {
+        // Arrange
+        var newConvoGuid = GetNewConversationGuid();
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var author = "AuthorA";
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, author, creationTime),
+                                    System.Text.Encoding.UTF8, "application/json"));
+        var conversationPK = $"CONVO#{newConvoGuid}";
+
+        // Act
+        var content = new StringContent(CreateSendConversationInviteRequestJson(conversationPK, "AuthorB", "Invitee", "invitee@example.com"),
+                                         System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations/invite", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().Be("Sender Username 'AuthorB' does not match the Author of the conversation 'AuthorA'.");
+    }
+
+    [Fact]
+    public async Task POST_ConversationsInvite_Should_Return_403_For_Sender_Not_Matching_Authenticated_User()
+    {
+        // Arrange
+        var newConvoGuid = GetNewConversationGuid();
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var author = "AuthenticatedUser";
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, author, creationTime),
+                                    System.Text.Encoding.UTF8, "application/json"));
+        var conversationPK = $"CONVO#{newConvoGuid}";
+
+        // Act
+        var content = new StringContent(CreateSendConversationInviteRequestJson(conversationPK, "DifferentSender", "Invitee", "invitee@example.com"),
+                                         System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations/invite", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().Be("Sender Username 'DifferentSender' does not match the Author of the conversation 'AuthenticatedUser'.");
+    }
+
+    [Fact]
+    public async Task POST_ConversationsInvite_Should_Return_400_For_Invalid_InviteeEmail()
+    {
+        // Arrange
+        var newConvoGuid = GetNewConversationGuid();
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var author = "HttpTestUser";
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, author, creationTime),
+                                    System.Text.Encoding.UTF8, "application/json"));
+        var conversationPK = $"CONVO#{newConvoGuid}";
+
+        // Act
+        var content = new StringContent(CreateSendConversationInviteRequestJson(conversationPK, author, "Invitee", "invalid-email"),
+                                         System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations/invite", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().StartWith("Invitee Email is not a valid email address.");
+    }
+
+    [Fact]
+    public async Task POST_ConversationsInvite_Should_Return_400_For_Missing_InviteeName()
+    {
+        // Arrange
+        var newConvoGuid = GetNewConversationGuid();
+        var creationTime = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var author = "HttpTestUser";
+        await _httpClient.PostAsync("/conversations",
+                                    new StringContent(CreateNewConversatonRequestJason(newConvoGuid, author, creationTime),
+                                    System.Text.Encoding.UTF8, "application/json"));
+        var conversationPK = $"CONVO#{newConvoGuid}";
+
+        // Act
+        var content = new StringContent(CreateSendConversationInviteRequestJson(conversationPK, author, "", "invitee@example.com"),
+                                         System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/conversations/invite", content);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var errorMessage = await response.Content.ReadAsStringAsync();
+        errorMessage.Should().StartWith("Invitee Name cannot be null or empty.");
+    }
+
+    #endregion
 
     private Guid GetNewConversationGuid()
     {
@@ -615,6 +784,15 @@ public class ConversationsApiHttpTests : IAsyncLifetime
             "Title": "Conclusion",
             "MessageBody": "This is a conclusion post",
             "UtcCreationTime": "{{updatedAt:yyyy-MM-ddTHH:mm:ssZ}}"
+        }
+        """;
+
+    private static string CreateSendConversationInviteRequestJson(string conversationPK, string senderUsername, string inviteeName, string inviteeEmail) => $$"""
+        {
+            "ConversationPK": "{{conversationPK}}",
+            "SenderUsername": "{{senderUsername}}",
+            "InviteeName": "{{inviteeName}}",
+            "InviteeEmail": "{{inviteeEmail}}"
         }
         """;
 

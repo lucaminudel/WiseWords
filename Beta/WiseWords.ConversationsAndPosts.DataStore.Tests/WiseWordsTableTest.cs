@@ -879,6 +879,37 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
             
         }
 
+        [Fact]
+        public async Task GetConversationAuthor_WhenConversationExists_ReturnsAuthor()
+        {
+            // Arrange
+            var guid = GetNewConversationGuid();
+            var author = "TestyAuthor";
+            var conversation = await AConversation()
+                .WithGuid(guid)
+                .WithAuthor(author)
+                .CreateAsync(_db);
+
+            // Act
+            var retrievedAuthor = await _db.GetConversationAuthor(conversation["PK"]);
+
+            // Assert
+            retrievedAuthor.Should().Be(author);
+        }
+
+        [Fact]
+        public async Task GetConversationAuthor_WhenConversationDoesNotExist_ThrowsException()
+        {
+            // Arrange
+            var nonExistentPk = "CONVO#" + Guid.NewGuid().ToString();
+
+            // Act
+            Func<Task> act = async () => await _db.GetConversationAuthor(nonExistentPk);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("Conversation not found or author is missing.");
+        }
     }
  
 }

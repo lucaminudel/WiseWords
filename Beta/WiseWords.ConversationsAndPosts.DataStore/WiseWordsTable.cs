@@ -207,6 +207,29 @@ namespace WiseWords.ConversationsAndPosts.DataStore
             return await AppendPostWithTitleWithoutReferentialIntegrityCheck(CONCLUSION_POST_SK_PREFIX, "Conclusion", conversationPK, parentPostSK, newConclusionGuid, author, title, messageBody, utcCreationTime);
         }
 
+        public async Task<string> GetConversationAuthor(string conversationPK)
+        {
+            ValidateConversationPkIntegrity(conversationPK);
+
+            string author = string.Empty;
+
+            await AsyncExecuteWithDynamoDB(async (client, context) =>
+            {
+                var conversation = await context.LoadAsync<ConversationSerialiser>(conversationPK, CONVERSATION_SK_METADATA);
+                if (conversation != null)
+                {
+                    author = conversation.Author;
+                }
+            });
+
+            if (string.IsNullOrEmpty(author))
+            {
+                throw new InvalidOperationException("Conversation not found or author is missing.");
+            }
+
+            return author;
+        }
+
         private async Task<string> AppendPostWithoutReferentialIntegrityCheck(string postType, string postTypeName, string conversationPK, string parentPostSK, Guid newGuid, string author,
                                                                               string messageBody, DateTimeOffset utcCreationTime)
         {

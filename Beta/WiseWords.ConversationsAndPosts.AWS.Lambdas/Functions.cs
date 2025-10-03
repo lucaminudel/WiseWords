@@ -7,24 +7,32 @@ using WiseWords.ConversationsAndPosts.DataStore;
 namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 {
 
-    public class Functions: IFunctions  
+    public class Functions : IFunctions
     {
         private readonly WiseWordsTable _service;
         private readonly ILoggerObserver _observer;
+        private readonly Func<(string Name, string Email)>? _getAuthenticatedUser;
 
-        private readonly Func<string> _getAuthenticatedUser;
-
-        public Functions() : this(new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl,
-                                  new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region,
-                                  () => "")
+        public Functions() : this(
+            new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl,
+            new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region, null)
         { }
 
-        public Functions(Uri? localDynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion, Func<string> GetAuthenticatedUser) 
-            : this(localDynamoDbServiceUrl, remoteDynamoDbRegion, GetAuthenticatedUser, new LoggerObserver("Lambda"))
+        public Functions(
+            Uri? localDynamoDbServiceUrl, 
+            Amazon.RegionEndpoint? remoteDynamoDbRegion, 
+            Func<(string, string)>? getAuthenticatedUser 
+        ) 
+            : this(localDynamoDbServiceUrl, remoteDynamoDbRegion, getAuthenticatedUser, new LoggerObserver("Lambda"))
         {
         }
 
-        public Functions(Uri? dynamoDbServiceUrl, Amazon.RegionEndpoint? remoteDynamoDbRegion, Func<string> getAuthenticatedUser, ILoggerObserver observer)
+        public Functions(
+            Uri? dynamoDbServiceUrl, 
+            Amazon.RegionEndpoint? remoteDynamoDbRegion, 
+            Func<(string, string)>? getAuthenticatedUser, 
+            ILoggerObserver observer
+        )
         {
             _service = new DataStore.WiseWordsTable(dynamoDbServiceUrl, remoteDynamoDbRegion);
             _getAuthenticatedUser = getAuthenticatedUser;
@@ -37,7 +45,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.CreateNewConversation(req.NewGuid, req.ConvoType, req.Title, req.MessageBody, GetAuthor(req.Author, context), req.UtcCreationTime);
+                var result = await _service.CreateNewConversation(req.NewGuid, req.ConvoType, req.Title, req.MessageBody, GetAuthor(req.Author, context).Name, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(CreateNewConversationHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -117,7 +125,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendDrillDownPost(req.ConversationPK, req.ParentPostSK, req.NewDrillDownGuid, GetAuthor(req.Author, context), req.Title, req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendDrillDownPost(req.ConversationPK, req.ParentPostSK, req.NewDrillDownGuid, GetAuthor(req.Author, context).Name, req.Title, req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendDrillDownPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -136,7 +144,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendCommentPost(req.ConversationPK, req.ParentPostSK, req.NewCommentGuid, GetAuthor(req.Author, context), req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendCommentPost(req.ConversationPK, req.ParentPostSK, req.NewCommentGuid, GetAuthor(req.Author, context).Name, req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendCommentPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -155,7 +163,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             try
             {
-                var result = await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, GetAuthor(req.Author, context), req.Title, req.MessageBody, req.UtcCreationTime);
+                var result = await _service.AppendConclusionPost(req.ConversationPK, req.ParentPostSK, req.NewConclusionGuid, GetAuthor(req.Author, context).Name, req.Title, req.MessageBody, req.UtcCreationTime);
 
                 _observer.OnSuccess($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
 
@@ -166,12 +174,81 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
                 _observer.OnFailure($"Handler={nameof(AppendConclusionPostHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
                 throw;
             }
-        }        
+        }
 
-        private string GetAuthor(string requestAuthor, ILambdaContext context)
+        public async Task SendConversationInviteEmailHandler(SendConversationInviteRequest req, ILambdaContext context)
         {
+            _observer.OnStart($"Handler={nameof(SendConversationInviteEmailHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}, {nameof(req.ConversationPK)}={req.ConversationPK}, {nameof(req.InviteeEmail)}={req.InviteeEmail}", context);
+
+            // AWS SES is not an idempotent service, additional logic currently not implemented, is needed to ensure idempotency (from Lamba retries, couble Send clicks, etc.)
+
+            try
+            {
+                await ValidateSendConversationInviteRequest(req);
+
+                // Actual implementation of SES call for the AWS Dev Environment
+                await Task.CompletedTask;
+
+                _observer.OnSuccess($"Handler={nameof(SendConversationInviteEmailHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
+            }
+            catch (Exception ex)
+            {
+                _observer.OnFailure($"Handler={nameof(SendConversationInviteEmailHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context, ex);
+                throw;
+            }
+        }
+
+        private async Task ValidateSendConversationInviteRequest(SendConversationInviteRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.SenderUsername))
+            {
+                throw new ArgumentException("Sender Username cannot be null or empty.", nameof(req.SenderUsername));
+            }
+
+            if (_getAuthenticatedUser != null) {
+                var authenticatedUser = _getAuthenticatedUser();
+                if (req.SenderUsername != authenticatedUser.Name)
+                {
+                    throw new System.Security.SecurityException($"Sender Username '{req.SenderUsername}' does not match authenticated user '{authenticatedUser.Name}'.");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(req.InviteeEmail))
+            {
+                throw new ArgumentException("Invitee Email cannot be null or empty.", nameof(req.InviteeEmail));
+            }
+            
+            try
+            {
+                new System.Net.Mail.MailAddress(req.InviteeEmail);
+            }
+            catch (FormatException)
+            {
+                throw new ArgumentException("Invitee Email is not a valid email address.", nameof(req.InviteeEmail));
+            }
+
+            if (string.IsNullOrWhiteSpace(req.InviteeName))
+            {
+                throw new ArgumentException("Invitee Name cannot be null or empty.", nameof(req.InviteeName));
+            }
+
+            var conversationAuthor = await _service.GetConversationAuthor(req.ConversationPK);
+            if (req.SenderUsername != conversationAuthor)
+            {
+                throw new System.Security.SecurityException($"Sender Username '{req.SenderUsername}' does not match the Author of the conversation '{conversationAuthor}'.");
+            }
+        }
+
+        private (string Name, string Email) GetAuthor(string requestAuthor, ILambdaContext context)
+        {
+            if (_getAuthenticatedUser == null)
+            {
+                return (requestAuthor, requestAuthor.Replace(" ", "") + "@development_environemnt.test" );                    
+            }
+
             requestAuthor = requestAuthor.Trim();
-            var preferredUsername = _getAuthenticatedUser();
+            var authenticatedUser = _getAuthenticatedUser();
+            var preferredUsername = authenticatedUser.Name;
 
             if (!string.IsNullOrEmpty(preferredUsername) && preferredUsername != requestAuthor)
             {
@@ -180,10 +257,10 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
 
             if (string.IsNullOrEmpty(requestAuthor))
             {
-                return preferredUsername;
+                return (preferredUsername, authenticatedUser.Email);
             }
 
-            return requestAuthor;
+            return (requestAuthor, authenticatedUser.Email);
         }
 
    }
