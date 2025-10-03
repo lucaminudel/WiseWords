@@ -695,7 +695,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         public async Task DeleteConversationAndPosts_DeletesAllItemsSuccessfully()
         {
             // Arrange
-            var conversationGuid = GetNewConversationGuid();
+            var conversationGuid = Guid.NewGuid();
             
 
             var jsonConversation = await _db.CreateNewConversation(
@@ -735,7 +735,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
         private static void AssertPostWithTitleMatches(Dictionary<string, string> actualPost, Dictionary<string, string> expectedPost)
         {
             actualPost["Title"].Should().Be(expectedPost["Title"]);
-            AssertPostWithTitleMatches(actualPost, expectedPost);
+            AssertPostMatches(actualPost, expectedPost);
         }
         private static void AssertPostMatches(Dictionary<string, string> actualPost, Dictionary<string, string> expectedPost)
         {
@@ -864,17 +864,9 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Tests
 
         public async Task DisposeAsync()
         {
-
             while (_dbCleanupConversationPostTest.Count > 0)
             {
-                try
-                {
-                    await _db.AdministrativeNonAtomicDeleteConversationAndPosts(_dbCleanupConversationPostTest.Dequeue());
-                }
-                catch (InvalidOperationException)
-                {
-                    // Item not found, ingnore and proceed with the next one
-                }
+                await _db.AdministrativeNonAtomicDeleteConversationAndPosts(_dbCleanupConversationPostTest.Dequeue());
             }
             
         }
