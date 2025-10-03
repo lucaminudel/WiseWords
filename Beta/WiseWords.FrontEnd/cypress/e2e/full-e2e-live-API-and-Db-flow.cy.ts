@@ -13,7 +13,18 @@ describe('Full E2E Live API and DB Flow', () => {
 
   it('should create a new conversation, add posts, and verify persistence', () => {
     // Step 1: Create a new conversation
+    // Intercept environment config to capture the ApiBaseUrl used by the app
+    cy.intercept('GET', '**/assets/env.*.json').as('envConfig');
+
     cy.visit('/conversations');
+
+    cy.wait('@envConfig').then((i) => {
+      const api = i.response && (i.response as any).body && (i.response as any).body.ApiBaseUrl ? (i.response as any).body.ApiBaseUrl as string : null;
+      if (!api) {
+        throw new Error('Failed to resolve ApiBaseUrl from env config');
+      }
+      cy.wrap(api).as('apiBaseUrl');
+    });
     
     cy.window().then((win) => {
       cy.stub(win, 'prompt').returns(authorName);
@@ -26,7 +37,19 @@ describe('Full E2E Live API and DB Flow', () => {
     cy.get('textarea[placeholder*="Provide a short summary"]').type('This is a test conversation created by an automated E2E test.');
     cy.get('input[placeholder*="Provide a short title"]').type(conversationTitle);
 
+    // Intercept the create request to capture the created conversation PK
+    cy.intercept('POST', '**/conversations').as('createConv');
+
     cy.contains('button', 'Create').click();
+
+    cy.wait('@createConv').then((i) => {
+      const body = (i.response && (i.response as any).body) || {};
+      const createdPk = (body && body.PK) as string | undefined;
+      if (!createdPk) {
+        cy.log('WARN: Could not capture created PK from create response. Cleanup will fall back to search.');
+      }
+      cy.wrap(createdPk || null).as('createdConversationPk');
+    });
 
     // Step 2: Verify it has been created in the current session
     cy.get('#new-conversation-form').should('not.exist');
@@ -131,5 +154,55 @@ describe('Full E2E Live API and DB Flow', () => {
     cy.contains('[data-testid="post-container"]', 'Another Nested Drill Down').should('be.visible');
     cy.contains('[data-testid="post-container"]', 'Another Nested Comment').should('be.visible');
     cy.contains('[data-testid="post-container"]', 'Another Nested Conclusion').should('be.visible');
+
+    // Cleanup: delete the created conversation via API (AdministrativeNonAtomicDelete)
+    cy.log('--- Cleaning up created conversation via API ---');
+    const year = new Date().getFullYear();
+
+    cy.get<string>('@apiBaseUrl').then((apiBaseUrl) => {
+      cy.get<string | null>('@createdConversationPk').then((createdPk) => {
+        if (createdPk) {
+          const pkEncoded = encodeURIComponent(createdPk);
+          cy.log(`Deleting conversation via API at ${apiBaseUrl}/conversations/${pkEncoded}`);
+          cy.request({
+            url: `${apiBaseUrl}/conversations/${pkEncoded}`,
+            method: 'DELETE',
+            failOnStatusCode: false
+          }).then(delRes => {
+            cy.log(`DELETE status: ${delRes.status}`);
+            expect([204, 404, 200, 202]).to.include(delRes.status);
+          });
+        } else {
+          // Fallback: search by year and author if we couldn't capture PK
+          cy.request({
+            url: `${apiBaseUrl}/conversations?updatedAtYear=${year}&filterByAuthor=${encodeURIComponent(authorName)}`,
+            method: 'GET',
+            failOnStatusCode: false
+          }).then(res => {
+            if (res.status !== 200 || !Array.isArray(res.body)) {
+              cy.log('Cleanup skipped: failed to query conversations for cleanup');
+              return;
+            }
+            const conversations = res.body as Array<{ PK: string; Title: string; Author: string }>;
+            const match = conversations.find(c => c.Title === conversationTitle && c.Author === authorName);
+            if (!match) {
+              cy.log('Cleanup skipped: created conversation not found');
+              return;
+            }
+
+            const pkEncoded = encodeURIComponent(match.PK);
+            cy.log(`Deleting conversation via API at ${apiBaseUrl}/conversations/${pkEncoded}`);
+            cy.request({
+              url: `${apiBaseUrl}/conversations/${pkEncoded}`,
+              method: 'DELETE',
+              failOnStatusCode: false
+            }).then(delRes => {
+              cy.log(`DELETE status: ${delRes.status}`);
+              expect([204, 404, 200, 202]).to.include(delRes.status);
+            });
+          });
+        }
+      });
+    });
   });
 });
