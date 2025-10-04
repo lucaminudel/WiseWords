@@ -1,4 +1,6 @@
 using Amazon.Lambda.Core;
+using Amazon.SimpleEmail;
+using Amazon.SimpleEmail.Model;
 
 using WiseWords.ConversationsAndPosts.DataStore;
 
@@ -12,28 +14,33 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
         private readonly WiseWordsTable _service;
         private readonly ILoggerObserver _observer;
         private readonly Func<(string Name, string Email)>? _getAuthenticatedUser;
+        private readonly Uri _websiteUld;
 
         public Functions() : this(
+            new DataStore.Configuration.Loader().GetEnvironmentVariables().WebsiteBaseUrl,
             new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl,
             new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region, null)
         { }
 
         public Functions(
+            Uri? websiteUrl, 
             Uri? localDynamoDbServiceUrl, 
             Amazon.RegionEndpoint? remoteDynamoDbRegion, 
             Func<(string, string)>? getAuthenticatedUser 
         ) 
-            : this(localDynamoDbServiceUrl, remoteDynamoDbRegion, getAuthenticatedUser, new LoggerObserver("Lambda"))
+            : this(websiteUrl, localDynamoDbServiceUrl, remoteDynamoDbRegion, getAuthenticatedUser, new LoggerObserver("Lambda"))
         {
         }
 
         public Functions(
+            Uri? websiteUrl, 
             Uri? dynamoDbServiceUrl, 
             Amazon.RegionEndpoint? remoteDynamoDbRegion, 
             Func<(string, string)>? getAuthenticatedUser, 
             ILoggerObserver observer
         )
         {
+            _websiteUld = websiteUrl!;
             _service = new DataStore.WiseWordsTable(dynamoDbServiceUrl, remoteDynamoDbRegion);
             _getAuthenticatedUser = getAuthenticatedUser;
             _observer = observer;
@@ -186,8 +193,47 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             {
                 await ValidateSendConversationInviteRequest(req);
 
-                // Actual implementation of SES call for the AWS Dev Environment
-                await Task.CompletedTask;
+                if (_getAuthenticatedUser == null)
+                {
+                    _observer.OnWarning("Enail send skipped in Local Dev Emvironment", context);
+                    return;                    
+                }
+
+                var authenticatedUser = _getAuthenticatedUser?.Invoke();
+                var conversationUrl = new Uri(_websiteUld, $"conversations/{req.ConversationPK}");
+                
+                var emailBody = $@"Hi {req.InviteeName},
+
+    {authenticatedUser?.Name ?? req.SenderUsername} started a conversation on WiseWords, and has invited you to participate.
+
+    Follow this link to view the conversation: {conversationUrl}.
+    When you post a comment, you will be asked to register.
+
+    WiseWords is a platform for engaging in productive discussions.
+    Learn more about the WiseWords here: {_websiteUld}.
+
+    For any question, reply to this email or contact {authenticatedUser?.Name ?? req.SenderUsername} here in cc.
+
+Ciao!
+The WiseWords Team";
+
+                using var sesClient = new AmazonSimpleEmailServiceClient();
+                var sendRequest = new SendEmailRequest
+                {
+                    Source = "",
+                    Destination = new Destination
+                    {
+                        ToAddresses = [req.InviteeEmail],
+                        CcAddresses = authenticatedUser?.Email != null ? [authenticatedUser.Value.Email] : []
+                    },
+                    Message = new Message
+                    {
+                        Subject = new Content($"{req.SenderUsername} invited you to join a conversation on WiseWords"),
+                        Body = new Body { Text = new Content(emailBody) }
+                    }
+                };
+
+                await sesClient.SendEmailAsync(sendRequest);
 
                 _observer.OnSuccess($"Handler={nameof(SendConversationInviteEmailHandler)}, {nameof(context.AwsRequestId)}={context.AwsRequestId}", context);
             }
