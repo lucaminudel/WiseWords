@@ -11,6 +11,7 @@ import { formatUnixTimestamp } from '../utils/dateUtils';
 import { getConversationTypeColor } from '../utils/conversationUtils';
 import { postTypeService } from '../utils/postType';
 import { getAddSubActionButtonText, getProposeSolutionButtonText } from '../utils/buttonTextUtils';
+import { getConversationSubType, getConversationConclusionType } from '../utils/conversationLabelsConstants';
 import { Post } from '../types/conversation';
 import { useAuth } from '../contexts/AuthContext';
 import { authNavigationFlowSessionState } from '../services/authNavigationFlowSessionState';
@@ -92,6 +93,17 @@ const isInitialLoadCompleted = useRef(false);
         }
         setConversation(conversationData);
         setPosts(postsData);
+
+        // Show owner-only info message on initial load
+        if (username && conversationData.Author === username) {
+          const sub = getConversationSubType(conversationData.ConvoType || '');
+          const concl = getConversationConclusionType(conversationData.ConvoType || '');
+          setInfoMessage(
+            `Only you, as the one starting this conversation, are able to add sub-${sub}s and propose ${concl}s.\n` +
+            `Everyone else is only allowed to comment, and may suggest you sub-${sub}s and ${concl}s in their comments.\n` +
+            `Only you are able to invite others to join this conversation, and to export this entire conversation to keep for your records or for your own analysis.`
+          );
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred while loading the conversation');
       } finally {
@@ -533,7 +545,7 @@ const isInitialLoadCompleted = useRef(false);
               marginBottom: '24px',
             }}
           >
-            <span>{infoMessage}</span>
+            <span style={{ whiteSpace: 'pre-line' }}>{infoMessage}</span>
           </div>
         )}
         <div 

@@ -38,7 +38,7 @@ describe('Conversation Thread Ownership Restrictions', () => {
       // Verify info message appears within the form
               cy.get('[data-testid="drilldown-form-METADATA"]').within(() => {
                 cy.get('[data-testid="ownership-info-message"]').should('be.visible');
-                cy.get('[data-testid="ownership-info-message"]').should('contain.text', 'Only Alice, who started this conversation, can do this.');
+                cy.get('[data-testid="ownership-info-message"]').should('contain.text', 'Only Alice who started this conversation can do this.');
         // Verify input fields and post button are disabled
         cy.get('input[placeholder*="Title"]').should('be.disabled');
         cy.get('textarea').should('be.disabled');
@@ -59,7 +59,7 @@ describe('Conversation Thread Ownership Restrictions', () => {
       // Verify info message appears within the form
       cy.get('[data-testid="conclusion-form-METADATA"]').within(() => {
         cy.get('[data-testid="ownership-info-message"]').should('be.visible');
-        cy.get('[data-testid="ownership-info-message"]').should('contain.text', 'Only Alice, who started this conversation, can do this.');
+        cy.get('[data-testid="ownership-info-message"]').should('contain.text', 'Only Alice who started this conversation can do this.');
 
         // Verify input fields and post button are disabled
         cy.get('input[placeholder*="Title"]').should('be.disabled');
@@ -83,7 +83,7 @@ describe('Conversation Thread Ownership Restrictions', () => {
       // Verify info message appears within the form
       cy.get(`[data-testid="drilldown-form-${parentPostSK}"]`).within(() => {
         cy.get('[data-testid="ownership-info-message"]').should('be.visible');
-        cy.get('[data-testid="ownership-info-message"]').should('contain.text', 'Only Alice, who started this conversation, can do this.');
+        cy.get('[data-testid="ownership-info-message"]').should('contain.text', 'Only Alice who started this conversation can do this.');
 
         // Verify input fields and post button are disabled
         cy.get('input[placeholder*="Title"]').should('be.disabled');
@@ -107,7 +107,7 @@ describe('Conversation Thread Ownership Restrictions', () => {
       // Verify info message appears within the form
       cy.get(`[data-testid="conclusion-form-${parentPostSK}"]`).within(() => {
         cy.get('[data-testid="ownership-info-message"]').should('be.visible');
-        cy.get('[data-testid="ownership-info-message"]').should('contain.text', 'Only Alice, who started this conversation, can do this.');
+        cy.get('[data-testid="ownership-info-message"]').should('contain.text', 'Only Alice who started this conversation can do this.');
 
         // Verify input fields and post button are disabled
         cy.get('input[placeholder*="Title"]').should('be.disabled');

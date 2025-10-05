@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Logo } from './common/Logo';
 import { getConversationTypeColor, getConversationTypeLabel, convertConvoTypeToNumber } from '../utils/conversationUtils';
+import { getConversationSubType, getConversationConclusionType } from '../utils/conversationLabelsConstants';
 import { formatUnixTimestampNoSeconds, formatUnixTimestampDayMonthSpaceYear } from '../utils/dateUtils';
 import { ConversationResponse } from '../types/conversation';
 import { ConversationService } from '../services/conversationService';
@@ -361,8 +362,9 @@ const ConversationsList: React.FC = () => {
               }}
             >
               <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-accent)' }}>
-                Only you will be able to add sub-{getConversationSubType(formData.type)}s and propose {getConversationConclusionType(formData.type)}s. Others will be allowed to comment.
-                <br />You can also export the entire conversation to keep for your records or for your own analysis.
+                Only you, as the one starting this conversation, will be able to add sub-{getConversationSubType(formData.type)}s and propose {getConversationConclusionType(formData.type)}s.<br />                
+                Everyone else will only be allowed to comment.<br />
+                You will also be able to invite others to join the conversation, and to export the entire conversation to keep for your records or for your own analysis.
               </p>
             </div>
           )}
@@ -402,7 +404,7 @@ const ConversationsList: React.FC = () => {
               >
                 <option value="QUESTION">Question - a question looking for an answer - allows for comments, sub-questions, and proposed answers</option>
                 <option value="PROBLEM">Problem - a problem looking for a solution - allows for comments, sub-problems, and proposed solutions</option>
-                <option value="DILEMMA">Dilemma - a difficult choice between multiple options - allows for comments, sub-dilemmas, and proposed resolutions</option>
+                <option value="DILEMMA">Dilemma - a difficult choice between multiple options - allows for comments, sub-dilemmas, and proposed choices</option>
               </select>
             </div>
             
@@ -475,31 +477,4 @@ const ConversationsList: React.FC = () => {
   );
 };
 
-const getConversationConclusionType = (type: string) => {
-  switch (type) {
-    case 'QUESTION':
-      return 'answer';
-    case 'PROBLEM':
-      return 'solution';
-    case 'DILEMMA':
-      return 'choice';
-    default:
-      return 'conclusion';
-  }
-};
-
-const getConversationSubType = (type: string) => {
-  switch (type) {
-    case 'QUESTION':
-      return 'question';
-    case 'PROBLEM':
-      return 'problem';
-    case 'DILEMMA':
-      return 'dilemma';
-    default:
-      return 'item';
-  }
-};
-
 export default ConversationsList;
-;

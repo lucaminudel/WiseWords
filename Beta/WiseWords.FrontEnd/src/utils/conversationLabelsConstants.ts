@@ -30,6 +30,7 @@ export const CONVERSATION_BUTTON_LABELS = {
  * Post type labels configuration for conversation types
  */
 export const CONVERSATION_POST_LABELS = {
+
   QUESTION: {
     drillDown: 'Sub-question',
     conclusion: 'Proposed Answer'
@@ -52,3 +53,30 @@ export const CONVERSATION_TYPE_LABELS = {
     PROBLEM: 'Problem', 
     DILEMMA: 'Dilemma',
 } as const;
+
+// Lowercase labels for dynamic phrases used in messages/UI
+export const getConversationConclusionType = (type: string) => {
+ switch (type) {
+   case 'QUESTION':
+     return 'answer';
+   case 'PROBLEM':
+     return 'solution';
+   case 'DILEMMA':
+     return 'choice';
+   default:
+     return 'conclusion';
+ }
+};
+
+export const getConversationSubType = (type: string) => {
+ switch (type) {
+   case 'QUESTION':
+     return 'question';
+   case 'PROBLEM':
+     return 'problem';
+   case 'DILEMMA':
+     return 'dilemma';
+   default:
+     return 'item';
+ }
+};

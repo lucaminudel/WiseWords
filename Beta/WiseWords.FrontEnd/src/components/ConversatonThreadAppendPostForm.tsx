@@ -71,8 +71,8 @@ export const ConversatonThreadAppendPostForm = ({
           }}
         >
           <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-accent)' }}>
-            Only <em>{author}</em>, who started this conversation, can do this. 
-            You can comment, suggesting they do so, providing your motivations.
+            Only <em>{author}</em> who started this conversation can do this. <br/>
+            Instead you can comment, suggesting to do so, explaining your reasoning and motivation.
           </p>
         </div>
       )}

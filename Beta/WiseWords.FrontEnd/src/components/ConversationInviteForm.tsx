@@ -115,7 +115,7 @@ export const ConversationInviteForm: React.FC<ConversationInviteFormProps> = ({
             htmlFor={`${id}-name`}
             style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}
           >
-            Name (used in the email greeting)
+            Name (used for the greeting)
           </label>
           <input
             id={`${id}-name`}
@@ -149,7 +149,7 @@ export const ConversationInviteForm: React.FC<ConversationInviteFormProps> = ({
             htmlFor={`${id}-email`}
             style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}
           >
-            Send to Email address
+            Email address (of the recipient)
           </label>
           <input
             id={`${id}-email`}

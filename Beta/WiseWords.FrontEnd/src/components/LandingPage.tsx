@@ -25,18 +25,19 @@ const LandingPage: React.FC = () => {
         
         <p className="app-description">
           <br/>
-          All social networks are good to share news, opinions, statements.
+          A calm forum to facilitate productive conversations &amp; meaningful conclusions.
           <br/><br/>
-          Wise Words gets you from questions to <span className="highlight">answers</span>, problems to <span className="highlight">solutions</span>, and dilemmas to <span className="highlight">options</span>.
-          Enabling productive collaborative conversations.
-        </p>
-        
+          It seamlessly gets you + your team <br/>
+          from questions to <span className="highlight">answers</span>, problems to <span className="highlight">solutions</span>, and dilemmas to <span className="highlight">choices</span>.
+          <br/><br/>
+          <span className="highlight">Invite</span> the right people, <span className="highlight">refine</span> the original goal gradually, and easily <span className="highlight">export</span> the conversation.</p>        
         <button 
           className="enter-forum-button"
           onClick={handleEnterForum}
         >
           Enter
         </button>
+        <span className="contact-us-note">Contact us <a href="https://www.smharter.com/index.html#contacts">here</a></span>
       </div>
     </div>
   );
