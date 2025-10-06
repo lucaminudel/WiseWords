@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using Amazon.Lambda.Core;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
@@ -14,25 +15,29 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
         private readonly WiseWordsTable _service;
         private readonly ILoggerObserver _observer;
         private readonly Func<(string Name, string Email)>? _getAuthenticatedUser;
-        private readonly Uri _websiteUld;
+        private readonly Uri _websiteUrl;
+        private readonly MailAddress _invitesSourceEmailAddress;
 
         public Functions() : this(
+            new DataStore.Configuration.Loader().GetEnvironmentVariables().InvitesSourceEmailAddress,
             new DataStore.Configuration.Loader().GetEnvironmentVariables().WebsiteBaseUrl,
             new DataStore.Configuration.Loader().GetEnvironmentVariables().DynamoDbServiceLocalUrl,
             new DataStore.Configuration.Loader().GetEnvironmentVariables().AWS.Region, null)
         { }
 
         public Functions(
+            MailAddress? invitesSourceEmailAddress,
             Uri? websiteUrl, 
             Uri? localDynamoDbServiceUrl, 
             Amazon.RegionEndpoint? remoteDynamoDbRegion, 
             Func<(string, string)>? getAuthenticatedUser 
         ) 
-            : this(websiteUrl, localDynamoDbServiceUrl, remoteDynamoDbRegion, getAuthenticatedUser, new LoggerObserver("Lambda"))
+            : this(invitesSourceEmailAddress, websiteUrl, localDynamoDbServiceUrl, remoteDynamoDbRegion, getAuthenticatedUser, new LoggerObserver("Lambda"))
         {
         }
 
         public Functions(
+            MailAddress? invitesSourceEmailAddress,
             Uri? websiteUrl, 
             Uri? dynamoDbServiceUrl, 
             Amazon.RegionEndpoint? remoteDynamoDbRegion, 
@@ -40,7 +45,8 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
             ILoggerObserver observer
         )
         {
-            _websiteUld = websiteUrl!;
+            _invitesSourceEmailAddress = invitesSourceEmailAddress!;
+            _websiteUrl = websiteUrl!;
             _service = new DataStore.WiseWordsTable(dynamoDbServiceUrl, remoteDynamoDbRegion);
             _getAuthenticatedUser = getAuthenticatedUser;
             _observer = observer;
@@ -200,7 +206,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
                 }
 
                 var authenticatedUser = _getAuthenticatedUser?.Invoke();
-                var conversationUrl = new Uri(_websiteUld, $"conversations/{req.ConversationPK}");
+                var conversationUrl = new Uri(_websiteUrl, $"conversations/{req.ConversationPK}");
                 
                 var emailBody = $@"Hi {req.InviteeName},
 
@@ -210,7 +216,7 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
     When you post a comment, you will be asked to register.
 
     WiseWords is a platform for engaging in productive discussions.
-    Learn more about the WiseWords here: {_websiteUld}.
+    Learn more about the WiseWords here: {_websiteUrl}.
 
     For any question, reply to this email or contact {authenticatedUser?.Name ?? req.SenderUsername} here in cc.
 
@@ -220,7 +226,7 @@ The WiseWords Team";
                 using var sesClient = new AmazonSimpleEmailServiceClient();
                 var sendRequest = new SendEmailRequest
                 {
-                    Source = "",
+                    Source = _invitesSourceEmailAddress.ToString(),
                     Destination = new Destination
                     {
                         ToAddresses = [req.InviteeEmail],

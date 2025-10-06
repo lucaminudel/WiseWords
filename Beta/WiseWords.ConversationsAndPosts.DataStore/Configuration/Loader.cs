@@ -1,6 +1,5 @@
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Text.Json;
+using System.Net.Mail;
 
 namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
 {
@@ -70,6 +69,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
     {
         public string ApiBaseUrl { get; set; } = string.Empty;
         public string WebsiteBaseUrl { get; set; } = string.Empty;
+        public string InvitesSourceEmailAddress { get; set; } = string.Empty;
         public string DynamoDbServiceLocalUrl { get; set; } = string.Empty;
         public string DynamoDbServiceLocalContainerUrl { get; set; } = string.Empty;
 
@@ -100,6 +100,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
 
             ApiBaseUrl = new Uri(cfg.ApiBaseUrl);
             WebsiteBaseUrl = new Uri(cfg.WebsiteBaseUrl);
+            InvitesSourceEmailAddress = new MailAddress(cfg.InvitesSourceEmailAddress);
 
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl))
                 DynamoDbServiceLocalUrl = new Uri(cfg.DynamoDbServiceLocalUrl);
@@ -140,6 +141,9 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
             if (false == Uri.IsWellFormedUriString(cfg.WebsiteBaseUrl, UriKind.Absolute))
                 throw new ArgumentException($"{nameof(cfg.WebsiteBaseUrl)} configuration value need to be a well formed Url ('{cfg.WebsiteBaseUrl}').");
 
+            if (string.IsNullOrEmpty(cfg.InvitesSourceEmailAddress))
+                throw new ArgumentNullException($"{nameof(cfg.InvitesSourceEmailAddress)} configuration value cannot be null or empty.");
+
             if (!string.IsNullOrEmpty(cfg.DynamoDbServiceLocalUrl) && !Uri.IsWellFormedUriString(cfg.DynamoDbServiceLocalUrl, UriKind.Absolute))
                 throw new ArgumentNullException($"{nameof(cfg.DynamoDbServiceLocalUrl)} configuration value need to be either empty or a well formed Url. But is: '{cfg.DynamoDbServiceLocalUrl}'.");
 
@@ -162,6 +166,7 @@ namespace WiseWords.ConversationsAndPosts.DataStore.Configuration
 
         public Uri? ApiBaseUrl { get; internal set; } = null;
         public Uri? WebsiteBaseUrl { get; internal set; } = null;
+        public  MailAddress? InvitesSourceEmailAddress { get; internal set; } = null;
         public Uri? DynamoDbServiceLocalUrl { get; internal set; } = null;
         public Uri? DynamoDbServiceLocalContainerUrl { get; internal set; } = null;
 

@@ -30,6 +30,7 @@ public class Router
         Func<(string userName, string userEmail)>? _getAuthenticatedUser = environmentInfo.Cognito == null ? null : GetAuthenticatedUserFromCognitoAuthorizerClaims;
 
         _lambdaFunctions = new Functions(
+            environmentInfo.InvitesSourceEmailAddress,
             environmentInfo.WebsiteBaseUrl,
             environmentInfo.DynamoDbServiceLocalContainerUrl,
             environmentInfo.AWS.Region,
