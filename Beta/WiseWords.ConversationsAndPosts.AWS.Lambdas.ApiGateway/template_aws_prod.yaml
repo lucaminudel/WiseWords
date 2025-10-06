@@ -5,7 +5,7 @@ Description: Template for ConversationsAndPosts Lambda + API Gateway with Cognit
 Parameters:
   AllowedOrigin:
     Type: String
-    Default: "https://doxsj8lfqq7dm.cloudfront.net"
+    Default: "https://www.wise-words.online"
   CognitoDomainPrefix:
     Type: String
     Default: "wisewords"
@@ -187,12 +187,7 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
-      Cors:
-        AllowMethods: "'GET,POST,DELETE,OPTIONS'"
-        AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: !Sub "'${AllowedOrigin}'" 
-        AllowCredentials: true
-        MaxAge: 600  # Cache preflight response for 10 minutes
+
       GatewayResponses:
         DEFAULT_4XX:
           ResponseParameters:
