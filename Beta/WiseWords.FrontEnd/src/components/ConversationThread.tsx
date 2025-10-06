@@ -164,42 +164,40 @@ const isInitialLoadCompleted = useRef(false);
   // Scroll to form when it becomes visible and set focus
   useEffect(() => {
     if (activeForm) {
-      setTimeout(() => {
-        const formId = `${activeForm.type}-form-${activeForm.context.insertAfterSK || 'main'}`;
-        const formElement = document.getElementById(formId);
+      const formId = `${activeForm.type}-form-${activeForm.context.insertAfterSK || 'main'}`;
+      const formElement = document.getElementById(formId);
+      
+      if (formElement) {
+        // Scroll so bottom of form aligns with bottom of viewport
+        formElement.scrollIntoView({
+          behavior: 'smooth', 
+          block: 'end'
+        });
         
-        if (formElement) {
-          // Scroll so bottom of form aligns with bottom of viewport
-          formElement.scrollIntoView({
-            behavior: 'smooth', 
-            block: 'end'
-          });
-          
-          // Focus on the first input field (Title if required, otherwise Message)
-          if (activeForm.type !== 'comment') {
-            // For forms that require a title, focus on the title input first
-            const titleInput = formElement.querySelector('input[type="text"]') as HTMLInputElement;
-            if (titleInput) {
-              titleInput.focus();
-            } else {
-              // Fallback to textarea if title input not found
-              const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
-              textarea?.focus();
-            }
+        // Focus on the first input field (Title if required, otherwise Message)
+        if (activeForm.type !== 'comment') {
+          // For forms that require a title, focus on the title input first
+          const titleInput = formElement.querySelector('input[type="text"]') as HTMLInputElement;
+          if (titleInput) {
+            titleInput.focus();
           } else {
-            // For comments, focus on the textarea
+            // Fallback to textarea if title input not found
             const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
-            if (textarea) {
-              textarea.focus();
-              
-              // If there's pre-filled content (quoted text), position cursor at the end
-              if (formData.messageBody) {
-                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-              }
+            textarea?.focus();
+          }
+        } else {
+          // For comments, focus on the textarea
+          const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.focus();
+            
+            // If there's pre-filled content (quoted text), position cursor at the end
+            if (formData.messageBody) {
+              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
             }
           }
         }
-      }, 200);
+      }
     }
   }, [activeForm]);
 

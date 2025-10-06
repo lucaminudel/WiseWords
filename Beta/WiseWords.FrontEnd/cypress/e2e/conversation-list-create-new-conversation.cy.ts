@@ -167,17 +167,28 @@ describe('New Conversation Form - Complete Integration', () => {
     cy.window().then((win) => {
       cy.stub(win, 'prompt').returns('TestUser');
     });
+
     cy.contains('button', 'New Conversation').click();
     
     // Try to submit with empty fields
     cy.contains('button', 'Create').click();
+
+    // Assert that the validation error message is displayed
+    cy.get('#form-error-message')
+      .should('be.visible')
+      .and('contain', 'Please fill in all required fields');
     
     // Form should still be visible (validation should prevent submission)
     cy.get('#new-conversation-form').should('be.visible');
     
     // Fill only title and try again
-    cy.get('input[placeholder*="Provide a short title"]').type('Test Title');
+    cy.get('#form-title-input').type('Test Title');
     cy.contains('button', 'Create').click();
+    
+    // Assert that the validation error message is displayed
+    cy.get('#form-error-message')
+      .should('be.visible')
+      .and('contain', 'Please fill in all required fields');
     
     // Form should still be visible
     cy.get('#new-conversation-form').should('be.visible');

@@ -113,29 +113,27 @@ const ConversationsList: React.FC = () => {
 
   useEffect(() => {
     if (showNewConversationForm) {
-      setTimeout(() => {
-        const formId = 'new-conversation-form';
-        const formElement = document.getElementById(formId);
+      const formId = 'new-conversation-form';
+      const formElement = document.getElementById(formId);
+      
+      if (formElement) {
+        // Scroll so bottom of form aligns with bottom of viewport
+        formElement.scrollIntoView({
+          behavior: 'smooth', 
+          block: 'end'
+        });
         
-        if (formElement) {
-          // Scroll so bottom of form aligns with bottom of viewport
-          formElement.scrollIntoView({
-            behavior: 'smooth', 
-            block: 'end'
-          });
+        // Focus on the message textarea and position cursor
+        const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
+        if (textarea) {
+          textarea.focus();
           
-          // Focus on the message textarea and position cursor
-          const textarea = formElement.querySelector('textarea') as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.focus();
-            
-            // If there's pre-filled content (quoted text), position cursor at the end
-            if (formData.messageBody) {
-              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            }
+          // If there's pre-filled content (quoted text), position cursor at the end
+          if (formData.messageBody) {
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
           }
         }
-      }, 200);
+      }
     }
   }, [showNewConversationForm]);
 
@@ -371,7 +369,9 @@ const ConversationsList: React.FC = () => {
           
           {/* Form Error Display */}
           {formError && (
-            <div style={{ 
+            <div 
+              id="form-error-message"
+              style={{ 
               color: 'var(--color-danger)', 
               backgroundColor: 'rgba(255, 79, 90, 0.1)',
               padding: '0.75rem',
@@ -413,8 +413,10 @@ const ConversationsList: React.FC = () => {
             <div className="form-group">
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Opening message</label>
               <textarea 
+                id="form-message-textarea"
+                key="message-body-textarea"
                 value={formData.messageBody}
-                onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, messageBody: e.target.value }))}
                 placeholder={"Provide a short summary of the crux of the matter.\nDescribe the context, circumstances, and constraints.\nDescribe what is your end goal, and the outcome you are looking for, from this conversation."}
                 rows={4}
                 style={{
@@ -436,9 +438,11 @@ const ConversationsList: React.FC = () => {
             <div className="form-group">
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Title</label>
               <input 
+                key="form-title-input"
+                id="form-title-input"
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Provide a short title that summarises what the conversation is about"
                 style={{
                   width: '100%',
