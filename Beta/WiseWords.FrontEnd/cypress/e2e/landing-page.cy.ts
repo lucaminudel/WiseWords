@@ -4,7 +4,7 @@ describe('Landing Page', () => {
     cy.visit('/');
 
     // 2. Verify key elements are visible
-    cy.contains('A calm forum to facilitate productive conversations').should('be.visible');
+    cy.contains('calm forum for productive conversations').should('be.visible');
     const enterButton = cy.contains('button', 'Enter');
     enterButton.should('be.visible');
     cy.contains('Contact us here').should('be.visible');
