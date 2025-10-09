@@ -6,11 +6,7 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   
   const handleEnterForum = () => {
-    if (window.location.hostname === 'wise-words.online') {
-      window.location.href = 'https://www.wise-words.online/conversations';
-    } else {
-      navigate('/conversations');
-    }
+    navigate('/conversations');
   };
 
   return (
