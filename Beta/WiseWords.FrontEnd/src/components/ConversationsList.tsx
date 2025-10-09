@@ -247,7 +247,7 @@ const ConversationsList: React.FC = () => {
   return (
     <div className="landing-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
       <header style={{ padding: '24px 32px', marginBottom: '2rem' }}>
-        <Logo />
+        <Logo linkTo="/" />
       </header>
       <div className="landing-content" style={{ maxWidth: '90%', width: '90%', alignSelf: 'center' }}>
         <h2 style={{ marginBottom: 32, textAlign: 'center' }}>
