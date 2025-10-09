@@ -206,22 +206,22 @@ namespace WiseWords.ConversationsAndPosts.AWS.Lambdas
                 }
 
                 var authenticatedUser = _getAuthenticatedUser?.Invoke();
-                var conversationUrl = new Uri(_websiteUrl, $"conversations/{req.ConversationPK}");
+                var conversationUrl = new Uri(_websiteUrl, $"conversations/{Uri.EscapeDataString(req.ConversationPK)}");
                 
                 var emailBody = $@"Hi {req.InviteeName},
 
-    {authenticatedUser?.Name ?? req.SenderUsername} started a conversation on WiseWords, and has invited you to participate.
+    {authenticatedUser?.Name ?? req.SenderUsername} started a conversation on Wise-Words, and has invited you to participate.
 
     Follow this link to view the conversation: {conversationUrl}.
     When you post a comment, you will be asked to register.
 
-    WiseWords is a platform for engaging in productive discussions.
+    Wise-Words is a platform for engaging in productive discussions.
     Learn more about the WiseWords here: {_websiteUrl}.
 
     For any question, reply to this email or contact {authenticatedUser?.Name ?? req.SenderUsername} here in cc.
 
 Ciao!
-The WiseWords Team";
+The Wise-Words Team";
 
                 using var sesClient = new AmazonSimpleEmailServiceClient();
                 var sendRequest = new SendEmailRequest
@@ -234,7 +234,7 @@ The WiseWords Team";
                     },
                     Message = new Message
                     {
-                        Subject = new Content($"{req.SenderUsername} invited you to join a conversation on WiseWords"),
+                        Subject = new Content($"{req.SenderUsername} invited you to join a conversation on Wise-Words"),
                         Body = new Body { Text = new Content(emailBody) }
                     }
                 };
