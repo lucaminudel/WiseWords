@@ -25,12 +25,12 @@ const LandingPage: React.FC = () => {
         
         <p className="app-description">
           <br/>
+          A calm forum that drives productive conversations &amp; meaningful conclusions.
+          <br/><br/>
           Guide your team <br/>
           from questions to <span className="highlight">answers</span>, problems to <span className="highlight">solutions</span>, and dilemmas to <span className="highlight">choices</span>.
           <br/><br/>
-          With this calm forum for productive conversations &amp; meaningful conclusions.
-          <br/><br/>
-          <span className="highlight">Invite</span> your cohort, <span className="highlight">refine</span> your goal, and easily <span className="highlight">export</span> the conclusions.</p>        
+          Invite your cohort, refine your goal, and easily export the conclusions.</p>        
         <button 
           className="enter-forum-button"
           onClick={handleEnterForum}
